@@ -1,0 +1,58 @@
+import java.util.regex.Pattern
+
+tasks.register("codeStats") {
+    group = "documentation"
+    description = "Counts lines of code, comments, classes, methods, and more."
+
+    doLast {
+        def srcDir = file("src/main/java")
+        def totalLines = 0
+        def codeLines = 0
+        def commentLines = 0
+        def blankLines = 0
+        def classCount = 0
+        def methodCount = 0
+        def fileCount = 0
+
+        def subsystems = 0
+
+        def methodPattern = Pattern.compile("\\b(public|private|protected)\\s+[\\w<>\\[\\]]+\\s+\\w+\\s*\\(")
+
+        srcDir.eachFileRecurse { f ->
+            if (f.name.endsWith(".java")) {
+                fileCount++
+                def lines = f.readLines()
+                totalLines += lines.size()
+
+                lines.each { line ->
+                    def trimmed = line.trim()
+                    if (trimmed.isEmpty()) {
+                        blankLines++
+                    } else if (trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*")) {
+                        commentLines++
+                    } else {
+                        codeLines++
+                        if (trimmed.contains("class ") || trimmed.contains("interface ") || trimmed.contains("record ")) {
+                            classCount++
+                            if (trimmed.contains("Subsystem")) subsystems++
+                        }
+                        if (methodPattern.matcher(trimmed).find()) {
+                            methodCount++
+                        }
+                    }
+                }
+            }
+        }
+
+        println "Code Statistics"
+        println "-----------------------------"
+        println "Files:           ${fileCount}"
+        println "Lines of Code:   ${totalLines}"
+        println "  Code:          ${codeLines}"
+        println "  Comments:      ${commentLines}"
+        println "  Blank:         ${blankLines}"
+        println "Classes/Records: ${classCount}"
+        println "Methods:         ${methodCount}"
+        println "Subsystems:      ${subsystems}"
+    }
+}

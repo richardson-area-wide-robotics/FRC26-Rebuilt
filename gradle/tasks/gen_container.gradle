@@ -1,0 +1,71 @@
+tasks.register("generateRobotContainer") {
+    group = "codegen"
+    description = "Generates a RobotContainer with a team number and name"
+
+    doLast {
+        def team = project.findProperty("team")
+        def rawName = project.findProperty("containerName")
+
+        if (team == null || rawName == null) {
+            throw new GradleException(
+                    "Usage: ./gradlew generateRobotContainer -Pteam=<number> -PcontainerName=<Name>"
+            )
+        }
+
+        // Capitalize first letter
+        def name = rawName.toString().capitalize()
+        def className = "${name}Container"
+
+        def packageName = "frc.robot.common"
+        def outputDir = file("src/main/java/${packageName.replace('.', '/')}")
+
+        outputDir.mkdirs()
+
+        def outputFile = new File(outputDir, "${className}.java")
+
+        if (outputFile.exists()) {
+            throw new GradleException("${className}.java already exists!")
+        }
+
+        outputFile.text = """\
+package ${packageName};
+
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import frc.robot.common.interfaces.IRobotContainer;
+import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.common.annotations.Robot;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@Robot(team = ${team})
+public class ${className} implements IRobotContainer {
+
+    public static IRobotContainer createContainer() {
+        return new ${className}();
+    }
+
+    @Override
+    public Command getAutonomousCommand() {
+        return null;
+    }
+
+    @Override
+    public void simulationPeriodic() {
+    }
+
+    @Override
+    public void disabledPeriodic() {
+    }
+
+    @Override
+    public void autonomousPeriodic() {
+    }
+
+    @Override
+    public void teleopPeriodic() {
+    }
+}
+"""
+        println "Generated ${outputFile}"
+    }
+}

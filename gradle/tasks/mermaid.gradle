@@ -1,0 +1,197 @@
+tasks.named("build") {
+    dependsOn("exportMermaidGraph")
+}
+
+tasks.register("exportMermaidGraph") {
+    group = "documentation"
+    description = "Exports a Mermaid flowchart of the project's Java code."
+
+    doLast {
+        def srcDir = file("src/main/java")
+        def outFile = file("code.md")
+
+        def classInfo = [:]  // fqcn -> metadata
+
+        // Helper to make node names safe for Mermaid
+        def sanitizeNodeName = { raw ->
+            raw.replaceAll(/[<>]/, "_").replaceAll("\\.", "_")
+        }
+
+        srcDir.eachFileRecurse { f ->
+            if (!f.name.endsWith(".java")) return
+
+            def text = f.text
+
+            // ---- Strip comments to avoid Javadoc parsing ----
+            def code = text
+                    .replaceAll(/\/\*[\s\S]*?\*\//, "")   // remove /* ... */
+                    .replaceAll(/\/\/.*$/, "")             // remove // ...
+
+            // ---- Package ----
+            def pkgMatch = (code =~ /package\s+([\w\.]+);/)
+            def pkg = pkgMatch.find() ? pkgMatch[0][1] : ""
+
+            // ---- Type + Name ----
+            def headerMatch = (code =~ /\b(class|interface|record|@interface)\s+(\w+)\b/)
+            if (!headerMatch.find()) return
+
+            def type = headerMatch[0][1]
+            def name = headerMatch[0][2]
+
+            // ---- Extends ----
+            def extendsMatch = (code =~ /\bextends\s+([\w\.<>]+)\b/)
+            def ext = extendsMatch.find() ? extendsMatch[0][1] : null
+
+            // ---- Implements ----
+            def implMatch = (code =~ /\bimplements\s+([\w\.,\s<>]+)\b/)
+            def impls = implMatch.find() ? implMatch[0][1].split(",")*.trim() : []
+
+            // ---- Annotations ----
+            def annotatedMatch = (code =~ /((?:@\w+(?:\([^)]*\))?\s*)*)(class|interface|record|@interface)\s+\w+/)
+            def annotations = []
+            if (annotatedMatch.find()) {
+                def raw = annotatedMatch[0][1] ?: ""
+                annotations = (raw =~ /@(\w+)/).collect { it[1] }
+            }
+
+            def fqcn = pkg ? "${pkg}.${name}" : name
+
+            classInfo[fqcn] = [
+                    name        : (type == "@interface" ? "@${name}" : name),
+                    pkg         : pkg,
+                    type        : type,
+                    annotations : annotations,
+                    extends     : ext,
+                    implements  : impls,
+                    associations: []
+            ]
+
+            // ---- Associations (fields) ----
+            def fieldMatches = (code =~ /\b([\w<>]+)\s+\w+\s*;/)
+            fieldMatches.each { m ->
+                classInfo[fqcn].associations << m[1]
+            }
+        }
+
+        // ---- Group by package ----
+        def grouped = [:].withDefault { [] }
+        classInfo.each { fqcn, meta ->
+            grouped[meta.pkg] << meta
+        }
+
+        // ---- Track declared nodes ----
+        def declaredNodes = [] as Set
+        def externalNodes = [] as Set
+
+        // ---- Write Mermaid ----
+        outFile.parentFile.mkdirs()
+        outFile.withWriter { writer ->
+            writer.writeLine("# Code Structure Flowchart\n")
+            writer.writeLine("```mermaid")
+            writer.writeLine("flowchart TD")
+
+            // ---- Subgraphs per package ----
+            grouped.each { pkg, classes ->
+                if (pkg) {
+                    def safePkg = pkg.replaceAll("\\.", "_")
+                    writer.writeLine("    subgraph ${safePkg}[${pkg}]")
+                    classes.each { c ->
+                        def nodeName = sanitizeNodeName(c.name)
+                        def label = c.annotations ? "${c.name} «${c.annotations.join(', ')}»" : c.name
+                        writer.writeLine("        ${nodeName}[${label}]")
+                        declaredNodes << nodeName
+                    }
+                    writer.writeLine("    end")
+                } else {
+                    classes.each { c ->
+                        def nodeName = sanitizeNodeName(c.name)
+                        def label = c.annotations ? "${c.name} «${c.annotations.join(', ')}»" : c.name
+                        writer.writeLine("    ${nodeName}[${label}]")
+                        declaredNodes << nodeName
+                    }
+                }
+            }
+
+            // ---- Inheritance ----
+            classInfo.each { fqcn, meta ->
+                if (meta.extends) {
+                    def parentLabel = meta.extends
+                    def parentNode = sanitizeNodeName(meta.extends.replaceAll(/<.*>/, ""))
+                    if (!declaredNodes.contains(parentNode)) {
+                        writer.writeLine("    ${parentNode}[${parentLabel}]")
+                        declaredNodes << parentNode
+                        externalNodes << parentNode
+                    }
+                    def nodeName = sanitizeNodeName(meta.name)
+                    writer.writeLine("    ${nodeName} -->|extends| ${parentNode}")
+                }
+            }
+
+            // ---- Implements ----
+            classInfo.each { fqcn, meta ->
+                meta.implements.each { impl ->
+                    def ifaceLabel = impl
+                    def ifaceNode = sanitizeNodeName(impl.replaceAll(/<.*>/, ""))
+                    if (!declaredNodes.contains(ifaceNode)) {
+                        writer.writeLine("    ${ifaceNode}[${ifaceLabel}]")
+                        declaredNodes << ifaceNode
+                        externalNodes << ifaceNode
+                    }
+                    def nodeName = sanitizeNodeName(meta.name)
+                    writer.writeLine("    ${nodeName} -.implements.-> ${ifaceNode}")
+                }
+            }
+
+            // ---- Associations ----
+            classInfo.each { fqcn, meta ->
+                meta.associations.each { assoc ->
+                    def clean = assoc.replaceAll(/<.*>/, "")
+                    def assocNode = sanitizeNodeName(clean)
+                    if (classInfo.values().any { it.name == clean }) {
+                        def nodeName = sanitizeNodeName(meta.name)
+                        writer.writeLine("    ${nodeName} --> ${assocNode}")
+                    }
+                }
+            }
+
+            // ---- Annotation usage ----
+            classInfo.each { fqcn, meta ->
+                meta.annotations.each { ann ->
+                    def annNode = sanitizeNodeName("@${ann}")
+                    if (classInfo.values().any { it.name == "@${ann}" }) {
+                        def nodeName = sanitizeNodeName(meta.name)
+                        writer.writeLine("    ${nodeName} -.annotated with.-> ${annNode}")
+                    }
+                }
+            }
+
+            // ---- Styles ----
+            classInfo.each { fqcn, meta ->
+                def baseColor
+                switch (meta.type) {
+                    case "interface":
+                        baseColor = "#66bb6a"
+                        break
+                    case "record":
+                        baseColor = "#ba68c8"
+                        break
+                    case "@interface":
+                        baseColor = "#fbc02d"
+                        break
+                    default:
+                        baseColor = "#42a5f5"
+                }
+                writer.writeLine("    style ${sanitizeNodeName(meta.name)} fill:${baseColor},stroke:#333,stroke-width:2px,color:#fff")
+            }
+
+            // ---- External nodes style ----
+            externalNodes.each { n ->
+                writer.writeLine("    style ${n} fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5")
+            }
+
+            writer.writeLine("```")
+        }
+
+        println "Mermaid flowchart written to ${outFile}"
+    }
+}
