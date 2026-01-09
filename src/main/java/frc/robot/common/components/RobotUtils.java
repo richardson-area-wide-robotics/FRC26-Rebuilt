@@ -7,6 +7,7 @@ import com.revrobotics.spark.SparkBase.ControlType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import lombok.Getter;
 import lombok.experimental.UtilityClass;
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.utils.GlobalConstants;
@@ -14,7 +15,8 @@ import org.lasarobotics.utils.GlobalConstants;
 @UtilityClass
 public class RobotUtils  {
 
-  public RobotConfig robotConfig;
+  @Getter
+  private RobotConfig robotConfig;
 
   /**
    * Helper method to bind a control action to a command.

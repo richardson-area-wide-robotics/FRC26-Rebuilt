@@ -128,7 +128,7 @@ public class RAWRSwerveModule extends SwerveModule implements Sendable {
           PIDConstants.of(2.1, 0, 0.2, 0, 0), // The PID for the rotate Motor
           FFConstants.of(0, 0, 0, 0),  // Replace with actual feed-forward constants
           Dimensionless.ofBaseUnits(CommonConstants.DriveConstants.DRIVE_SLIP_RATIO, Units.Value),
-          Mass.ofRelativeUnits(RobotUtils.robotConfig.massKG, Units.Kilograms),
+          Mass.ofRelativeUnits(RobotUtils.getRobotConfig().massKG, Units.Kilograms),
           Distance.ofRelativeUnits(23, Units.Inches),
           Distance.ofRelativeUnits(24.5, Units.Inches),
           Time.ofBaseUnits(CommonConstants.DriveConstants.AUTO_LOCK_TIME, Units.Second));
@@ -205,16 +205,16 @@ public class RAWRSwerveModule extends SwerveModule implements Sendable {
     EXECUTOR_SERVICE.submit(() -> configDrive(driveWheel, motorOrientation, drivePID));
 
     // Reset the Drive Encoder
-    EXECUTOR_SERVICE.submit(() -> resetDriveEncoder());
+    EXECUTOR_SERVICE.submit(this::resetDriveEncoder);
 
     //Config Rotate Motor
     EXECUTOR_SERVICE.submit(() -> configRotate(motorOrientation, encoderOrientation, rotatePID));
 
     // Add callbacks to PurpleManager
-    PurpleManager.addCallback(() -> periodic());
-    PurpleManager.addCallbackSim(() -> simulationPeriodic());
+    PurpleManager.addCallback(this::periodic);
+    PurpleManager.addCallbackSim(this::simulationPeriodic);
 
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdownExecutorService()));
+    Runtime.getRuntime().addShutdownHook(new Thread(this::shutdownExecutorService));
   }
 
   public void configDrive(DriveWheel driveWheel, SwerveModule.MountOrientation motorOrientation,  PIDConstants drivePID) {

@@ -395,7 +395,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
             this::getChassisSpeeds,
             (speeds, feedforwards) -> autoDrive(speeds),
             PATH_FOLLOWER_CONFIG,
-            RobotUtils.robotConfig,
+            RobotUtils.getRobotConfig(),
             () -> {
               var alliance = DriverStation.getAlliance();
               if (alliance.isPresent()) {
