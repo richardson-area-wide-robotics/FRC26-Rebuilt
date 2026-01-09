@@ -2,7 +2,7 @@
   "fileName": "Instanceable.json",
   "name": "Instanceable",
   "version": "1.0.0",
-  "frcYear": "2026beta",
+  "frcYear": "2026",
   "uuid": "67d4b598-245a-49ed-904f-c62249006075",
   "mavenUrls": [
     "https://jitpack.io"
