@@ -22,6 +22,15 @@ public class RobotContainerRegistry {
         Set<Class<?>> annotatedClasses = reflections.getTypesAnnotatedWith(Robot.class);
 
         for (Class<?> clazz : annotatedClasses) {
+            try {
+                clazz.getMethod("createContainer");
+            } catch (NoSuchMethodException e) {
+                throw new IllegalStateException( //Crash early if we don't have the required createContainer method
+                        clazz.getName() + " is annotated with @Robot but does not define " +
+                                "public static IRobotContainer createContainer()"
+                );
+            }
+
             Robot annotation = clazz.getAnnotation(Robot.class);
             TEAM_CONTAINERS.put(annotation.team(), clazz);
         }
