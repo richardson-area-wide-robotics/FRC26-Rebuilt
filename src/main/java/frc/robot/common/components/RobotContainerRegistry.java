@@ -14,7 +14,7 @@ import java.util.Set;
 public class RobotContainerRegistry {
 
     // A map to hold robot containers by team
-    private static final Map<Integer, Class<?>> teamContainers = new HashMap<>();
+    private static final Map<Integer, Class<?>> TEAM_CONTAINERS = new HashMap<>();
 
     static {
         // Scan for classes annotated with @Robot in the frc.robot package
@@ -23,12 +23,12 @@ public class RobotContainerRegistry {
 
         for (Class<?> clazz : annotatedClasses) {
             Robot annotation = clazz.getAnnotation(Robot.class);
-            teamContainers.put(annotation.team(), clazz);
+            TEAM_CONTAINERS.put(annotation.team(), clazz);
         }
     }
 
     public static IRobotContainer createContainerForTeam(int teamNumber) {
-        Class<?> containerClass = teamContainers.get(teamNumber);
+        Class<?> containerClass = TEAM_CONTAINERS.get(teamNumber);
 
         if (containerClass == null) {
             System.out.println("We can't find a container for " + teamNumber + "! Using default");

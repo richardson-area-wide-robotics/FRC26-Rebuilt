@@ -94,7 +94,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   /**
    * SwerveDriveSubsystem constructor for managing a swerve drivetrain.
    *
-   * @param drivetrainHardware Hardware devices required by drivetrain.
+   * @param drivetrainHardwareParams Hardware devices required by drivetrain.
    * @param pidf PID constants for the drive system.
    * @param controlCentricity Control centricity configuration.
    * @param throttleInputCurve Spline function for throttle input.
@@ -103,7 +103,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
    * @param deadband Deadband for controller input [+0.001, +0.2].
    * @param lookAhead Rotate PID lookahead, in number of loops.
    */
-  public SwerveDriveSubsystem(SwerveHardware drivetrainHardware, PIDConstants pidf, ControlCentricity controlCentricity,
+  public SwerveDriveSubsystem(SwerveHardwareParams drivetrainHardwareParams, PIDConstants pidf, ControlCentricity controlCentricity,
                               PolynomialSplineFunction throttleInputCurve, PolynomialSplineFunction turnInputCurve,
                               Angle turnScalar, Dimensionless deadband, Time lookAhead) {
 
@@ -111,7 +111,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
         // Initialize subsystem name
         setSubsystem(this.getClass().getSimpleName());
 
-        this.DRIVETRAIN_HARDWARE = drivetrainHardware;
+        this.DRIVETRAIN_HARDWARE = initializeHardware(drivetrainHardwareParams);
 
         // Drivetrain constants
         DRIVE_MAX_LINEAR_SPEED = DRIVETRAIN_HARDWARE.lFrontModule().getMaxLinearVelocity();
@@ -178,7 +178,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
  *
  * @return A Hardware object containing all necessary devices for this subsystem
  */
-public static SwerveHardware initializeHardware(SwerveHardwareParams params) {
+private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
 
   RAWRSwerveModule lFrontModule = RAWRSwerveModule.createSwerve(
           params.leftFrontDriveId(),
