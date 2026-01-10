@@ -34,6 +34,7 @@ public class Robot extends LoggedRobot {
   private Command autonomousCommand;
 
   private IRobotContainer robotContainer;
+
   public Robot() {
     super();
   }
