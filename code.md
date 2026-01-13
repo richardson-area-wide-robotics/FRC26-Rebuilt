@@ -62,12 +62,6 @@ flowchart TD
         PearceConstants[PearceConstants]
         PearceContainer[PearceContainer]
     end
-    subgraph frc_robot_pearce_subsystems[frc.robot.pearce.subsystems]
-        CBSSubsystem[CBSSubsystem]
-        DeepClimbSubsystem[DeepClimbSubsystem]
-        ElevatorSubsystem[ElevatorSubsystem]
-        ScoringSubsystem[ScoringSubsystem]
-    end
     subgraph frc_robot_practicum[frc.robot.practicum]
         PracticumInStemContainer[PracticumInStemContainer]
     end
@@ -84,10 +78,6 @@ flowchart TD
     SingleMotorSubsystem -->|extends| DashboardSubsystem
     SwerveModule[SwerveModule]
     RAWRSwerveModule -->|extends| SwerveModule
-    CBSSubsystem -->|extends| DashboardSubsystem
-    DeepClimbSubsystem -->|extends| DashboardSubsystem
-    ElevatorSubsystem -->|extends| DashboardSubsystem
-    ScoringSubsystem -->|extends| DashboardSubsystem
     LoggedRobot[LoggedRobot]
     Robot -->|extends| LoggedRobot
     CANDiagnostics -.implements.-> IDiagnostic
@@ -106,7 +96,6 @@ flowchart TD
     PracticumInStemContainer -.implements.-> IRobotContainer
     SwerveDriveSubsystem --> SwerveHardware
     TankDriveSubsystem --> TankHardware
-    ScoringSubsystem --> EasyBreakBeam
     Robot --> IRobotContainer
     style BuildConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DashboardVariable fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
@@ -141,10 +130,6 @@ flowchart TD
     style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style CBSSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style DeepClimbSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style ElevatorSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style ScoringSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PracticumInStemContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style BaseInstanceable_CANDiagnostics fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
