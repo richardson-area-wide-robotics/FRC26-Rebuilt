@@ -58,6 +58,9 @@ flowchart TD
     subgraph frc_robot_common_swerve[frc.robot.common.swerve]
         RAWRSwerveModule[RAWRSwerveModule]
     end
+    subgraph frc_robot_kadiri[frc.robot.kadiri]
+        KadiriContainer[KadiriContainer]
+    end
     subgraph frc_robot_pearce[frc.robot.pearce]
         PearceConstants[PearceConstants]
         PearceContainer[PearceContainer]
@@ -92,6 +95,7 @@ flowchart TD
     TankDriveSubsystem -.implements.-> AutoCloseable
     Sendable[Sendable]
     RAWRSwerveModule -.implements.-> Sendable
+    KadiriContainer -.implements.-> IRobotContainer
     PearceContainer -.implements.-> IRobotContainer
     PracticumInStemContainer -.implements.-> IRobotContainer
     SwerveDriveSubsystem --> SwerveHardware
@@ -127,6 +131,7 @@ flowchart TD
     style SingleMotorSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RAWRSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CommonConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style KadiriContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
