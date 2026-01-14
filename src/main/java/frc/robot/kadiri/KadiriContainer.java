@@ -1,12 +1,19 @@
 package frc.robot.kadiri;
 
+
+
+import com.revrobotics.spark.SparkFlex;
+import com.revrobotics.spark.SparkLowLevel;
+import com.revrobotics.spark.config.SparkBaseConfig;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.Robot;
+import frc.robot.common.components.EasyMotor;
 import frc.robot.common.components.hardware.SwerveHardwareParams;
 import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
@@ -47,13 +54,13 @@ public class KadiriContainer implements IRobotContainer {
             Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
             Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
-    public static IRobotContainer createContainer(){
+    public static IRobotContainer createContainer() {
         DRIVE_SUBSYSTEM.setDefaultCommand(
                 DRIVE_SUBSYSTEM.driveCommand(
                         CommonConstants.HIDConstants.DRIVER_CONTROLLER::getLeftY,
                         CommonConstants.HIDConstants.DRIVER_CONTROLLER::getLeftX,
                         CommonConstants.HIDConstants.DRIVER_CONTROLLER::getRightX));
-        return new KadiriContainer();
+        return  new KadiriContainer();
     }
 
 
