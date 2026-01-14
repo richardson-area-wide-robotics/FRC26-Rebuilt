@@ -5,6 +5,7 @@ import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.Robot;
@@ -25,6 +26,8 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Robot(team = 6767)
+
+
 
 public class KadiriContainer implements IRobotContainer {
 
@@ -76,6 +79,11 @@ public class KadiriContainer implements IRobotContainer {
 
     }
 
+    public void robotInit() {
+        // This will display "Jayden" on the Driver Station SmartDashboard
+        SmartDashboard.putString("Name", "Jaden");
+
+    }
 
     @Override
     public Command getAutonomousCommand() {

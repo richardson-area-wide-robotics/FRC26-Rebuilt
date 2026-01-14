@@ -9,6 +9,7 @@ import frc.robot.common.components.EasyMotor;
 
 
 
+
 public class ShooterSubsystem extends SubsystemBase {
 
     private final SparkFlex shooterMotor;
