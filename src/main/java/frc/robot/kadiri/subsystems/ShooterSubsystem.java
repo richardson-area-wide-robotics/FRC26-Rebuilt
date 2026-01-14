@@ -9,33 +9,38 @@ import frc.robot.common.components.EasyMotor;
 
 
 
-public class IntakeSubsystem extends SubsystemBase {
+public class ShooterSubsystem extends SubsystemBase {
 
-    private final SparkFlex intakeMotor;
+    private final SparkFlex shooterMotor;
 
-    public IntakeSubsystem(int motorId) {
-        intakeMotor = EasyMotor.createEasySparkFlex(
-                1,
+    public ShooterSubsystem(int motorId) {
+        shooterMotor = EasyMotor.createEasySparkFlex(
+                2,
                 SparkLowLevel.MotorType.kBrushless,
                 SparkBaseConfig.IdleMode.kBrake
         );
     }
 
-    public Command intakeIn() {
+    public Command shooterIn() {
 
-        intakeMotor.set(1);
+        shooterMotor.set(1);
         return null;
     }
 
-    public Command intakeOut() {
+    public Command shooterOut() {
 
-        intakeMotor.set(-1);
+        shooterMotor.set(-1);
         return null;
     }
 
     public Command stop() {
-        intakeMotor.stopMotor();
+        shooterMotor.stopMotor();
         return null;
     }
 
 }
+
+
+
+
+

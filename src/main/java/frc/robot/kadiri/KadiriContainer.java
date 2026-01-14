@@ -1,27 +1,26 @@
 package frc.robot.kadiri;
 
 
-
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel;
-import com.revrobotics.spark.config.SparkBaseConfig;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.Robot;
-import frc.robot.common.components.EasyMotor;
+import frc.robot.common.components.RobotUtils;
 import frc.robot.common.components.hardware.SwerveHardwareParams;
 import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
+import frc.robot.kadiri.subsystems.IntakeSubsystem;
+import frc.robot.kadiri.subsystems.ShooterSubsystem;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
 
+
+import static frc.robot.CommonConstants.HIDConstants.DRIVER_CONTROLLER;
 import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity.FIELD_CENTRIC;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -29,7 +28,8 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 
 public class KadiriContainer implements IRobotContainer {
 
-
+    public static final IntakeSubsystem INTAKE_SUBSYSTEM = new IntakeSubsystem(10);
+    public static final ShooterSubsystem SHOOTER_SUBSYSTEM = new ShooterSubsystem(11);
     public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
             new SwerveHardwareParams(
                     new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),
@@ -54,13 +54,26 @@ public class KadiriContainer implements IRobotContainer {
             Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
             Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
+    public static IntakeSubsystem createIntakeSubsytem() {
+        RobotUtils.bindControl(DRIVER_CONTROLLER.x(), INTAKE_SUBSYSTEM.intakeIn(), INTAKE_SUBSYSTEM.stop());
+        RobotUtils.bindControl(DRIVER_CONTROLLER.y(), INTAKE_SUBSYSTEM.intakeOut(), INTAKE_SUBSYSTEM.stop());
+        return new IntakeSubsystem(1);
+    }
+
+    public static ShooterSubsystem createShooterSubsytem() {
+        RobotUtils.bindControl(DRIVER_CONTROLLER.x(), SHOOTER_SUBSYSTEM.shooterIn(), SHOOTER_SUBSYSTEM.stop());
+        RobotUtils.bindControl(DRIVER_CONTROLLER.y(), SHOOTER_SUBSYSTEM.shooterOut(), SHOOTER_SUBSYSTEM.stop());
+        return new ShooterSubsystem(1);
+    }
+
     public static IRobotContainer createContainer() {
         DRIVE_SUBSYSTEM.setDefaultCommand(
                 DRIVE_SUBSYSTEM.driveCommand(
-                        CommonConstants.HIDConstants.DRIVER_CONTROLLER::getLeftY,
-                        CommonConstants.HIDConstants.DRIVER_CONTROLLER::getLeftX,
-                        CommonConstants.HIDConstants.DRIVER_CONTROLLER::getRightX));
+                        DRIVER_CONTROLLER::getLeftY,
+                        DRIVER_CONTROLLER::getLeftX,
+                        DRIVER_CONTROLLER::getRightX));
         return  new KadiriContainer();
+
     }
 
 
