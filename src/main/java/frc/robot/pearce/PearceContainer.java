@@ -23,6 +23,7 @@ import frc.robot.common.components.hardware.SwerveHardwareParams;
 import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
+import frc.robot.pearce.subsystems.ProtoShooter;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
@@ -34,6 +35,8 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 @Robot(team = 1745)
 public class PearceContainer implements IRobotContainer {
 
+
+public static final ProtoShooter PROTO_SHOOTER = new ProtoShooter(10, 11);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
                 new SwerveHardwareParams(
                         new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),
@@ -91,6 +94,9 @@ public class PearceContainer implements IRobotContainer {
 
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
+
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(), Commands.runOnce(PROTO_SHOOTER::runShooter, PROTO_SHOOTER), Commands.none());
+
 
 //    RobotUtils.bindControl(
 //      HIDConstants.DRIVER_CONTROLLER.b(),
