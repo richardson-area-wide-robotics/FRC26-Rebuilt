@@ -18,13 +18,20 @@ public class ProtoShooter extends DashboardSubsystem {
     public ProtoShooter(int id1, int id2){
 
 
-         motor2 = EasyMotor.createEasySparkFlex(id1, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
-         motor1 = EasyMotor.createEasySparkFlex(id1, id2, false, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+         //motor2 = EasyMotor.createEasySparkFlex(id2, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+         motor1 = EasyMotor.createEasySparkFlex(id1, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
 
     }
 
     public void runShooter(){
 
         motor1.set(2);
+        //motor2.set(2);
+    }
+
+    public void stopShooter(){
+        motor1.set(0);
+        //motor2.set(0);
+
     }
 }
