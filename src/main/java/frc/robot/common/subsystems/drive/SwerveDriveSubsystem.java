@@ -7,10 +7,13 @@ package frc.robot.common.subsystems.drive;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
+import edu.wpi.first.math.geometry.Transform3d;
 import frc.robot.CommonConstants;
 import frc.robot.common.components.hardware.SwerveHardware;
 import frc.robot.common.components.hardware.SwerveHardwareParams;
+import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.subsystems.DashboardSubsystem;
+import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;
 import lombok.Getter;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
@@ -87,6 +90,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   private Rotation2d currentHeading;
   private final Field2d FIELD;
 
+  private final AssumedPoseSubsystem ASSUMED_POSE;
 
 
   /**
@@ -143,6 +147,14 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
           CommonConstants.DriveConstants.VISION_STDDEV
       );
 
+
+        ASSUMED_POSE = new AssumedPoseSubsystem(
+                (RAWRNavX2) DRIVETRAIN_HARDWARE.gyro(),
+                getKINEMATICS(),
+                DRIVETRAIN_HARDWARE::getModulePositions,
+                new Transform3d(),
+                "OV9281"
+        );
       // Chassis speeds
       desiredChassisSpeeds = new ChassisSpeeds();
 
@@ -290,6 +302,8 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
 
     // Draw a red square at that position
     FIELD.getObject("HeadingSquare").setPose(new Pose2d(squarePos, heading));
+
+    FIELD.getObject("REALBot").setPose(ASSUMED_POSE.getPose());
 
     // Field-centric indicator
     SmartDashboard.putBoolean("FC", controlCentricity.equals(ControlCentricity.FIELD_CENTRIC));

@@ -55,6 +55,9 @@ flowchart TD
         SwerveDriveSubsystem[SwerveDriveSubsystem]
         TankDriveSubsystem[TankDriveSubsystem]
     end
+    subgraph frc_robot_common_subsystems_vision[frc.robot.common.subsystems.vision]
+        AssumedPoseSubsystem[AssumedPoseSubsystem]
+    end
     subgraph frc_robot_common_swerve[frc.robot.common.swerve]
         RAWRSwerveModule[RAWRSwerveModule]
     end
@@ -76,6 +79,7 @@ flowchart TD
     SwerveDriveSubsystem -->|extends| DashboardSubsystem
     TankDriveSubsystem -->|extends| SubsystemBase
     SingleMotorSubsystem -->|extends| DashboardSubsystem
+    AssumedPoseSubsystem -->|extends| SubsystemBase
     SwerveModule[SwerveModule]
     RAWRSwerveModule -->|extends| SwerveModule
     LoggedRobot[LoggedRobot]
@@ -95,7 +99,9 @@ flowchart TD
     PearceContainer -.implements.-> IRobotContainer
     PracticumInStemContainer -.implements.-> IRobotContainer
     SwerveDriveSubsystem --> SwerveHardware
+    SwerveDriveSubsystem --> AssumedPoseSubsystem
     TankDriveSubsystem --> TankHardware
+    AssumedPoseSubsystem --> RAWRNavX2
     Robot --> IRobotContainer
     style BuildConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DashboardVariable fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
@@ -125,6 +131,7 @@ flowchart TD
     style SwerveDriveSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style TankDriveSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SingleMotorSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style AssumedPoseSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RAWRSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CommonConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
