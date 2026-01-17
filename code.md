@@ -65,6 +65,9 @@ flowchart TD
         PearceConstants[PearceConstants]
         PearceContainer[PearceContainer]
     end
+    subgraph frc_robot_pearce_subsystems[frc.robot.pearce.subsystems]
+        ProtoShooter[ProtoShooter]
+    end
     subgraph frc_robot_practicum[frc.robot.practicum]
         PracticumInStemContainer[PracticumInStemContainer]
     end
@@ -82,6 +85,7 @@ flowchart TD
     AssumedPoseSubsystem -->|extends| SubsystemBase
     SwerveModule[SwerveModule]
     RAWRSwerveModule -->|extends| SwerveModule
+    ProtoShooter -->|extends| DashboardSubsystem
     LoggedRobot[LoggedRobot]
     Robot -->|extends| LoggedRobot
     CANDiagnostics -.implements.-> IDiagnostic
@@ -136,6 +140,7 @@ flowchart TD
     style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style ProtoShooter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PracticumInStemContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style BaseInstanceable_CANDiagnostics fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
