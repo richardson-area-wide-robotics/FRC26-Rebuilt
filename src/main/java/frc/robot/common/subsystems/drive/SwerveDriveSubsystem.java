@@ -7,10 +7,13 @@ package frc.robot.common.subsystems.drive;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
+import edu.wpi.first.math.geometry.Transform3d;
 import frc.robot.CommonConstants;
 import frc.robot.common.components.hardware.SwerveHardware;
 import frc.robot.common.components.hardware.SwerveHardwareParams;
+import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.subsystems.DashboardSubsystem;
+import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;
 import lombok.Getter;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
@@ -79,8 +82,6 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   private final AdvancedSwerveKinematics ADVANCED_KINEMATICS;
   private final ProfiledPIDController AUTO_AIM_PID_CONTROLLER_FRONT;
   private final ProfiledPIDController AUTO_AIM_PID_CONTROLLER_BACK;
-  private final MedianFilter X_VELOCITY_FILTER;
-  private final MedianFilter Y_VELOCITY_FILTER;
   private final PPHolonomicDriveController PATH_FOLLOWER_CONFIG;
 
   private ControlCentricity controlCentricity;
@@ -89,6 +90,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   private Rotation2d currentHeading;
   private final Field2d FIELD;
 
+  private final AssumedPoseSubsystem ASSUMED_POSE;
 
 
   /**
@@ -145,6 +147,14 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
           CommonConstants.DriveConstants.VISION_STDDEV
       );
 
+
+        ASSUMED_POSE = new AssumedPoseSubsystem(
+                (RAWRNavX2) DRIVETRAIN_HARDWARE.gyro(),
+                getKINEMATICS(),
+                DRIVETRAIN_HARDWARE::getModulePositions,
+                new Transform3d(),
+                "OV9281"
+        );
       // Chassis speeds
       desiredChassisSpeeds = new ChassisSpeeds();
 
@@ -168,8 +178,6 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
       this.AUTO_AIM_PID_CONTROLLER_BACK = new ProfiledPIDController(10.0, 0.0, 0.5, new TrapezoidProfile.Constraints(2160.0, 4320.0), 0.02);
       this.AUTO_AIM_PID_CONTROLLER_BACK.enableContinuousInput(-180.0, +180.0);
       this.AUTO_AIM_PID_CONTROLLER_BACK.setTolerance(1.5);
-      this.X_VELOCITY_FILTER = new MedianFilter(100);
-      this.Y_VELOCITY_FILTER = new MedianFilter(100);
     }
 }
 
@@ -214,13 +222,11 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
    * @param yRequest         Desired Y (sideways) velocity
    * @param rotateRequest    Desired rotate rate
    * @param controlCentricity Control centricity
-   * @param inertialVelocity Current robot inertial velocity (null if traction control is disabled)
    */
   private void drive(LinearVelocity xRequest,
                     LinearVelocity yRequest,
                     AngularVelocity rotateRequest,
-                    ControlCentricity controlCentricity,
-                    LinearVelocity inertialVelocity) {
+                    ControlCentricity controlCentricity) {
 
       if (controlCentricity == null){
         controlCentricity = ControlCentricity.FIELD_CENTRIC;
@@ -297,6 +303,8 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
     // Draw a red square at that position
     FIELD.getObject("HeadingSquare").setPose(new Pose2d(squarePos, heading));
 
+    FIELD.getObject("REALBot").setPose(ASSUMED_POSE.getPose());
+
     // Field-centric indicator
     SmartDashboard.putBoolean("FC", controlCentricity.equals(ControlCentricity.FIELD_CENTRIC));
   }
@@ -305,6 +313,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
   /**
    * Start calling this repeatedly when robot is in danger of tipping over
    */
+ /* hudson cant code
   private void antiTip() {
     // Calculate direction of tip
     double direction = Math.atan2(DRIVETRAIN_HARDWARE.gyro().getRoll().in(Units.Degrees), DRIVETRAIN_HARDWARE.gyro().getPitch().in(Units.Degrees));
@@ -315,7 +324,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
       DRIVE_MAX_LINEAR_SPEED.div(4).times(Math.sin(direction)),
       Units.DegreesPerSecond.of(0.0), null, null
     );
-  }
+  }*/
 
   /**
    * Aim robot at a desired point on the field
@@ -339,8 +348,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
         velocityOutput.unaryMinus().times(Math.cos(moveDirection)),
         velocityOutput.unaryMinus().times(Math.sin(moveDirection)),
         rotateOutput,
-        controlCentricity,
-        getInertialVelocity()
+        controlCentricity
       );
       return;
     }
@@ -380,9 +388,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
       velocityOutput.unaryMinus().times(Math.cos(moveDirection)),
       velocityOutput.unaryMinus().times(Math.sin(moveDirection)),
       Units.DegreesPerSecond.of(rotateOutput),
-      controlCentricity,
-      getInertialVelocity()
-    );
+      controlCentricity);
   }
 
   /**
@@ -427,8 +433,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
       velocityOutput.unaryMinus().times(Math.cos(moveDirection)),
       velocityOutput.unaryMinus().times(Math.sin(moveDirection)),
       rotateOutput,
-      controlCentricity,
-      getInertialVelocity()
+      controlCentricity
     );
   }
 
@@ -458,7 +463,6 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
 //      Y_VELOCITY_FILTER.calculate(DRIVETRAIN_HARDWARE.gyro().getInputs().velocityY.in(Units.MetersPerSecond)
 //
 //    )).mutableCopy();
-
 
 
     updatePose();
