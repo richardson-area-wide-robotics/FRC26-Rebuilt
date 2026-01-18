@@ -34,8 +34,6 @@ import edu.wpi.first.math.geometry.Translation2d;    // For handling 2D translat
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; // For dashboard integration
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -75,7 +73,6 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   private final RotatePIDController ROTATE_PID_CONTROLLER;
   @Getter
   private final SwerveDriveKinematics KINEMATICS;
-  private final SwerveDrivePoseEstimator POSE_ESTIMATOR;
 
   public final LinearVelocity DRIVE_MAX_LINEAR_SPEED;
   public final LinearAcceleration DRIVE_AUTO_ACCELERATION;
@@ -137,15 +134,6 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
         KINEMATICS = new SwerveDriveKinematics(DRIVETRAIN_HARDWARE.getModuleCoordinates());
 
         ADVANCED_KINEMATICS = new AdvancedSwerveKinematics(DRIVETRAIN_HARDWARE.getModuleCoordinates());
-
-      POSE_ESTIMATOR = new SwerveDrivePoseEstimator(
-          KINEMATICS,
-          DRIVETRAIN_HARDWARE.gyro().getRotation2d(),
-          DRIVETRAIN_HARDWARE.getModulePositions(),
-          new Pose2d(),
-          CommonConstants.DriveConstants.ODOMETRY_STDDEV,
-          CommonConstants.DriveConstants.VISION_STDDEV
-      );
 
 
         ASSUMED_POSE = new AssumedPoseSubsystem(
@@ -257,9 +245,6 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
   private void updatePose() {
     // Save previous pose
     previousPose = getPose();
-
-    // Update pose based on odometry
-    POSE_ESTIMATOR.update(DRIVETRAIN_HARDWARE.gyro().getRotation2d(),  DRIVETRAIN_HARDWARE.getModulePositions());
 
     // Update current heading
     double dx = getPose().getX() - previousPose.getX();
@@ -442,11 +427,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
    * @param pose Pose to set robot to
    */
   private void resetPose(Pose2d pose) {
-    POSE_ESTIMATOR.resetPosition(
-      DRIVETRAIN_HARDWARE.gyro().getRotation2d(),
-      DRIVETRAIN_HARDWARE.getModulePositions(),
-      pose
-    );
+    ASSUMED_POSE.resetPose(pose);
   }
 
   @Override
@@ -692,7 +673,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
    * @return Currently estimated robot pose
    */
   public Pose2d getPose() {
-    return POSE_ESTIMATOR.getEstimatedPosition();
+    return ASSUMED_POSE.getPose();
   }
 
   /**
