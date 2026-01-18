@@ -125,10 +125,10 @@ public class RAWRSwerveModule extends SwerveModule implements Sendable {
             ZERO_OFFSET.get(location),
             PIDConstants.of(0.18, 0, 0.174, 0, 0), // Replace with actual PID constants
               FFConstants.of(
-                      0,  // kS
-                      0,   // kV
-                      2,   // kA
-                      0.0
+                      0,
+                      0,
+                      0,
+                      0
               ),
           PIDConstants.of(4.55, 0, 0.2, 0, 0), // The PID for the rotate Motor
           FFConstants.of(0, 0, 0, 0),  // Replace with actual feed-forward constants
