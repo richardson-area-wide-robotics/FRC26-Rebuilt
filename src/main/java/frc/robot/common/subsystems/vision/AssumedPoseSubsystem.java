@@ -1,35 +1,22 @@
 package frc.robot.common.subsystems.vision;
 
-import java.util.Optional;
-
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import org.photonvision.PhotonCamera;
-import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.PhotonPoseEstimator.PoseStrategy;
-import org.photonvision.EstimatedRobotPose;
-
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.common.gyro.RAWRNavX2;
+import org.lasarobotics.vision.AprilTagCamera;
 
 public class AssumedPoseSubsystem extends SubsystemBase {
 
     private final RAWRNavX2 imu;
     private final SwerveDrivePoseEstimator poseEstimator;
-
-    private final PhotonCamera camera;
-    private final PhotonPoseEstimator photonEstimator;
-
-    private final SwerveDriveKinematics kinematics;
+    private final AprilTagCamera aprilTagCamera;
     private final ModulePositionSupplier modulePositions;
 
     /**
@@ -49,7 +36,6 @@ public class AssumedPoseSubsystem extends SubsystemBase {
             String cameraName
     ) {
         this.imu = imu;
-        this.kinematics = kinematics;
         this.modulePositions = modulePositions;
 
         poseEstimator =
@@ -60,23 +46,20 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                         new Pose2d()
                 );
 
-        // Vision trust tuning (meters, meters, radians)
-        poseEstimator.setVisionMeasurementStdDevs(
-                VecBuilder.fill(0.5, 0.5, Math.toRadians(10))
-        );
+        // AprilTag field layout
+        AprilTagFieldLayout fieldLayout =
+                AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
-        camera = new PhotonCamera(cameraName);
-
-        photonEstimator =
-                new PhotonPoseEstimator(
-                        AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField),
-                        PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
-                        robotToCamera
+        // AprilTag camera wrapper
+        aprilTagCamera =
+                new AprilTagCamera(
+                        cameraName,
+                        imu,
+                        robotToCamera,
+                        AprilTagCamera.Resolution.RES_640_480,
+                        edu.wpi.first.math.geometry.Rotation2d.fromDegrees(90),
+                        fieldLayout
                 );
-
-        photonEstimator.setMultiTagFallbackStrategy(
-                PoseStrategy.LOWEST_AMBIGUITY
-        );
     }
 
     @Override
@@ -87,28 +70,17 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                 modulePositions.get()
         );
 
-        // 2) Feed gyro heading into PhotonVision
-        photonEstimator.addHeadingData(
-                Timer.getFPGATimestamp(),
-                imu.getRotation2d()
-        );
+        // 2) Fuse vision measurement (if a new one exists)
+        AprilTagCamera.Result visionResult =
+                aprilTagCamera.getLatestEstimatedPose();
 
-        // 3) Give PhotonVision a reference pose
-        photonEstimator.setReferencePose(
-                new Pose3d(poseEstimator.getEstimatedPosition())
-        );
-
-        // 4) Get vision estimate
-        Optional<EstimatedRobotPose> visionEstimate =
-                photonEstimator.update(camera.getLatestResult());
-
-        // 5) Fuse vision if valid
-        visionEstimate.ifPresent(estimate -> {
+        if (visionResult != null) {
             poseEstimator.addVisionMeasurement(
-                    estimate.estimatedPose.toPose2d(),
-                    estimate.timestampSeconds
+                    visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
+                    visionResult.estimatedRobotPose.timestampSeconds,
+                    visionResult.standardDeviation
             );
-        });
+        }
     }
 
     /** Best assumed robot pose on the field */

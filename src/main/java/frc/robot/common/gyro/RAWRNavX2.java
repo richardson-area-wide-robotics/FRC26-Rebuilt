@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ThreadLocalRandom;
 
+import edu.wpi.first.units.measure.*;
 import frc.robot.common.interfaces.IMU;
 import org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity;
 import org.lasarobotics.hardware.LoggableHardware;
@@ -20,14 +21,6 @@ import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Frequency;
-import edu.wpi.first.units.measure.LinearVelocity;
-import edu.wpi.first.units.measure.MutAngle;
-import edu.wpi.first.units.measure.MutAngularVelocity;
-import edu.wpi.first.units.measure.MutLinearAcceleration;
-import edu.wpi.first.units.measure.MutLinearVelocity;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 
 /**
@@ -39,7 +32,7 @@ import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
  * @since 2025
  */
 @SuppressWarnings("unused")
-public class RAWRNavX2 extends LoggableHardware implements IMU {
+public class RAWRNavX2 extends LoggableHardware implements IMU, org.lasarobotics.hardware.IMU {
 
   /** NavX sensor inputs */
   @AutoLog
@@ -181,6 +174,11 @@ public class RAWRNavX2 extends LoggableHardware implements IMU {
 
     previousSpeeds = desiredSpeeds;
     lastUpdateTime = currentTime;
+  }
+
+  @Override
+  public Time getTimestamp() {
+    synchronized (inputs) { return inputs.timestamp; }
   }
 
   @Override
