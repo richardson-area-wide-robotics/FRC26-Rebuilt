@@ -68,9 +68,6 @@ flowchart TD
     subgraph frc_robot_pearce_subsystems[frc.robot.pearce.subsystems]
         ProtoShooter[ProtoShooter]
     end
-    subgraph frc_robot_practicum[frc.robot.practicum]
-        PracticumInStemContainer[PracticumInStemContainer]
-    end
     BaseInstanceable_CANDiagnostics[BaseInstanceable<CANDiagnostics]
     CANDiagnostics -->|extends| BaseInstanceable_CANDiagnostics
     LoggableHardware[LoggableHardware]
@@ -103,7 +100,6 @@ flowchart TD
     Sendable[Sendable]
     RAWRSwerveModule -.implements.-> Sendable
     PearceContainer -.implements.-> IRobotContainer
-    PracticumInStemContainer -.implements.-> IRobotContainer
     SwerveDriveSubsystem --> SwerveHardware
     SwerveDriveSubsystem --> AssumedPoseSubsystem
     TankDriveSubsystem --> TankHardware
@@ -144,7 +140,6 @@ flowchart TD
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoShooter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style PracticumInStemContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style BaseInstanceable_CANDiagnostics fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style LoggableHardware fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
