@@ -12,6 +12,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import frc.robot.CommonConstants;
 import frc.robot.common.components.hardware.SwerveModuleHardware;
 import org.lasarobotics.drive.TractionControlController;
@@ -28,8 +30,6 @@ import org.lasarobotics.utils.PIDConstants;
 import org.littletonrobotics.junction.Logger;
 
 import com.revrobotics.spark.SparkBase.ControlType;
-import com.revrobotics.spark.SparkBase.PersistMode;
-import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController.ArbFFUnits;
 import  com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig;
