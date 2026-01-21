@@ -23,7 +23,6 @@ import frc.robot.common.components.hardware.SwerveHardwareParams;
 import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
-import frc.robot.pearce.subsystems.ProtoShooter;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
