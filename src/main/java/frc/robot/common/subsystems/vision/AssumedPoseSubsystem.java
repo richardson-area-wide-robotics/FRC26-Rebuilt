@@ -2,8 +2,10 @@ package frc.robot.common.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -43,7 +45,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                         kinematics,
                         imu.getRotation2d(),
                         modulePositions.get(),
-                        new Pose2d()
+                        new Pose2d(13, 4, new Rotation2d(Math.PI))
                 );
 
         // AprilTag field layout
@@ -56,7 +58,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                         cameraName,
                         imu,
                         robotToCamera,
-                        AprilTagCamera.Resolution.RES_640_480,
+                        AprilTagCamera.Resolution.RES_1280_800,
                         edu.wpi.first.math.geometry.Rotation2d.fromDegrees(90),
                         fieldLayout
                 );
@@ -74,12 +76,18 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         AprilTagCamera.Result visionResult =
                 aprilTagCamera.getLatestEstimatedPose();
 
+        
+
         if (visionResult != null) {
-            poseEstimator.addVisionMeasurement(
-                    visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
-                    visionResult.estimatedRobotPose.timestampSeconds,
-                    visionResult.standardDeviation
+                double visionDistance = visionResult.estimatedRobotPose.estimatedPose.toPose2d().getTranslation()
+                .getDistance(poseEstimator.getEstimatedPosition().getTranslation());
+                if (visionDistance < 1.0) {
+                        poseEstimator.addVisionMeasurement(
+                        visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
+                        visionResult.estimatedRobotPose.timestampSeconds,
+                        visionResult.standardDeviation
             );
+                }
         }
     }
 
