@@ -1,6 +1,7 @@
 package frc.robot.common.components;
 
-import com.revrobotics.spark.SparkBase;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
@@ -27,7 +28,7 @@ public class EasyMotor {
 
         motor = new SparkMax(motorID, motorType);
         config.idleMode(idleMode);
-        motor.configure(config, SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
+        motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         return motor;
     }
@@ -47,7 +48,7 @@ public class EasyMotor {
 
         motor = new SparkFlex(motorID, motorType);
         config.idleMode(idleMode);
-        motor.configure(config, SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
+        motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         return motor;
     }
@@ -72,7 +73,7 @@ public class EasyMotor {
         config.idleMode(idleMode);
         config.follow(followMotorID, inverted);
 
-        motor.configure(config, SparkBase.ResetMode.kResetSafeParameters, SparkBase.PersistMode.kPersistParameters);
+        motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         return motor;
     }

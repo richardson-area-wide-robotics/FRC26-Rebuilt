@@ -68,9 +68,6 @@ flowchart TD
     subgraph frc_robot_pearce_subsystems[frc.robot.pearce.subsystems]
         ProtoShooter[ProtoShooter]
     end
-    subgraph frc_robot_practicum[frc.robot.practicum]
-        PracticumInStemContainer[PracticumInStemContainer]
-    end
     BaseInstanceable_CANDiagnostics[BaseInstanceable<CANDiagnostics]
     CANDiagnostics -->|extends| BaseInstanceable_CANDiagnostics
     LoggableHardware[LoggableHardware]
@@ -93,6 +90,8 @@ flowchart TD
     RobotExceptionHandler -.implements.-> Thread_UncaughtExceptionHandler
     DefaultContainer -.implements.-> IRobotContainer
     RAWRNavX2 -.implements.-> IMU
+    org_lasarobotics_hardware_IMU[org.lasarobotics.hardware.IMU]
+    RAWRNavX2 -.implements.-> org_lasarobotics_hardware_IMU
     RAWRQuestNav -.implements.-> IMU
     Pathfinder[Pathfinder]
     LocalADStarAK -.implements.-> Pathfinder
@@ -101,10 +100,10 @@ flowchart TD
     Sendable[Sendable]
     RAWRSwerveModule -.implements.-> Sendable
     PearceContainer -.implements.-> IRobotContainer
-    PracticumInStemContainer -.implements.-> IRobotContainer
     SwerveDriveSubsystem --> SwerveHardware
     SwerveDriveSubsystem --> AssumedPoseSubsystem
     TankDriveSubsystem --> TankHardware
+    AssumedPoseSubsystem --> RAWRNavX2
     Robot --> IRobotContainer
     style BuildConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DashboardVariable fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
@@ -141,7 +140,6 @@ flowchart TD
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoShooter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style PracticumInStemContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style BaseInstanceable_CANDiagnostics fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style LoggableHardware fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
@@ -150,6 +148,7 @@ flowchart TD
     style SwerveModule fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style LoggedRobot fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style Thread_UncaughtExceptionHandler fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
+    style org_lasarobotics_hardware_IMU fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style Pathfinder fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style Sendable fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
 ```
