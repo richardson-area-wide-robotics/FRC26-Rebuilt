@@ -66,6 +66,9 @@ flowchart TD
         PearceContainer[PearceContainer]
     end
     subgraph frc_robot_pearce_subsystems[frc.robot.pearce.subsystems]
+        ProtoClimber[ProtoClimber]
+        ProtoFeeder[ProtoFeeder]
+        ProtoIntake[ProtoIntake]
         ProtoShooter[ProtoShooter]
     end
     BaseInstanceable_CANDiagnostics[BaseInstanceable<CANDiagnostics]
@@ -139,6 +142,9 @@ flowchart TD
     style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style ProtoClimber fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style ProtoFeeder fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style ProtoIntake fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoShooter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style BaseInstanceable_CANDiagnostics fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
