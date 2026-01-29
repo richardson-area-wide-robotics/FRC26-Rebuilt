@@ -2,7 +2,6 @@ package frc.robot.pearce.subsystems;
 
 //Will handel climbing
 //Motor Count:
-//Spindexter: 1
-//Tower: 1
+//Climber: 2
 public class ProtoClimber {
 }
