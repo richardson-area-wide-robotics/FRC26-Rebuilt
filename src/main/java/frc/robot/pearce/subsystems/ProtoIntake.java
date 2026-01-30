@@ -1,5 +1,7 @@
 package frc.robot.pearce.subsystems;
 
+import java.util.function.BooleanSupplier;
+
 import org.littletonrobotics.junction.Logger;
 
 import com.revrobotics.PersistMode;
@@ -10,6 +12,9 @@ import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkFlexConfig;
 
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.common.components.EasyMotor;
@@ -21,6 +26,9 @@ public class ProtoIntake extends DashboardSubsystem {
     private SparkFlex intakeMotor;
     private SparkFlex deployMotor;
     private RelativeEncoder deployEncoder;
+    private Debouncer debouncer;
+    private PowerDistribution powerDistribution;
+    private BooleanSupplier isStalling;
 
     public ProtoIntake(int intakeID, int deployID) {
         intakeMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
@@ -33,6 +41,9 @@ public class ProtoIntake extends DashboardSubsystem {
 
         deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         deployEncoder.setPosition(0);
+
+        debouncer = new Debouncer(0.25, DebounceType.kRising);
+        powerDistribution = new PowerDistribution();
     }
 
     public void intake() {
@@ -43,17 +54,24 @@ public class ProtoIntake extends DashboardSubsystem {
         intakeMotor.set(-1.0);
     }
 
+    public void stop() {
+        intakeMotor.set(0.0);
+    }
+
     //TODO: change to actual encoder position
     public Command deploy() {
-        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 100));
+        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 100)).until(isStalling);
     }
 
     public Command reverseDeploy() {
-        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0));
+        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0)).until(isStalling);
     }
 
+    //TODO: replace with actual PDH channel
     @Override
     public void periodic() {
-        Logger.recordOutput("Deploy Motor Encoder Position", deployEncoder.getPosition());
+        Logger.recordOutput(getName() + "/Encoder/Position", deployEncoder.getPosition());
+        double currentDraw = powerDistribution.getCurrent(0);
+        isStalling = () -> debouncer.calculate(currentDraw > 35);
     }
 }
