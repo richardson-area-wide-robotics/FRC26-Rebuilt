@@ -40,66 +40,66 @@ public class PearceContainer implements IRobotContainer {
 
     public static final ProtoShooter PROTO_SHOOTER = new ProtoShooter(10, 11);
     public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(12,13);
- // public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
-//                new SwerveHardwareParams(
-//                        new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),
-//
-//                        CommonConstants.DriveHardwareConstants.LEFT_FRONT_DRIVE_MOTOR_ID,
-//                        CommonConstants.DriveHardwareConstants.LEFT_FRONT_ROTATE_MOTOR_ID,
-//
-//                        CommonConstants.DriveHardwareConstants.RIGHT_FRONT_DRIVE_MOTOR_ID,
-//                        CommonConstants.DriveHardwareConstants.RIGHT_FRONT_ROTATE_MOTOR_ID,
-//
-//                        CommonConstants.DriveHardwareConstants.LEFT_REAR_DRIVE_MOTOR_ID,
-//                        CommonConstants.DriveHardwareConstants.LEFT_REAR_ROTATE_MOTOR_ID,
-//
-//                        CommonConstants.DriveHardwareConstants.RIGHT_REAR_DRIVE_MOTOR_ID,
-//                        CommonConstants.DriveHardwareConstants.RIGHT_REAR_ROTATE_MOTOR_ID
-//                ),
-//          PIDConstants.of(4.0, 0.0, 0.05, 0.0, 0.0),
-//          FIELD_CENTRIC,
-//      CommonConstants.DriveConstants.BASIC_DRIVE_THROTTLE_INPUT_CURVE,
-//      CommonConstants.DriveConstants.BASIC_DRIVE_TURN_INPUT_CURVE,
-//      Angle.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_TURN_SCALAR, Units.Degree),
-//      Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
-//      Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
+  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
+                new SwerveHardwareParams(
+                        new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),
+
+                        CommonConstants.DriveHardwareConstants.LEFT_FRONT_DRIVE_MOTOR_ID,
+                        CommonConstants.DriveHardwareConstants.LEFT_FRONT_ROTATE_MOTOR_ID,
+
+                        CommonConstants.DriveHardwareConstants.RIGHT_FRONT_DRIVE_MOTOR_ID,
+                        CommonConstants.DriveHardwareConstants.RIGHT_FRONT_ROTATE_MOTOR_ID,
+                        CommonConstants.DriveHardwareConstants.LEFT_REAR_DRIVE_MOTOR_ID,
+                        CommonConstants.DriveHardwareConstants.LEFT_REAR_ROTATE_MOTOR_ID,
+
+                        CommonConstants.DriveHardwareConstants.RIGHT_REAR_DRIVE_MOTOR_ID,
+                        CommonConstants.DriveHardwareConstants.RIGHT_REAR_ROTATE_MOTOR_ID
+                ),
+          PIDConstants.of(4.0, 0.0, 0.05, 0.0, 0.0),
+          FIELD_CENTRIC,
+      CommonConstants.DriveConstants.BASIC_DRIVE_THROTTLE_INPUT_CURVE,
+      CommonConstants.DriveConstants.BASIC_DRIVE_TURN_INPUT_CURVE,
+      Angle.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_TURN_SCALAR, Units.Degree),
+      Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
+      Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
   private static SendableChooser<Command> automodeChooser;
 
   public static IRobotContainer createContainer(){
         // Set drive command
         // LeftY is the xRequest and LeftX is the yRequest for some reason
-//        DRIVE_SUBSYSTEM.setDefaultCommand(
-//         DRIVE_SUBSYSTEM.driveCommand(
-//            HIDConstants.DRIVER_CONTROLLER::getLeftY,
-//            HIDConstants.DRIVER_CONTROLLER::getLeftX,
-//            HIDConstants.DRIVER_CONTROLLER::getRightX));
+        DRIVE_SUBSYSTEM.setDefaultCommand(
+        DRIVE_SUBSYSTEM.driveCommand(
+            HIDConstants.DRIVER_CONTROLLER::getLeftY,
+            HIDConstants.DRIVER_CONTROLLER::getLeftX,
+            HIDConstants.DRIVER_CONTROLLER::getRightX));
   
       // Bind buttons and triggers
       configureBindings();
   
       // Set up the auto builder
-      //DRIVE_SUBSYSTEM.configureAutoBuilder();
+      DRIVE_SUBSYSTEM.configureAutoBuilder();
 
       // Set up the auto chooser
-      //automodeChooser = AutoBuilder.buildAutoChooser();
-      //SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
+      automodeChooser = AutoBuilder.buildAutoChooser();
+      SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
 
       return new PearceContainer();
   }
 
   private static void configureBindings() {
     // Driver Start - toggle traction control
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.start(), DRIVE_SUBSYSTEM.toggleTractionControlCommand(), Commands.none());
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.start(), DRIVE_SUBSYSTEM.toggleTractionControlCommand(), Commands.none());
 
     // Driver Left Stick Button - Reset pose
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftStick(), DRIVE_SUBSYSTEM.resetPoseCommand(Pose2d::new), Commands.none());
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftStick(), DRIVE_SUBSYSTEM.resetPoseCommand(Pose2d::new), Commands.none());
 
     // Driver Right Stick Button - Reset heading
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(), Commands.runOnce(PROTO_SHOOTER::runShooter, PROTO_SHOOTER), Commands.runOnce(PROTO_SHOOTER::stopShooter));
 
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 
 //    RobotUtils.bindControl(
 //      HIDConstants.DRIVER_CONTROLLER.b(),
@@ -137,6 +137,6 @@ public class PearceContainer implements IRobotContainer {
    */
   @Override
   public Command getAutonomousCommand() {
-    return Commands.none();
+    return automodeChooser.getSelected();
   }
 }
