@@ -7,7 +7,6 @@ import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
-import com.revrobotics.spark.SparkHelpers.SparkModel;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkFlexConfig;
 
@@ -17,10 +16,6 @@ import frc.robot.common.components.EasyMotor;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.subsystems.DashboardSubsystem;
 
-//Will handle intaking
-//Motor Count:
-//Intake Spin: 1
-//Intake Deploy: 1
 public class ProtoIntake extends DashboardSubsystem {
 
     private SparkFlex intakeMotor;
@@ -32,13 +27,12 @@ public class ProtoIntake extends DashboardSubsystem {
         deployMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
         deployEncoder = deployMotor.getEncoder();
 
-        deployEncoder.setPosition(0);
-
         SparkFlexConfig deployConfig = new SparkFlexConfig();
         deployConfig.closedLoop.pid(0.1, 0, 0);
         deployConfig.closedLoop.outputRange(-1, 1);
 
         deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        deployEncoder.setPosition(0);
     }
 
     public void intake() {

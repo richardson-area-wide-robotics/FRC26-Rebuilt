@@ -13,9 +13,6 @@ import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismRoot2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
 
-// Will handle climbing
-// Motor Count:
-// Climber: 2
 public class ProtoClimber extends DashboardSubsystem {
 
     private final SparkFlex motor1;
