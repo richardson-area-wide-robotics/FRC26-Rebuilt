@@ -19,7 +19,7 @@ public class RobotUtils  {
   @Getter
   private RobotConfig robotConfig;
 
-  private final PowerDistribution POWER_DISTRIBUTION = new PowerDistribution();
+  //private final PowerDistribution POWER_DISTRIBUTION = new PowerDistribution();
 
   /**
    * Helper method to bind a control action to a command.
@@ -105,6 +105,6 @@ public class RobotUtils  {
    * @since 2026
    */
   public static double getPDHCurrent(int channel){
-    return POWER_DISTRIBUTION.getCurrent(channel);
+    return 4;
   }
 }

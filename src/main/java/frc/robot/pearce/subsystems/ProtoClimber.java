@@ -16,14 +16,14 @@ import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
 public class ProtoClimber extends DashboardSubsystem {
 
     private final SparkFlex motor1;
-    private final SparkFlex motor2;
+    //private final SparkFlex motor2;
     private final RelativeEncoder encoder;
 
     // AdvantageKit visualization
     private final LoggedMechanism2d climberMech;
     private final LoggedMechanismLigament2d climberLigament;
 
-    private static final double METERS_PER_ROTATION = 0.005; // TODO we will need to adjust this when we have the phy climber
+    private static final double METERS_PER_ROTATION = 0.3; // TODO we will need to adjust this when we have the phy climber
     private static final double MIN_LENGTH_METERS = 0.05;
 
     public ProtoClimber(int id1, int id2) {
@@ -34,11 +34,11 @@ public class ProtoClimber extends DashboardSubsystem {
                 SparkBaseConfig.IdleMode.kBrake
         );
 
-        motor2 = EasyMotor.createEasySparkFlex(
-                id2,
-                SparkLowLevel.MotorType.kBrushless,
-                SparkBaseConfig.IdleMode.kBrake
-        );
+//        motor2 = EasyMotor.createEasySparkFlex(
+//                id2,
+//                SparkLowLevel.MotorType.kBrushless,
+//                SparkBaseConfig.IdleMode.kBrake
+//        );
 
         encoder = motor1.getEncoder();
 
@@ -59,13 +59,17 @@ public class ProtoClimber extends DashboardSubsystem {
     }
 
     public void runClimber() {
-        motor1.set(2);
-        motor2.set(2);
+        motor1.set(0.3);
+        //motor2.set(2);
+    }
+    public void unRunClimber() {
+        motor1.set(-0.3);
+        //motor2.set(2);
     }
 
     public void stopClimber() {
         motor1.set(0);
-        motor2.set(0);
+        //motor2.set(0);
     }
 
     @Override
@@ -79,6 +83,8 @@ public class ProtoClimber extends DashboardSubsystem {
 
         // Update mechanism visualization
         climberLigament.setLength(extensionMeters);
+        Logger.recordOutput(getName()+"/Climber", climberMech);
+
 
         // Log outputs
         Logger.recordOutput(
