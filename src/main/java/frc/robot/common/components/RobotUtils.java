@@ -99,7 +99,7 @@ public class RobotUtils  {
   /**
    * Get the current power of a channel on the PDH
    *
-   * @param channel the channel on the pdh to get the current of. 
+   * @param channel the channel on the pdh to get the current of.
    *
    * @author Hudson Strub
    * @since 2026
