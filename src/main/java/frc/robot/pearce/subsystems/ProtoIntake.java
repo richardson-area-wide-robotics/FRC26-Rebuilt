@@ -23,7 +23,7 @@ public class ProtoIntake extends DashboardSubsystem {
     private RelativeEncoder deployEncoder;
 
     public ProtoIntake(int intakeID, int deployID) {
-        intakeMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
+        intakeMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
         deployMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
         deployEncoder = deployMotor.getEncoder();
 

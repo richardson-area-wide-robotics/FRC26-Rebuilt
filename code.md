@@ -85,6 +85,8 @@ flowchart TD
     AssumedPoseSubsystem -->|extends| SubsystemBase
     SwerveModule[SwerveModule]
     RAWRSwerveModule -->|extends| SwerveModule
+    ProtoClimber -->|extends| DashboardSubsystem
+    ProtoIntake -->|extends| DashboardSubsystem
     ProtoShooter -->|extends| DashboardSubsystem
     LoggedRobot[LoggedRobot]
     Robot -->|extends| LoggedRobot
