@@ -64,7 +64,7 @@ public class ProtoIntake extends DashboardSubsystem {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0)).until(isStalling);
     }
 
-    //TODO: replace with actual PDH channel
+    //TODO: replace with actual PDH channel and current
     @Override
     public void periodic() {
         Logger.recordOutput(getName() + "/Encoder/Position", deployEncoder.getPosition());

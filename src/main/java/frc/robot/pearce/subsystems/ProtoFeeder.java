@@ -26,4 +26,20 @@ public class ProtoFeeder {
     public void load() {
         feederMotor.set(1.0);
     }
+
+    public void stopCycle() {
+        spindexerMotor.set(0.0);
+    }
+
+    public void stopLoad() {
+        feederMotor.set(0.0);
+    }
+
+    public void reverseCycle() {
+        spindexerMotor.set(-1.0);
+    }
+
+    public void reverseLoad() {
+        feederMotor.set(-1.0);
+    }
 }
