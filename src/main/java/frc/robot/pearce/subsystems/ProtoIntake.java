@@ -2,10 +2,14 @@ package frc.robot.pearce.subsystems;
 
 import org.littletonrobotics.junction.Logger;
 
+import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
+import com.revrobotics.spark.SparkHelpers.SparkModel;
 import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkFlexConfig;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -29,6 +33,12 @@ public class ProtoIntake extends DashboardSubsystem {
         deployEncoder = deployMotor.getEncoder();
 
         deployEncoder.setPosition(0);
+
+        SparkFlexConfig deployConfig = new SparkFlexConfig();
+        deployConfig.closedLoop.pid(0.1, 0, 0);
+        deployConfig.closedLoop.outputRange(-1, 1);
+
+        deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 
     public void intake() {
