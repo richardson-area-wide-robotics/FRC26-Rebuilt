@@ -38,14 +38,21 @@ public class ProtoShooter extends DashboardSubsystem {
 
 
         config.closedLoop
-                .p(0.00055)
+                .p(0.00035)
                 .i(0.000001)
                 .d(0.0065);
 
         config2.closedLoop
-                .p(0.00055)
+                .p(0.00035)
                 .i(0.000001)
                 .d(0.0065);
+
+//        config.closedLoop.feedForward
+//                .kS(5.565) //565000
+//                .kV(0.001);
+//                //.kA(1.5)
+//                //.kG(0);
+
 
         config.smartCurrentLimit(65);
         config2.follow(motor1, true);
@@ -78,6 +85,7 @@ public class ProtoShooter extends DashboardSubsystem {
     public void periodic() {
         Logger.recordOutput(getName() + "/Speed/DesiredRPM", rpm);
         Logger.recordOutput(getName() + "/Speed/RPM1", motor1.getEncoder().getVelocity());
+        Logger.recordOutput(getName() + "/Speed/AMPS1", motor1.getOutputCurrent());
         Logger.recordOutput(getName() + "/Speed/RPM2", motor2.getEncoder().getVelocity());
     }
 
