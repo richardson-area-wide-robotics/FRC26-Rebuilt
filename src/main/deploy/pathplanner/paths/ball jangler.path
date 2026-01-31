@@ -127,7 +127,7 @@
   "rotationTargets": [],
   "constraintZones": [
     {
-      "name": "Constraints Zone",
+      "name": "bump",
       "minWaypointRelativePos": 1.2322738386308059,
       "maxWaypointRelativePos": 2.2180929095354203,
       "constraints": {
@@ -140,7 +140,7 @@
       }
     },
     {
-      "name": "Constraints Zone",
+      "name": "bump2",
       "minWaypointRelativePos": 5.202933985330028,
       "maxWaypointRelativePos": 6.517359413202923,
       "constraints": {
