@@ -8,6 +8,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.trajectory.Trajectory;
 import frc.robot.CommonConstants;
 import frc.robot.common.components.hardware.SwerveHardware;
 import frc.robot.common.components.hardware.SwerveHardwareParams;
@@ -153,7 +154,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
       // Path logging for PathPlanner
       PathPlannerLogging.setLogActivePathCallback((poses) -> {
           if (poses.isEmpty()) return;
-          var trajectory = TrajectoryGenerator.generateTrajectory(
+          Trajectory trajectory = TrajectoryGenerator.generateTrajectory(
               poses,
               new TrajectoryConfig(DRIVE_MAX_LINEAR_SPEED, DRIVE_AUTO_ACCELERATION)
           );
@@ -277,7 +278,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
     Translation2d robotPos = getPose().getTranslation();
 
     // Use currentHeading if you want motion-based heading, else gyro heading
-    Rotation2d heading = currentHeading != null ? currentHeading : DRIVETRAIN_HARDWARE.gyro().getRotation2d();
+    Rotation2d heading = currentHeading != null ? currentHeading : ASSUMED_POSE.getPose().getRotation();
 
     // Create a small square offset from robot to indicate heading
     double squareSize = 0.5; // meters, adjust as needed
@@ -288,7 +289,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
     // Draw a red square at that position
     FIELD.getObject("HeadingSquare").setPose(new Pose2d(squarePos, heading));
 
-    FIELD.getObject("REALBot").setPose(ASSUMED_POSE.getPose());
+    //FIELD.getObject("REALBot").setPose(ASSUMED_POSE.getPose());
 
     // Field-centric indicator
     SmartDashboard.putBoolean("FC", controlCentricity.equals(ControlCentricity.FIELD_CENTRIC));
@@ -469,7 +470,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
     // Convert speeds to module states, correcting for 2nd order kinematics
     SwerveModuleState[] moduleStates = ADVANCED_KINEMATICS.toSwerveModuleStates(
             desiredChassisSpeeds,
-      DRIVETRAIN_HARDWARE.gyro().getRotation2d(),
+      ASSUMED_POSE.getPose().getRotation(),
       ControlCentricity.ROBOT_CENTRIC
     );
 
@@ -484,12 +485,12 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
 
     // Update auto-aim controllers
     AUTO_AIM_PID_CONTROLLER_FRONT.calculate(
-      DRIVETRAIN_HARDWARE.gyro().getRotation2d().getDegrees(),
-      DRIVETRAIN_HARDWARE.gyro().getRotation2d().getDegrees()
+          ASSUMED_POSE.getPose().getRotation().getDegrees(),
+          ASSUMED_POSE.getPose().getRotation().getDegrees()
     );
     AUTO_AIM_PID_CONTROLLER_BACK.calculate(
-      DRIVETRAIN_HARDWARE.gyro().getRotation2d().plus(Rotation2d.fromRadians(Math.PI)).getDegrees(),
-      DRIVETRAIN_HARDWARE.gyro().getRotation2d().plus(Rotation2d.fromRadians(Math.PI)).getDegrees()
+          ASSUMED_POSE.getPose().getRotation().plus(Rotation2d.fromRadians(Math.PI)).getDegrees(),
+          ASSUMED_POSE.getPose().getRotation().plus(Rotation2d.fromRadians(Math.PI)).getDegrees()
     );
   }
 
