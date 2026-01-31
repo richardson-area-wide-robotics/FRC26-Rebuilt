@@ -4,6 +4,7 @@ import com.pathplanner.lib.config.RobotConfig;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkBase.ControlType;
 
+import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -17,6 +18,8 @@ public class RobotUtils  {
 
   @Getter
   private RobotConfig robotConfig;
+
+  //private final PowerDistribution POWER_DISTRIBUTION = new PowerDistribution();
 
   /**
    * Helper method to bind a control action to a command.
@@ -91,5 +94,17 @@ public class RobotUtils  {
     else {
        return GlobalConstants.NEO_ENCODER_TICKS_PER_ROTATION;
     }
+  }
+
+  /**
+   * Get the current power of a channel on the PDH
+   *
+   * @param channel the channel on the pdh to get the current of.
+   *
+   * @author Hudson Strub
+   * @since 2026
+   */
+  public static double getPDHCurrent(int channel){
+    return 4;
   }
 }
