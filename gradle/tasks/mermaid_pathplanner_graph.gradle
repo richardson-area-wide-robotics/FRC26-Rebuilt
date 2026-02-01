@@ -32,7 +32,8 @@ tasks.register("exportPathPlannerPaths") {
             md.writeLine("# PathPlanner Paths\n")
 
             pathDir.eachFileMatch(~/.*\.path/) { f ->
-                def pathName = f.name - ".path"
+                def originalName = f.name - ".path"
+                def pathName = originalName.replaceAll(/\s+/, "_") // replace spaces with underscores
                 def json = jsonSlurper.parse(f)
 
                 if (!json.waypoints || json.waypoints.isEmpty()) {
@@ -46,6 +47,8 @@ tasks.register("exportPathPlannerPaths") {
                 def svgFile = new File(svgDir, "${pathName}.svg")
 
                 svgFile.withWriter { svg ->
+                    // XML header for GitHub compatibility
+                    svg.writeLine('<?xml version="1.0" encoding="UTF-8"?>')
                     svg.writeLine("""<svg
   xmlns="http://www.w3.org/2000/svg"
   viewBox="0 0 ${fieldWidth} ${fieldHeight}"
@@ -105,9 +108,9 @@ tasks.register("exportPathPlannerPaths") {
                     svg.writeLine("</svg>")
                 }
 
-                // ---- Markdown entry ----
-                md.writeLine("## ${pathName}\n")
-                md.writeLine("![${pathName}](paths/${pathName}.svg)\n")
+                // ---- Markdown entry (use underscore filenames for GitHub) ----
+                md.writeLine("## ${originalName}\n")
+                md.writeLine("![${originalName}](paths/${pathName}.svg)\n")
             }
         }
 
