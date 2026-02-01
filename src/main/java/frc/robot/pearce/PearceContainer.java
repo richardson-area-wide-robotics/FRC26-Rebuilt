@@ -4,16 +4,20 @@
 
 package frc.robot.pearce;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.interfaces.IRobotContainer;
+import frc.robot.pearce.components.HubStatus;
 import frc.robot.pearce.subsystems.ProtoShooter;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.littletonrobotics.junction.Logger;
 
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -114,6 +118,9 @@ public class PearceContainer implements IRobotContainer {
   
   @Override
   public void teleopPeriodic() {
+    HubStatus.HubState[] statuses = HubStatus.getBothHubStatuses(DriverStation.getMatchTime());
+    Logger.recordOutput("/Status/Red", statuses[0]);
+    Logger.recordOutput("/Status/Blue", statuses[1]);
   }
 
   /**
