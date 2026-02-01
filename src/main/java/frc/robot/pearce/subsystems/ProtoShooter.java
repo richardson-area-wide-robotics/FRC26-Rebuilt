@@ -14,7 +14,20 @@ public class ProtoShooter extends DashboardSubsystem {
     private final SparkFlex motor1;
     private final SparkFlex motor2;
     private final SparkClosedLoopController controller1;
-    private final SparkClosedLoopController controller2;
+
+    public ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
+
+    public enum ShooterPosition {
+
+        AGAINST_HUB(4000);
+
+        public final float rpm;
+
+        ShooterPosition(float rpm) {
+            this.rpm = rpm;
+        }
+    }
+
 
     public ProtoShooter(int id1, int id2) {
 
@@ -31,7 +44,6 @@ public class ProtoShooter extends DashboardSubsystem {
         );
 
         controller1 = motor1.getClosedLoopController();
-        controller2 = motor2.getClosedLoopController();
 
         SparkFlexConfig config = new SparkFlexConfig();
         SparkFlexConfig config2 = new SparkFlexConfig();
@@ -70,27 +82,20 @@ public class ProtoShooter extends DashboardSubsystem {
         );
     }
 
-    public void runShooterRPM(double rpm) {
-        controller1.setSetpoint(-rpm, SparkBase.ControlType.kVelocity);
-        //controller2.setSetpoint(rpm, SparkBase.ControlType.kVelocity);
-    }
-
-    public static int rpm = 4000;
-
-    public void shoot(){
-        runShooterRPM(-rpm);
+    public void runShooter(){
+        controller1.setSetpoint(currentShooterPosition.rpm, SparkBase.ControlType.kVelocity);
     }
 
     @Override
     public void periodic() {
-        Logger.recordOutput(getName() + "/Speed/DesiredRPM", rpm);
-        Logger.recordOutput(getName() + "/Speed/RPM1", motor1.getEncoder().getVelocity());
-        Logger.recordOutput(getName() + "/Speed/AMPS1", motor1.getOutputCurrent());
-        Logger.recordOutput(getName() + "/Speed/RPM2", motor2.getEncoder().getVelocity());
+        Logger.recordOutput(getName() + "/RMP/DesiredRPM", currentShooterPosition.rpm);
+        Logger.recordOutput(getName() + "/RMP/CurrentRPM", motor1.getEncoder().getVelocity());
+
+        Logger.recordOutput(getName() + "/Motor1/CurrentAMPS", motor1.getOutputCurrent());
+        Logger.recordOutput(getName() + "/Motor2/CurrentAMPS", motor2.getOutputCurrent());
     }
 
     public void stopShooter() {
         motor1.stopMotor();
-        //motor2.stopMotor();
     }
 }

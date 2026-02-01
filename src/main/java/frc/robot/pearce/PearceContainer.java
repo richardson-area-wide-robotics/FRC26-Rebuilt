@@ -4,32 +4,16 @@
 
 package frc.robot.pearce;
 
-import com.pathplanner.lib.auto.AutoBuilder;
-
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.Dimensionless;
-import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
-import frc.robot.common.components.hardware.SwerveHardwareParams;
-import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
-import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
-import frc.robot.pearce.subsystems.ProtoClimber;
 import frc.robot.pearce.subsystems.ProtoShooter;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.lasarobotics.utils.PIDConstants;
-
-import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity.FIELD_CENTRIC;
 
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -97,7 +81,7 @@ public class PearceContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(), Commands.runOnce(PROTO_SHOOTER::shoot, PROTO_SHOOTER), Commands.runOnce(PROTO_SHOOTER::stopShooter));
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(), Commands.runOnce(PROTO_SHOOTER::runShooter, PROTO_SHOOTER), Commands.runOnce(PROTO_SHOOTER::stopShooter));
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 
