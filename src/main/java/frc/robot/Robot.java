@@ -22,6 +22,7 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.common.interfaces.IRobotContainer;
+import org.littletonrobotics.junction.Logger;
 
 
 /**
@@ -88,6 +89,8 @@ public class Robot extends LoggedRobot {
     autonomousCommand = robotContainer.getAutonomousCommand();
 
     if (autonomousCommand != null) {
+      Logger.recordOutput("Auto/AutonomousCommand", autonomousCommand.getName());
+
       CommandScheduler.getInstance().schedule(autonomousCommand);
     }
   }
