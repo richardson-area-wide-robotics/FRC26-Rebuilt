@@ -1,0 +1,116 @@
+import groovy.json.JsonSlurper
+
+tasks.named("build") {
+    dependsOn("exportPathPlannerPaths")
+}
+
+tasks.register("exportPathPlannerPaths") {
+    group = "documentation"
+    description = "Exports PathPlanner paths as SVGs with Bezier curves and speed constraints"
+
+    doLast {
+        def pathDir = file("src/main/deploy/pathplanner/paths")
+        def outDir = file("docs/pathplanner")
+        def svgDir = new File(outDir, "paths")
+        def mdFile = new File(outDir, "paths.md")
+
+        if (!pathDir.exists()) {
+            println "No PathPlanner paths directory found"
+            return
+        }
+
+        outDir.mkdirs()
+        svgDir.mkdirs()
+
+        // 2025 field size in meters
+        def fieldWidth = 16.54
+        def fieldHeight = 8.21
+
+        def jsonSlurper = new JsonSlurper()
+
+        mdFile.withWriter { md ->
+            md.writeLine("# PathPlanner Paths\n")
+
+            pathDir.eachFileMatch(~/.*\.path/) { f ->
+                def pathName = f.name - ".path"
+                def json = jsonSlurper.parse(f)
+
+                if (!json.waypoints || json.waypoints.isEmpty()) {
+                    println "Skipping ${f.name}: no waypoints"
+                    return
+                }
+
+                def waypoints = json.waypoints
+                def constraintZones = json.constraintZones ?: []
+
+                def svgFile = new File(svgDir, "${pathName}.svg")
+
+                svgFile.withWriter { svg ->
+                    svg.writeLine("""<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 ${fieldWidth} ${fieldHeight}"
+  width="800"
+  preserveAspectRatio="xMidYMid meet">""")
+
+                    // Background
+                    svg.writeLine("""
+  <rect x="0" y="0"
+        width="${fieldWidth}"
+        height="${fieldHeight}"
+        fill="#1e1e1e"/>""")
+
+                    // ---- Draw Bezier paths segment by segment ----
+                    def totalSegments = waypoints.size() - 1
+                    waypoints.eachWithIndex { wp, i ->
+                        if (i == totalSegments) return
+
+                        def start = wp.anchor
+                        def end = waypoints[i + 1].anchor
+
+                        def cp1 = wp.nextControl ?: start
+                        def cp2 = waypoints[i + 1].prevControl ?: end
+
+                        // Determine color based on constraint zones
+                        def segColor = "#42a5f5" // default
+                        constraintZones.each { zone ->
+                            if (i >= zone.minWaypointRelativePos && i <= zone.maxWaypointRelativePos) {
+                                segColor = "#ef5350" // slow down
+                            }
+                        }
+
+                        svg.writeLine("""
+  <path d="M ${start.x} ${fieldHeight - start.y} C ${cp1.x} ${fieldHeight - cp1.y}, ${cp2.x} ${fieldHeight - cp2.y}, ${end.x} ${fieldHeight - end.y}"
+        fill="none"
+        stroke="${segColor}"
+        stroke-width="0.05"/>""")
+                    }
+
+                    // ---- Draw waypoints (anchor points) ----
+                    waypoints.each { wp ->
+                        svg.writeLine("""
+  <circle cx="${wp.anchor.x}"
+          cy="${fieldHeight - wp.anchor.y}"
+          r="0.08"
+          fill="#66bb6a"/>""")
+                    }
+
+                    // Start and end markers
+                    def start = waypoints.first().anchor
+                    def end = waypoints.last().anchor
+
+                    svg.writeLine("""
+  <circle cx="${start.x}" cy="${fieldHeight - start.y}" r="0.1" fill="#00ff00"/>
+  <circle cx="${end.x}" cy="${fieldHeight - end.y}" r="0.1" fill="#ff0000"/>""")
+
+                    svg.writeLine("</svg>")
+                }
+
+                // ---- Markdown entry ----
+                md.writeLine("## ${pathName}\n")
+                md.writeLine("![${pathName}](paths/${pathName}.svg)\n")
+            }
+        }
+
+        println "PathPlanner SVGs with Bezier curves and constraints written to ${outDir}"
+    }
+}

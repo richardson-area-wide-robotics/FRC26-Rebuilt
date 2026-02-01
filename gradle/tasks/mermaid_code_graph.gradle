@@ -8,7 +8,7 @@ tasks.register("exportMermaidGraph") {
 
     doLast {
         def srcDir = file("src/main/java")
-        def outFile = file("code.md")
+        def outFile = file("docs/code.md")
 
         def classInfo = [:]  // fqcn -> metadata
 
