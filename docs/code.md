@@ -61,6 +61,9 @@ flowchart TD
     subgraph frc_robot_common_swerve[frc.robot.common.swerve]
         RAWRSwerveModule[RAWRSwerveModule]
     end
+    subgraph frc_robot_pearce_components[frc.robot.pearce.components]
+        HubStatus[HubStatus]
+    end
     subgraph frc_robot_pearce[frc.robot.pearce]
         PearceConstants[PearceConstants]
         PearceContainer[PearceContainer]
@@ -142,6 +145,7 @@ flowchart TD
     style RAWRSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CommonConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style HubStatus fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoClimber fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
