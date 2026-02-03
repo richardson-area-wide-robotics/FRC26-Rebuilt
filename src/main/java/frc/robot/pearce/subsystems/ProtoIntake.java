@@ -12,8 +12,6 @@ import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkFlexConfig;
 
-import edu.wpi.first.math.filter.Debouncer;
-import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.common.components.EasyMotor;
@@ -25,7 +23,6 @@ public class ProtoIntake extends DashboardSubsystem {
     private SparkFlex intakeMotor;
     private SparkFlex deployMotor;
     private RelativeEncoder deployEncoder;
-    private Debouncer debouncer;
     private BooleanSupplier isStalling;
 
     public ProtoIntake(int intakeID, int deployID) {
@@ -39,8 +36,6 @@ public class ProtoIntake extends DashboardSubsystem {
 
         deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         deployEncoder.setPosition(0);
-
-        debouncer = new Debouncer(0.25, DebounceType.kRising);
     }
 
     public void intake() {
@@ -69,6 +64,6 @@ public class ProtoIntake extends DashboardSubsystem {
     public void periodic() {
         Logger.recordOutput(getName() + "/Encoder/Position", deployEncoder.getPosition());
         double currentDraw = RobotUtils.getPDHCurrent(0);
-        isStalling = () -> debouncer.calculate(currentDraw > 35);
+        isStalling = RobotUtils.debounce(currentDraw, 35);
     }
 }
