@@ -1,12 +1,20 @@
 # PathPlanner Paths
 
-## ball jangler
+## snow blower
 
-![ball jangler](paths/ball_jangler.svg)
+![snow blower](paths/snow_blower.svg)
 
 ## Bench Test Two
 
 ![Bench Test Two](paths/Bench_Test_Two.svg)
+
+## Kadiri Path
+
+![Kadiri Path](paths/Kadiri_Path.svg)
+
+## ball
+
+![ball](paths/ball.svg)
 
 ## Bench Test
 
@@ -15,8 +23,4 @@
 ## Egg Cycle
 
 ![Egg Cycle](paths/Egg_Cycle.svg)
-
-## Kadiri Path
-
-![Kadiri Path](paths/Kadiri_Path.svg)
 
