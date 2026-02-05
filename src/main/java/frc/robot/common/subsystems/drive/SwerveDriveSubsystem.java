@@ -86,7 +86,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   private ChassisSpeeds desiredChassisSpeeds;
   private Pose2d previousPose;
   private Rotation2d currentHeading;
-  private final Field2d FIELD;
+  public final Field2d FIELD;
 
   private final AssumedPoseSubsystem ASSUMED_POSE;
 
@@ -229,7 +229,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
       // Convert speeds to module states, correcting for 2nd order kinematics
       SwerveModuleState[] moduleStates = ADVANCED_KINEMATICS.toSwerveModuleStates(
           desiredChassisSpeeds,
-              DRIVETRAIN_HARDWARE.gyro().getRotation2d(),
+              ASSUMED_POSE.getPose().getRotation(),
           controlCentricity
       );
 

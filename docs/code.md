@@ -74,6 +74,9 @@ flowchart TD
         ProtoClimber[ProtoClimber]
         ProtoIntake[ProtoIntake]
     end
+    subgraph frc_robot_pearce_subsystems_smart[frc.robot.pearce.subsystems.smart]
+        TeleopAssistSubsystem[TeleopAssistSubsystem]
+    end
     LoggableHardware[LoggableHardware]
     RAWRNavX2 -->|extends| LoggableHardware
     BaseInstanceable_CANDiagnostics[BaseInstanceable<CANDiagnostics]
@@ -91,6 +94,7 @@ flowchart TD
     ProtoShooter -->|extends| DashboardSubsystem
     ProtoClimber -->|extends| DashboardSubsystem
     ProtoIntake -->|extends| DashboardSubsystem
+    TeleopAssistSubsystem -->|extends| SubsystemBase
     LoggedRobot[LoggedRobot]
     Robot -->|extends| LoggedRobot
     Pathfinder[Pathfinder]
@@ -112,6 +116,7 @@ flowchart TD
     TankDriveSubsystem --> TankHardware
     SwerveDriveSubsystem --> SwerveHardware
     SwerveDriveSubsystem --> AssumedPoseSubsystem
+    TeleopAssistSubsystem --> SwerveDriveSubsystem
     Robot --> IRobotContainer
     style LocalADStarAK fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RAWRNavX2 fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -151,6 +156,7 @@ flowchart TD
     style ProtoFeeder fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoClimber fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoIntake fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style TeleopAssistSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style LoggableHardware fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
