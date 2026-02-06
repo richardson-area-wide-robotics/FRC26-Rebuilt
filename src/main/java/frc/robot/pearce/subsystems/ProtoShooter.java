@@ -88,8 +88,8 @@ public class ProtoShooter extends DashboardSubsystem {
 
     @Override
     public void periodic() {
-        Logger.recordOutput(getName() + "/RMP/DesiredRPM", currentShooterPosition.rpm);
-        Logger.recordOutput(getName() + "/RMP/CurrentRPM", motor1.getEncoder().getVelocity());
+        Logger.recordOutput(getName() + "/RPM/DesiredRPM", currentShooterPosition.rpm);
+        Logger.recordOutput(getName() + "/RPM/CurrentRPM", motor1.getEncoder().getVelocity());
 
         Logger.recordOutput(getName() + "/Motor1/CurrentAMPS", motor1.getOutputCurrent());
         Logger.recordOutput(getName() + "/Motor2/CurrentAMPS", motor2.getOutputCurrent());
