@@ -22,7 +22,7 @@ public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerve
 
     public SwerveHardware {
         while (gyro.isCalibrating()) {
-            stop(); // Stops all modules while gyro calibrates
+            //stop(); // Stops all modules while gyro calibrates
         }
         gyro.reset();
     }
