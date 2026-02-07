@@ -33,7 +33,7 @@ public class TeleopAssistSubsystem extends SubsystemBase {
         /** Example fixed pose on the field */
         EXAMPLE_FIXED(
                 () -> new Pose2d(
-                        new Translation2d(5.5, 4.1),
+                        new Translation2d(4, 4.1),
                         Rotation2d.fromDegrees(180)
                 ),
                 1.5
@@ -97,8 +97,8 @@ public class TeleopAssistSubsystem extends SubsystemBase {
 
     private static final PathConstraints AI_CONSTRAINTS =
             new PathConstraints(
+                    7.0,
                     3.0,
-                    2.0,
                     Math.toRadians(540),
                     Math.toRadians(720));
 
