@@ -77,23 +77,14 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         AprilTagCamera.Result visionResult =
                 aprilTagCamera.getLatestEstimatedPose();
 
+        
 
         if (visionResult != null) {
-            Pose2d visionPose =
-                    visionResult.estimatedRobotPose.estimatedPose.toPose2d();
-            Pose2d odomPose = poseEstimator.getEstimatedPosition();
-
-            double translationError =
-                    visionPose.getTranslation()
-                            .getDistance(odomPose.getTranslation());
-
-            if (translationError < 0.3) { // meters
-                poseEstimator.addVisionMeasurement(
-                        visionPose,
+                        poseEstimator.addVisionMeasurement(
+                        visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
                         visionResult.estimatedRobotPose.timestampSeconds,
                         visionResult.standardDeviation
-                );
-            }
+            );
         }
     }
 
