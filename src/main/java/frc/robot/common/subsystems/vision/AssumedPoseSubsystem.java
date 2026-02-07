@@ -12,7 +12,15 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.common.gyro.RAWRNavX2;
+
+import java.util.List;
+import java.util.Optional;
+
 import org.lasarobotics.vision.AprilTagCamera;
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.targeting.PhotonPipelineResult;
 
 public class AssumedPoseSubsystem extends SubsystemBase {
 
@@ -20,6 +28,8 @@ public class AssumedPoseSubsystem extends SubsystemBase {
     private final SwerveDrivePoseEstimator poseEstimator;
     private final AprilTagCamera aprilTagCamera;
     private final ModulePositionSupplier modulePositions;
+    private final PhotonCamera photonCamera;
+    private final PhotonPoseEstimator photonPoseEstimator;
 
     /** Functional interface so this subsystem does not depend directly on your swerve subsystem implementation. */
     @FunctionalInterface
@@ -37,6 +47,8 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         this.imu = imu;
         this.modulePositions = modulePositions;
 
+        photonCamera = new PhotonCamera(cameraName);
+
         // Initialize pose estimator
         poseEstimator = new SwerveDrivePoseEstimator(
                 kinematics,
@@ -47,6 +59,8 @@ public class AssumedPoseSubsystem extends SubsystemBase {
 
         // AprilTag field layout
         AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+
+        photonPoseEstimator = new PhotonPoseEstimator(fieldLayout, robotToCamera);
 
         // AprilTag camera wrapper
         aprilTagCamera = new AprilTagCamera(
@@ -67,6 +81,15 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                 imu.getRotation2d(),
                 modulePositions.get()
         );
+
+        List<PhotonPipelineResult> result = photonCamera.getAllUnreadResults();
+        if (!result.isEmpty()) {
+            Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(result.get(0));
+            if (estimatedPose.isPresent()) {
+                Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
+                poseEstimator.addVisionMeasurement(photonPose, Timer.getFPGATimestamp());
+            }
+        }
     }
 
     /**
