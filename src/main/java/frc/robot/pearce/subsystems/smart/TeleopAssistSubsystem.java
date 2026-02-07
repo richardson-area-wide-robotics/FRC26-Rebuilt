@@ -81,6 +81,14 @@ public class TeleopAssistSubsystem extends SubsystemBase {
 
     private Command activeCommand;
 
+    private enum RobotMode {
+        SCORING,
+        INTAKING,
+        CLIMBING,
+        DEFENCE,
+        FEED
+    }
+
     private enum AssistState {
         DISABLED,
         IDLE,
@@ -91,6 +99,9 @@ public class TeleopAssistSubsystem extends SubsystemBase {
 
     @Getter
     private AssistState state = AssistState.DISABLED;
+
+    @Getter
+    private RobotMode mode = RobotMode.DEFENCE;
 
     private Pose2d lastGoalPose;
     private double lastPlanTime = 0.0;
@@ -103,8 +114,8 @@ public class TeleopAssistSubsystem extends SubsystemBase {
                     Math.toRadians(720));
 
     private static final double HOLD_DISTANCE = 0.75;
-    private static final double REPLAN_DISTANCE = 0.4;
-    private static final double REPLAN_COOLDOWN = 0.5;
+    private static final double REPLAN_DISTANCE = 0.7;
+    private static final double REPLAN_COOLDOWN = 0.7;
 
     public TeleopAssistSubsystem(SwerveDriveSubsystem drive) {
         this.drive = drive;
@@ -189,7 +200,7 @@ public class TeleopAssistSubsystem extends SubsystemBase {
 
         activeCommand =
                 AutoBuilder.pathfindToPose(approachPose, AI_CONSTRAINTS)
-                        .withTimeout(3.5);
+                        .withTimeout(1);
 
         lastGoalPose = approachPose;
         lastPlanTime = Timer.getFPGATimestamp();
