@@ -85,7 +85,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   private Rotation2d currentHeading;
   public final Field2d FIELD;
 
-  private final AssumedPoseSubsystem ASSUMED_POSE;
+  public final AssumedPoseSubsystem ASSUMED_POSE;
 
 
   /**

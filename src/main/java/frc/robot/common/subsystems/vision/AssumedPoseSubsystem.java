@@ -2,7 +2,6 @@ package frc.robot.common.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -22,10 +21,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
     private final AprilTagCamera aprilTagCamera;
     private final ModulePositionSupplier modulePositions;
 
-    /**
-     * Functional interface so this subsystem does not depend directly
-     * on your swerve subsystem implementation.
-     */
+    /** Functional interface so this subsystem does not depend directly on your swerve subsystem implementation. */
     @FunctionalInterface
     public interface ModulePositionSupplier {
         SwerveModulePosition[] get();
@@ -41,41 +37,47 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         this.imu = imu;
         this.modulePositions = modulePositions;
 
-        poseEstimator =
-                new SwerveDrivePoseEstimator(
-                        kinematics,
-                        imu.getRotation2d(),
-                        modulePositions.get(),
-                        new Pose2d(13, 4, new Rotation2d(Math.PI))
-                );
+        // Initialize pose estimator
+        poseEstimator = new SwerveDrivePoseEstimator(
+                kinematics,
+                imu.getRotation2d(),
+                modulePositions.get(),
+                new Pose2d(13, 4, new Rotation2d(Math.PI))
+        );
 
         // AprilTag field layout
-        AprilTagFieldLayout fieldLayout =
-                AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+        AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
         // AprilTag camera wrapper
-        aprilTagCamera =
-                new AprilTagCamera(
-                        cameraName,
-                        imu,
-                        robotToCamera,
-                        AprilTagCamera.Resolution.RES_1280_800,
-                        edu.wpi.first.math.geometry.Rotation2d.fromDegrees(89.4),
-                        fieldLayout
-                );
+        aprilTagCamera = new AprilTagCamera(
+                cameraName,
+                imu,
+                robotToCamera,
+                AprilTagCamera.Resolution.RES_1280_800,
+                Rotation2d.fromDegrees(89.4),
+                fieldLayout
+        );
     }
 
     @Override
     public void periodic() {
-        // 1) Update odometry from gyro + wheels
+        // Only update odometry from gyro + wheels every loop
+        poseEstimator.updateWithTime(
+                Timer.getFPGATimestamp(),
+                imu.getRotation2d(),
+                modulePositions.get()
+        );
+    }
 
-
-        // 2) Fuse vision measurement if available
+    /**
+     * Fuse the latest available AprilTag pose into the estimator.
+     * Only call this when you want to update from vision.
+     */
+    public void fuseLatestVisionPose() {
         AprilTagCamera.Result visionResult = aprilTagCamera.getLatestEstimatedPose();
 
         if (visionResult != null) {
-            Pose2d newPose =
-                    visionResult.estimatedRobotPose.estimatedPose.toPose2d();
+            Pose2d newPose = visionResult.estimatedRobotPose.estimatedPose.toPose2d();
 
             // Weak vision heading to prevent orbiting
             var stdDevs = visionResult.standardDeviation.copy();
@@ -88,12 +90,6 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                     stdDevs
             );
         }
-
-        poseEstimator.updateWithTime(
-                Timer.getFPGATimestamp(),
-                imu.getRotation2d(),
-                modulePositions.get()
-        );
     }
 
     /** Best assumed robot pose on the field */
