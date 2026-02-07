@@ -8,6 +8,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.common.gyro.RAWRNavX2;
@@ -66,7 +67,8 @@ public class AssumedPoseSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         // 1) Update odometry from gyro + wheels
-        poseEstimator.update(
+        poseEstimator.updateWithTime(
+                Timer.getFPGATimestamp(),
                 imu.getRotation2d(),
                 modulePositions.get()
         );
