@@ -83,7 +83,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                         poseEstimator.addVisionMeasurement(
                         visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
                         visionResult.estimatedRobotPose.timestampSeconds,
-                        visionResult.standardDeviation
+                        visionResult.standardDeviation.times(2.0)
             );
         }
     }
