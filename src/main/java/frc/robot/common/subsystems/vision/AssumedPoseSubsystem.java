@@ -68,11 +68,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         // 1) Update odometry from gyro + wheels
-        poseEstimator.updateWithTime(
-                Timer.getFPGATimestamp(),
-                imu.getRotation2d(),
-                modulePositions.get()
-        );
+
 
         // 2) Fuse vision measurement if available
         AprilTagCamera.Result visionResult = aprilTagCamera.getLatestEstimatedPose();
@@ -92,6 +88,12 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                     stdDevs
             );
         }
+
+        poseEstimator.updateWithTime(
+                Timer.getFPGATimestamp(),
+                imu.getRotation2d(),
+                modulePositions.get()
+        );
     }
 
     /** Best assumed robot pose on the field */
