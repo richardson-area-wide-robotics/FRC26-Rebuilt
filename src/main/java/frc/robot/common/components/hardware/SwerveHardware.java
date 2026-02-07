@@ -2,6 +2,7 @@ package frc.robot.common.components.hardware;
 
 
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.common.interfaces.IMU;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -22,7 +23,9 @@ public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerve
 
     public SwerveHardware {
         while (gyro.isCalibrating()) {
-            //stop(); // Stops all modules while gyro calibrates
+           if(!RobotBase.isSimulation()){ //Would Crash in Sim
+               stop(); // Stops all modules while gyro calibrates
+           }
         }
         gyro.reset();
     }
