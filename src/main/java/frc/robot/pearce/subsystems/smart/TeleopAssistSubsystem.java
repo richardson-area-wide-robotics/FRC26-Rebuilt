@@ -33,7 +33,7 @@ public class TeleopAssistSubsystem extends SubsystemBase {
         /** Example fixed pose on the field */
         EXAMPLE_FIXED(
                 () -> new Pose2d(
-                        new Translation2d(4, 4.1),
+                        new Translation2d(7, 4.1),
                         Rotation2d.fromDegrees(180)
                 ),
                 1.5
@@ -54,7 +54,7 @@ public class TeleopAssistSubsystem extends SubsystemBase {
         }
 
         public Pose2d getPose() {
-            return poseSupplier != null ? poseSupplier.get() : null;
+            return poseSupplier != null ? poseSupplier.get() : new Pose2d();
         }
 
     }
