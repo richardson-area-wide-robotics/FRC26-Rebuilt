@@ -2,7 +2,6 @@ package frc.robot.common.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -65,6 +64,8 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                 );
     }
 
+    private AprilTagCamera.Result lastVisionResult;
+
     @Override
     public void periodic() {
         // 1) Update odometry from gyro + wheels
@@ -76,8 +77,9 @@ public class AssumedPoseSubsystem extends SubsystemBase {
 
         // 2) Fuse vision measurement if available
         AprilTagCamera.Result visionResult = aprilTagCamera.getLatestEstimatedPose();
+        if (visionResult != null) lastVisionResult = visionResult;
 
-        if (visionResult != null) {
+        if (lastVisionResult != null) {
             Pose2d newPose =
                     visionResult.estimatedRobotPose.estimatedPose.toPose2d();
 
