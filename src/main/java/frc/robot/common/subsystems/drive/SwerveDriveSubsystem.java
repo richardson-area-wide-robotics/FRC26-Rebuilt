@@ -7,7 +7,7 @@ package frc.robot.common.subsystems.drive;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.trajectory.Trajectory;
 import frc.robot.CommonConstants;
 import frc.robot.common.components.hardware.SwerveHardware;
@@ -30,12 +30,9 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.util.PathPlannerLogging;
-import edu.wpi.first.math.geometry.Rotation2d;      // For handling rotations
-import edu.wpi.first.math.geometry.Translation2d;    // For handling 2D translations
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard; // For dashboard integration
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -141,7 +138,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
                 (RAWRNavX2) DRIVETRAIN_HARDWARE.gyro(),
                 getKINEMATICS(),
                 DRIVETRAIN_HARDWARE::getModulePositions,
-                new Transform3d(),
+                new Transform3d(3.23,3.45,0, new Rotation3d()),
                 "OV9281"
         );
       // Chassis speeds
