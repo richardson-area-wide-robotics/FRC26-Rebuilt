@@ -59,7 +59,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                         imu,
                         robotToCamera,
                         AprilTagCamera.Resolution.RES_1280_800,
-                        edu.wpi.first.math.geometry.Rotation2d.fromDegrees(90),
+                        edu.wpi.first.math.geometry.Rotation2d.fromDegrees(89.4),
                         fieldLayout
                 );
     }
@@ -80,10 +80,10 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         
 
         if (visionResult != null) {
-                        poseEstimator.addVisionMeasurement(
+                    poseEstimator.addVisionMeasurement(
                         visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
                         visionResult.estimatedRobotPose.timestampSeconds,
-                        visionResult.standardDeviation.times(2.0)
+                        visionResult.standardDeviation
             );
         }
     }
