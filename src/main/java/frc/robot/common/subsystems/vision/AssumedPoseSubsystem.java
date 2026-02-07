@@ -78,15 +78,11 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         
 
         if (visionResult != null) {
-                double visionDistance = visionResult.estimatedRobotPose.estimatedPose.toPose2d().getTranslation()
-                .getDistance(poseEstimator.getEstimatedPosition().getTranslation());
-                if (visionDistance < 1.0) {
                         poseEstimator.addVisionMeasurement(
                         visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
                         visionResult.estimatedRobotPose.timestampSeconds,
                         visionResult.standardDeviation
             );
-                }
         }
     }
 
