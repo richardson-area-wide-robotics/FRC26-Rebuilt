@@ -65,12 +65,6 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                 );
     }
 
-    private Pose2d lastVisionPose = null;
-    private double lastVisionTime = 0.0;
-
-    // how long to blend (seconds)
-    private static final double VISION_LERP_TIME = 0.1;
-
     @Override
     public void periodic() {
         // 1) Update odometry from gyro + wheels
@@ -80,37 +74,24 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                 modulePositions.get()
         );
 
-        // 2) Fuse vision measurement (if a new one exists)
-        AprilTagCamera.Result visionResult =
-                aprilTagCamera.getLatestEstimatedPose();
+        // 2) Fuse vision measurement if available
+        AprilTagCamera.Result visionResult = aprilTagCamera.getLatestEstimatedPose();
 
         if (visionResult != null) {
             Pose2d newPose =
                     visionResult.estimatedRobotPose.estimatedPose.toPose2d();
-            double now = Timer.getFPGATimestamp();
 
-            Pose2d blendedPose = newPose;
+            // Weak vision heading to prevent orbiting
+            var stdDevs = visionResult.standardDeviation.copy();
+            stdDevs.set(2, 0, Math.toRadians(999)); // X/Y strong, theta weak
 
-            if (lastVisionPose != null) {
-                double alpha = MathUtil.clamp(
-                        (now - lastVisionTime) / VISION_LERP_TIME,
-                        0.0,
-                        1.0
-                );
-
-                blendedPose = lastVisionPose.interpolate(newPose, alpha);
-            }
-
+            // Add vision measurement
             poseEstimator.addVisionMeasurement(
-                    blendedPose,
+                    newPose,
                     visionResult.estimatedRobotPose.timestampSeconds,
-                    visionResult.standardDeviation
+                    stdDevs
             );
-
-            lastVisionPose = blendedPose;
-            lastVisionTime = now;
         }
-
     }
 
     /** Best assumed robot pose on the field */
