@@ -2,6 +2,7 @@ package frc.robot.common.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -64,6 +65,12 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                 );
     }
 
+    private Pose2d lastVisionPose = null;
+    private double lastVisionTime = 0.0;
+
+    // how long to blend (seconds)
+    private static final double VISION_LERP_TIME = 0.1;
+
     @Override
     public void periodic() {
         // 1) Update odometry from gyro + wheels
@@ -77,15 +84,33 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         AprilTagCamera.Result visionResult =
                 aprilTagCamera.getLatestEstimatedPose();
 
-        
-
         if (visionResult != null) {
-                    poseEstimator.addVisionMeasurement(
-                        visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
-                        visionResult.estimatedRobotPose.timestampSeconds,
-                        visionResult.standardDeviation
+            Pose2d newPose =
+                    visionResult.estimatedRobotPose.estimatedPose.toPose2d();
+            double now = Timer.getFPGATimestamp();
+
+            Pose2d blendedPose = newPose;
+
+            if (lastVisionPose != null) {
+                double alpha = MathUtil.clamp(
+                        (now - lastVisionTime) / VISION_LERP_TIME,
+                        0.0,
+                        1.0
+                );
+
+                blendedPose = lastVisionPose.interpolate(newPose, alpha);
+            }
+
+            poseEstimator.addVisionMeasurement(
+                    blendedPose,
+                    visionResult.estimatedRobotPose.timestampSeconds,
+                    visionResult.standardDeviation
             );
+
+            lastVisionPose = blendedPose;
+            lastVisionTime = now;
         }
+
     }
 
     /** Best assumed robot pose on the field */
