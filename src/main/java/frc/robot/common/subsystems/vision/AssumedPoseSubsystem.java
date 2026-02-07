@@ -6,6 +6,7 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -75,13 +76,23 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         AprilTagCamera.Result visionResult =
                 aprilTagCamera.getLatestEstimatedPose();
 
-        
+
 
         if (visionResult != null) {
-                        poseEstimator.addVisionMeasurement(
-                        visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
-                        visionResult.estimatedRobotPose.timestampSeconds,
-                        visionResult.standardDeviation
+            Pose2d visionPose =
+                    visionResult.estimatedRobotPose.estimatedPose.toPose2d();
+
+            // Use translation from vision
+            Translation2d translation = visionPose.getTranslation();
+
+            Rotation2d newRotation = imu.getRotation2d();
+
+            Pose2d poseWithNewRotation = new Pose2d(translation, newRotation);
+
+            poseEstimator.addVisionMeasurement(
+                    poseWithNewRotation,
+                    visionResult.estimatedRobotPose.timestampSeconds,
+                    visionResult.standardDeviation
             );
         }
     }
