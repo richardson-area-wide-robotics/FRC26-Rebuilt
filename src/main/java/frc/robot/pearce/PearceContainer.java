@@ -41,7 +41,7 @@ public class PearceContainer implements IRobotContainer {
 
 
     public static final ProtoShooter PROTO_SHOOTER = new ProtoShooter(10, 11);
-    public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15,13);
+    public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
                 new SwerveHardwareParams(
                         new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),
