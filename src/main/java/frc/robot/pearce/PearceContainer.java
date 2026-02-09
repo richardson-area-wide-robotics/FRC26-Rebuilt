@@ -24,6 +24,7 @@ import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.HubStatus;
+import frc.robot.pearce.subsystems.ProtoClimber;
 import frc.robot.pearce.subsystems.ProtoShooter;
 import frc.robot.pearce.subsystems.smart.TeleopAssistSubsystem;
 import lombok.AccessLevel;
@@ -39,8 +40,8 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 public class PearceContainer implements IRobotContainer {
 
 
-    //public static final ProtoShooter PROTO_SHOOTER = new ProtoShooter(10, 11);
-    //public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15,13);
+    public static final ProtoShooter PROTO_SHOOTER = new ProtoShooter(10, 11);
+    public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
                 new SwerveHardwareParams(
                         new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),

@@ -8,6 +8,10 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import edu.wpi.first.units.Units;
+import org.lasarobotics.hardware.revrobotics.Spark;
+import org.lasarobotics.hardware.revrobotics.Spark.ID;
+import org.lasarobotics.hardware.revrobotics.Spark.MotorKind;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -51,6 +55,30 @@ public class EasyMotor {
         motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         return motor;
+    }
+
+    /**
+     * Create an easy LASA Spark motor
+     *
+     * @param name      Name used for logging
+     * @param motorID  CAN ID
+     * @param kind     Motor kind (NEO, NEO_VORTEX, CIM, etc.)
+     * @param idleMode Brake or Coast
+     * @param inverted Is motor inverted
+     *
+     * @author Hudson Strub
+     * @since 2025
+     */
+    public Spark createEasySpark(String name, int motorID, MotorKind kind, SparkBaseConfig.IdleMode idleMode, boolean inverted) {
+        Spark spark = new Spark(
+                new ID(name, motorID),
+                kind
+        );
+
+        spark.setIdleMode(idleMode);
+        spark.setInverted(inverted);
+
+        return spark;
     }
 
 
