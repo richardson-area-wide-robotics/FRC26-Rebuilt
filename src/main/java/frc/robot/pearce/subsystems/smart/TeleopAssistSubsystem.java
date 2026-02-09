@@ -153,6 +153,26 @@ public class TeleopAssistSubsystem extends SubsystemBase {
         return cachedHubState == HubStatus.HubState.ACTIVE;
     }
 
+    /**
+     * Builds a pose offset backward from the goal along its facing direction.
+     */
+    private Pose2d buildApproachPose(Pose2d goalPose, double approachDistance) {
+        Pose2d robotPose = drive.getPose();
+
+        // Vector from robot to goal
+        Translation2d delta = goalPose.getTranslation().minus(robotPose.getTranslation());
+        double distance = delta.getNorm();
+
+        // Avoid division by zero
+        Translation2d direction = distance > 1e-6 ? delta.times(1.0 / distance) : new Translation2d();
+
+        // Move back from the goal along this line
+        Translation2d approachTranslation = goalPose.getTranslation().minus(direction.times(approachDistance));
+
+        // Keep the goal rotation
+        return new Pose2d(approachTranslation, goalPose.getRotation());
+    }
+
     private void perform() {
         if (!enabled) {
             transitionTo(AssistState.DISABLED);
@@ -173,41 +193,44 @@ public class TeleopAssistSubsystem extends SubsystemBase {
 
         Pose2d goalPose = currentGoal.getPose();
         Pose2d robotPose = drive.getPose();
+        double distanceToTarget = robotPose.getTranslation()
+                .getDistance(goalPose.getTranslation());
 
-        double distanceToTarget =
-                robotPose.getTranslation()
-                        .getDistance(goalPose.getTranslation());
-
+        // If very close, hold position
         if (distanceToTarget < HOLD_DISTANCE) {
             cancelAI();
             transitionTo(AssistState.HOLDING);
             return;
         }
 
-        Pose2d approachPose =
-                buildApproachPose(goalPose, currentGoal.getApproachDistance());
+        // Decide whether to replan
+        boolean targetMovedSignificantly =
+                lastGoalPose == null
+                        || goalPose.getTranslation().getDistance(lastGoalPose.getTranslation()) > 0.5; // 0.5m threshold
 
-        boolean shouldReplan =
-                !isRunning()
-                        || lastGoalPose == null
-                        || robotPose.getTranslation()
-                        .getDistance(lastGoalPose.getTranslation()) > REPLAN_DISTANCE
-                        || Timer.getFPGATimestamp() - lastPlanTime > REPLAN_COOLDOWN;
+        boolean robotMovedSignificantly =
+                lastGoalPose != null
+                        && robotPose.getTranslation().getDistance(lastGoalPose.getTranslation()) > 1.0; // 1m threshold
+
+        boolean shouldReplan = !isRunning() || targetMovedSignificantly || robotMovedSignificantly
+                || Timer.getFPGATimestamp() - lastPlanTime > REPLAN_COOLDOWN;
 
         if (!shouldReplan) return;
 
         cancelAI();
 
-        activeCommand =
-                AutoBuilder.pathfindToPose(approachPose, AI_CONSTRAINTS)
-                        .withTimeout(1);
+        Pose2d approachPose = buildApproachPose(goalPose, currentGoal.getApproachDistance());
 
-        lastGoalPose = approachPose;
-        lastPlanTime = Timer.getFPGATimestamp();
+        // Schedule path with a longer timeout for smoother motion
+        activeCommand = AutoBuilder.pathfindToPose(approachPose, AI_CONSTRAINTS)
+                .withTimeout(5); // 5 seconds instead of 1
+
         activeCommand.schedule();
-
+        lastGoalPose = goalPose;
+        lastPlanTime = Timer.getFPGATimestamp();
         transitionTo(AssistState.ASSISTING);
     }
+
 
     private void cancelAI() {
         if (activeCommand != null) {
@@ -219,24 +242,6 @@ public class TeleopAssistSubsystem extends SubsystemBase {
     private void transitionTo(AssistState newState) {
         if (state == newState) return;
         state = newState;
-    }
-
-    /**
-     * Builds a pose offset backward from the goal along its facing direction.
-     */
-    private Pose2d buildApproachPose(Pose2d goalPose, double approachDistance) {
-        Rotation2d facing = goalPose.getRotation();
-
-        Translation2d offset =
-                new Translation2d(
-                        Math.cos(facing.getRadians()),
-                        Math.sin(facing.getRadians()))
-                        .times(approachDistance);
-
-        Translation2d approachTranslation =
-                goalPose.getTranslation().minus(offset);
-
-        return new Pose2d(approachTranslation, facing);
     }
 
     @Override
