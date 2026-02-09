@@ -1,23 +1,27 @@
 package frc.robot.pearce.subsystems;
 
-import com.revrobotics.RelativeEncoder;
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel;
-import com.revrobotics.spark.config.SparkBaseConfig;
-
-import frc.robot.common.components.EasyMotor;
 import frc.robot.common.subsystems.DashboardSubsystem;
+
+import org.lasarobotics.hardware.revrobotics.Spark;
+import org.lasarobotics.hardware.revrobotics.Spark.ID;
+import org.lasarobotics.hardware.revrobotics.Spark.MotorKind;
 
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
-import org.littletonrobotics.junction.mechanism.LoggedMechanismRoot2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
+import org.littletonrobotics.junction.mechanism.LoggedMechanismRoot2d;
+
+import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.ResetMode;
+import com.revrobotics.PersistMode;
+
+import edu.wpi.first.units.Units;
 
 public class ProtoClimber extends DashboardSubsystem {
 
-    private final SparkFlex motor1;
-    //private final SparkFlex motor2;
-    private final RelativeEncoder encoder;
+    private final Spark motor1;
+    // private final Spark motor2;
 
     // AdvantageKit visualization
     private final LoggedMechanism2d climberMech;
@@ -28,19 +32,20 @@ public class ProtoClimber extends DashboardSubsystem {
 
     public ProtoClimber(int id1, int id2) {
 
-        motor1 = EasyMotor.createEasySparkFlex(
-                id1,
-                SparkLowLevel.MotorType.kBrushless,
-                SparkBaseConfig.IdleMode.kBrake
+        motor1 = new Spark(
+                new ID("ClimberHardware/Climber", id1),
+                MotorKind.NEO_VORTEX,
+                Units.Hertz.of(50)
         );
 
-//        motor2 = EasyMotor.createEasySparkFlex(
-//                id2,
-//                SparkLowLevel.MotorType.kBrushless,
-//                SparkBaseConfig.IdleMode.kBrake
-//        );
+        SparkFlexConfig config = new SparkFlexConfig();
+        config.idleMode(IdleMode.kBrake);
 
-        encoder = motor1.getEncoder();
+        motor1.configure(
+                config,
+                ResetMode.kResetSafeParameters,
+                PersistMode.kPersistParameters
+        );
 
         climberMech = new LoggedMechanism2d(2.0, 2.0);
 
@@ -51,53 +56,41 @@ public class ProtoClimber extends DashboardSubsystem {
                 new LoggedMechanismLigament2d(
                         "Climber",
                         MIN_LENGTH_METERS,
-                        90 // vertical
+                        90
                 )
         );
 
-        Logger.recordOutput(getName()+"/Climber", climberMech);
+        Logger.recordOutput(getName() + "/Climber", climberMech);
     }
 
     public void runClimber() {
         motor1.set(0.3);
-        //motor2.set(2);
     }
+
     public void unRunClimber() {
         motor1.set(-0.3);
-        //motor2.set(2);
     }
 
     public void stopClimber() {
-        motor1.set(0);
-        //motor2.set(0);
+        motor1.stopMotor();
     }
 
     @Override
     public void periodic() {
 
+        var inputs = motor1.getInputs();
+
         double extensionMeters =
                 Math.max(
                         MIN_LENGTH_METERS,
-                        encoder.getPosition() * METERS_PER_ROTATION
+                        inputs.encoderPosition * METERS_PER_ROTATION
                 );
 
         // Update mechanism visualization
         climberLigament.setLength(extensionMeters);
-        Logger.recordOutput(getName()+"/Climber", climberMech);
-
+        Logger.recordOutput(getName() + "/Climber", climberMech);
 
         // Log outputs
-        Logger.recordOutput(
-                getName() + "/ExtensionMeters",
-                extensionMeters
-        );
-        Logger.recordOutput(
-                getName() + "/Encoder/Position",
-                encoder.getPosition()
-        );
-        Logger.recordOutput(
-                getName() + "/Encoder/Velocity",
-                encoder.getVelocity()
-        );
+        Logger.recordOutput(getName() + "/ExtensionMeters", extensionMeters);
     }
 }
