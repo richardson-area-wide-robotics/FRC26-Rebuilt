@@ -30,7 +30,7 @@ public class ProtoClimber extends DashboardSubsystem {
     private static final double METERS_PER_ROTATION = 0.3; // TODO we will need to adjust this when we have the phy climber
     private static final double MIN_LENGTH_METERS = 0.05;
 
-    public ProtoClimber(int id1, int id2) {
+    public ProtoClimber(int id1) {
 
         motor1 = new Spark(
                 new ID("ClimberHardware/Climber", id1),
