@@ -16,7 +16,6 @@ import frc.robot.common.gyro.RAWRNavX2;
 import java.util.List;
 import java.util.Optional;
 
-import org.lasarobotics.vision.AprilTagCamera;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
@@ -26,7 +25,6 @@ public class AssumedPoseSubsystem extends SubsystemBase {
 
     private final RAWRNavX2 imu;
     private final SwerveDrivePoseEstimator poseEstimator;
-    private final AprilTagCamera aprilTagCamera;
     private final ModulePositionSupplier modulePositions;
     private final PhotonCamera photonCamera;
     private final PhotonPoseEstimator photonPoseEstimator;
@@ -62,15 +60,6 @@ public class AssumedPoseSubsystem extends SubsystemBase {
 
         photonPoseEstimator = new PhotonPoseEstimator(fieldLayout, robotToCamera);
 
-        // AprilTag camera wrapper
-        aprilTagCamera = new AprilTagCamera(
-                cameraName,
-                imu,
-                robotToCamera,
-                AprilTagCamera.Resolution.RES_1280_800,
-                Rotation2d.fromDegrees(89.4),
-                fieldLayout
-        );
     }
 
     @Override
@@ -82,7 +71,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
             Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(results.get(0));
             if (estimatedPose.isPresent()) {
                 Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
-                poseEstimator.addVisionMeasurement(photonPose, currentTime);
+                poseEstimator.addVisionMeasurement(photonPose, estimatedPose.get().timestampSeconds);
             }
         }
 
@@ -93,30 +82,6 @@ public class AssumedPoseSubsystem extends SubsystemBase {
                 modulePositions.get()
         );
     }
-
-    /**
-     * Fuse the latest available AprilTag pose into the estimator.
-     * Only call this when you want to update from vision.
-     */
-    public void fuseLatestVisionPose() {
-        AprilTagCamera.Result visionResult = aprilTagCamera.getLatestEstimatedPose();
-
-        if (visionResult != null) {
-            Pose2d newPose = visionResult.estimatedRobotPose.estimatedPose.toPose2d();
-
-            // Weak vision heading to prevent orbiting
-            var stdDevs = visionResult.standardDeviation.copy();
-            stdDevs.set(2, 0, Math.toRadians(999)); // X/Y strong, theta weak
-
-            // Add vision measurement
-            poseEstimator.addVisionMeasurement(
-                    newPose,
-                    visionResult.estimatedRobotPose.timestampSeconds,
-                    stdDevs
-            );
-        }
-    }
-
     /** Best assumed robot pose on the field */
     public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
