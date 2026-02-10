@@ -71,7 +71,9 @@ public class AssumedPoseSubsystem extends SubsystemBase {
             Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(results.get(0));
             if (estimatedPose.isPresent()) {
                 Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
-                poseEstimator.addVisionMeasurement(photonPose, estimatedPose.get().timestampSeconds);
+                double poseTime = estimatedPose.get().timestampSeconds;
+                poseEstimator.addVisionMeasurement(photonPose, poseTime);
+                currentTime = poseTime;
             }
         }
 
