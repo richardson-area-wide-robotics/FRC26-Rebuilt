@@ -220,7 +220,7 @@ private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
 
       // Get requested chassis speeds, correcting for second order kinematics
       desiredChassisSpeeds = AdvancedSwerveKinematics.correctForDynamics(
-          new ChassisSpeeds(xRequest, yRequest, rotateRequest)
+          new ChassisSpeeds(xRequest.unaryMinus(), yRequest.unaryMinus(), rotateRequest)
       );
 
       // Convert speeds to module states, correcting for 2nd order kinematics
