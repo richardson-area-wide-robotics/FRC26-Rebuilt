@@ -124,7 +124,7 @@ flowchart TD
     style Robot fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style DashboardAutoUpdater fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CANDiagnostics fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style EasyBreakBeam fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style EasyBreakBeam fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
     style EasyMotor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SwerveHardware fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
     style SwerveHardwareParams fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
