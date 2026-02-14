@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.PearceContainer;
@@ -225,7 +226,8 @@ public class TeleopAssistSubsystem extends SubsystemBase {
         activeCommand = AutoBuilder.pathfindToPose(approachPose, AI_CONSTRAINTS)
                 .withTimeout(5); // 5 seconds instead of 1
 
-        activeCommand.schedule();
+        CommandScheduler.getInstance().schedule(activeCommand);
+
         lastGoalPose = goalPose;
         lastPlanTime = Timer.getFPGATimestamp();
         transitionTo(AssistState.ASSISTING);
