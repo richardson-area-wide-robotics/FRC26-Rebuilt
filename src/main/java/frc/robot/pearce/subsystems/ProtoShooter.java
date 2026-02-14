@@ -60,7 +60,20 @@ public class ProtoShooter extends DashboardSubsystem {
         );
 
         // Follower
-        motor2.follow(motor1);
+        SparkFlexConfig followerConfig = new SparkFlexConfig();
+        followerConfig.idleMode(IdleMode.kCoast);
+        followerConfig.smartCurrentLimit(65);
+        followerConfig.closedLoop
+                .p(0.00035)
+                .i(0.000001)
+                .d(0.0065);
+
+                followerConfig.follow(id1, true);
+        motor2.configure(
+                followerConfig,
+                ResetMode.kResetSafeParameters,
+                PersistMode.kPersistParameters
+        );
     }
 
     public void runShooter() {
