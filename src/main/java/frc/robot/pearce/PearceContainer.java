@@ -108,6 +108,11 @@ public class PearceContainer implements IRobotContainer {
             Commands.runOnce(TELEOP_ASSIST::toggle), Commands.none()
     );
 
+    RobotUtils.bindControl(
+            HIDConstants.DRIVER_CONTROLLER.povUp(),
+            Commands.runOnce(TELEOP_ASSIST::disable), Commands.none()
+    );
+
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 
       //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(), Commands.runOnce(PROTO_CLIMBER::unRunClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
