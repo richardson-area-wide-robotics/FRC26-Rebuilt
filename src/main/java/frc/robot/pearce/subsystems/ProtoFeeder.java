@@ -15,9 +15,9 @@ public class ProtoFeeder {
     private SparkMax feederMotor;
     private SparkFlex spindexerMotor;
 
-    public ProtoFeeder(int feederID) {
+    public ProtoFeeder(int feederID, int spindexerID) {
         feederMotor = EasyMotor.createEasySparkMax(feederID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
-        //spindexerMotor = EasyMotor.createEasySparkFlex(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+        spindexerMotor = EasyMotor.createEasySparkFlex(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
     }
 
     public void cycle() {
