@@ -21,7 +21,6 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
     private final LoggedMechanismLigament2d mechanismLigament;
 
     public RobotSectorEvaluator(SwerveDriveSubsystem drive) {
-<<<<<<< Updated upstream
     this.drive = drive;
 
         mechanism = new LoggedMechanism2d(2.0, 2.0);
@@ -36,9 +35,7 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
                         90
                 )
         );
-=======
         this.drive = drive;
->>>>>>> Stashed changes
     }
 
     public RobotSector getSector() { //
@@ -65,7 +62,6 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
 
     @Override
     public void periodic() {
-<<<<<<< Updated upstream
         if(getSector().center != null){
             Logger.recordOutput(getName() +"/Sector ", getSector().center);
 
@@ -75,13 +71,11 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
             Logger.recordOutput(getName() + "/3d", mechanism);
         }
 
-=======
         if (getSector().center != null){
             Logger.recordOutput(getName() + "/CurrentSector/info/center ", getSector().center);
             Logger.recordOutput(getName() + "/CurrentSector/info/width ", getSector().width);
             Logger.recordOutput(getName() + "/CurrentSector/info/hight ", getSector().hight);
             RobotSector.updateAdvantage(getSector());
         }
->>>>>>> Stashed changes
     }
 }
