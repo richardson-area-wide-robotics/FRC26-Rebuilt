@@ -28,6 +28,13 @@ public class TeleopAssistSubsystem extends SubsystemBase {
     @Getter
     private HubStatus.HubState cachedHubState = HubStatus.HubState.ACTIVE;
 
+    private DynamicPather dynamicPather = new DynamicPather(
+            new PathConstraints(
+                    7.0,
+                    3.0,
+                    Math.toRadians(540),
+                    Math.toRadians(720)));
+
     public enum Goal {
         NONE(null, 0.0),
 
@@ -107,13 +114,6 @@ public class TeleopAssistSubsystem extends SubsystemBase {
     private Pose2d lastGoalPose;
     private double lastPlanTime = 0.0;
 
-    private static final PathConstraints AI_CONSTRAINTS =
-            new PathConstraints(
-                    7.0,
-                    3.0,
-                    Math.toRadians(540),
-                    Math.toRadians(720));
-
     private static final double HOLD_DISTANCE = 0.75;
     private static final double REPLAN_DISTANCE = 0.7;
     private static final double REPLAN_COOLDOWN = 0.7;
@@ -152,26 +152,6 @@ public class TeleopAssistSubsystem extends SubsystemBase {
 
         cachedHubState = HubStatus.getHubStatus(alliance.get(), matchTime);
         return cachedHubState == HubStatus.HubState.ACTIVE;
-    }
-
-    /**
-     * Builds a pose offset backward from the goal along its facing direction.
-     */
-    private Pose2d buildApproachPose(Pose2d goalPose, double approachDistance) {
-        Pose2d robotPose = drive.getPose();
-
-        // Vector from robot to goal
-        Translation2d delta = goalPose.getTranslation().minus(robotPose.getTranslation());
-        double distance = delta.getNorm();
-
-        // Avoid division by zero
-        Translation2d direction = distance > 1e-6 ? delta.times(1.0 / distance) : new Translation2d();
-
-        // Move back from the goal along this line
-        Translation2d approachTranslation = goalPose.getTranslation().minus(direction.times(approachDistance));
-
-        // Keep the goal rotation
-        return new Pose2d(approachTranslation, goalPose.getRotation());
     }
 
     private void perform() {
@@ -220,12 +200,10 @@ public class TeleopAssistSubsystem extends SubsystemBase {
 
         cancelAI();
 
-        Pose2d approachPose = buildApproachPose(goalPose, currentGoal.getApproachDistance());
+        Pose2d approachPose = dynamicPather.buildApproachPose(drive.getPose(), goalPose, currentGoal.getApproachDistance());
 
         // Schedule path with a longer timeout for smoother motion
-        activeCommand = AutoBuilder.pathfindToPose(approachPose, AI_CONSTRAINTS)
-                .withTimeout(5); // 5 seconds instead of 1
-
+        activeCommand = dynamicPather.computePathfindCommand(approachPose, 1);
         CommandScheduler.getInstance().schedule(activeCommand);
 
         lastGoalPose = goalPose;
