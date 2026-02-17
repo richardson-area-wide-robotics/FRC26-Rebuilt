@@ -69,7 +69,7 @@ public class HubStatus {
         // Shift alternates:
         // Odd shifts: firstInactive is INACTIVE
         // Even shifts: firstInactive is ACTIVE
-        return (shift % 2 == 1) ? isFirstInactiveAlliance : !isFirstInactiveAlliance;
+        return (shift % 2 == 1) == isFirstInactiveAlliance;
     }
 
     /** Converts match time to the current ALLIANCE SHIFT number (1–4). Returns 0 for transition shift. */
