@@ -2,6 +2,7 @@ package frc.robot.pearce.subsystems;
 
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
+import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 
 import frc.robot.common.components.EasyMotor;
@@ -11,11 +12,11 @@ import frc.robot.common.components.EasyMotor;
 // One (Tower)
 public class ProtoFeeder {
 
-    private SparkFlex feederMotor;
+    private SparkMax feederMotor;
     private SparkFlex spindexerMotor;
 
     public ProtoFeeder(int feederID, int spindexerID) {
-        feederMotor = EasyMotor.createEasySparkFlex(feederID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+        feederMotor = EasyMotor.createEasySparkMax(feederID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
         spindexerMotor = EasyMotor.createEasySparkFlex(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
     }
 

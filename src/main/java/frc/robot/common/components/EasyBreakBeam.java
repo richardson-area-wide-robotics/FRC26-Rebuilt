@@ -1,23 +1,16 @@
 package frc.robot.common.components;
 
 import edu.wpi.first.wpilibj.DigitalInput;
-import lombok.Getter;
 
-/** Wrapper for making break beams
+/**
+ * Wrapper for making break beams
  *
  * @author Hudson Strub
  * @since 2025 Offseason
  */
-@Getter
-public class EasyBreakBeam {
-    private final DigitalInput input;
-
+public record EasyBreakBeam(DigitalInput input) {
     public EasyBreakBeam(int channel) {
-        this.input = new DigitalInput(channel);
-    }
-
-    public EasyBreakBeam(DigitalInput input) {
-        this.input = input;
+        this(new DigitalInput(channel));
     }
 
     /**

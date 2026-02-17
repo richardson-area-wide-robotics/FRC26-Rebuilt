@@ -4,12 +4,18 @@ import com.pathplanner.lib.config.RobotConfig;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkBase.ControlType;
 
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import lombok.Getter;
 import lombok.experimental.UtilityClass;
+
+import java.util.function.BooleanSupplier;
+
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.utils.GlobalConstants;
 
@@ -19,7 +25,8 @@ public class RobotUtils  {
   @Getter
   private RobotConfig robotConfig;
 
-  //private final PowerDistribution POWER_DISTRIBUTION = new PowerDistribution();
+  private final PowerDistribution POWER_DISTRIBUTION = new PowerDistribution(20, ModuleType.kRev);
+  private final Debouncer DEBOUNCER = new Debouncer(0.25, DebounceType.kRising);
 
   /**
    * Helper method to bind a control action to a command.
@@ -105,6 +112,10 @@ public class RobotUtils  {
    * @since 2026
    */
   public static double getPDHCurrent(int channel){
-    return 4;
+    return POWER_DISTRIBUTION.getCurrent(channel);
+  }
+
+  public static BooleanSupplier debounce(double currentDraw, double currentLimit) {
+    return () -> DEBOUNCER.calculate(currentDraw > currentLimit);
   }
 }

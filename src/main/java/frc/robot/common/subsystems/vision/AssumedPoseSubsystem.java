@@ -8,22 +8,28 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.common.gyro.RAWRNavX2;
-import org.lasarobotics.vision.AprilTagCamera;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.targeting.PhotonPipelineResult;
 
 public class AssumedPoseSubsystem extends SubsystemBase {
 
     private final RAWRNavX2 imu;
     private final SwerveDrivePoseEstimator poseEstimator;
-    private final AprilTagCamera aprilTagCamera;
     private final ModulePositionSupplier modulePositions;
+    private final PhotonCamera photonCamera;
+    private final PhotonPoseEstimator photonPoseEstimator;
 
-    /**
-     * Functional interface so this subsystem does not depend directly
-     * on your swerve subsystem implementation.
-     */
+    /** Functional interface so this subsystem does not depend directly on your swerve subsystem implementation. */
     @FunctionalInterface
     public interface ModulePositionSupplier {
         SwerveModulePosition[] get();
@@ -39,57 +45,45 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         this.imu = imu;
         this.modulePositions = modulePositions;
 
-        poseEstimator =
-                new SwerveDrivePoseEstimator(
-                        kinematics,
-                        imu.getRotation2d(),
-                        modulePositions.get(),
-                        new Pose2d(13, 4, new Rotation2d(Math.PI))
-                );
+        photonCamera = new PhotonCamera(cameraName);
+
+        // Initialize pose estimator
+        poseEstimator = new SwerveDrivePoseEstimator(
+                kinematics,
+                imu.getRotation2d(),
+                modulePositions.get(),
+                new Pose2d(13, 4, new Rotation2d(Math.PI))
+        );
 
         // AprilTag field layout
-        AprilTagFieldLayout fieldLayout =
-                AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+        AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
-        // AprilTag camera wrapper
-        aprilTagCamera =
-                new AprilTagCamera(
-                        cameraName,
-                        imu,
-                        robotToCamera,
-                        AprilTagCamera.Resolution.RES_1280_800,
-                        edu.wpi.first.math.geometry.Rotation2d.fromDegrees(90),
-                        fieldLayout
-                );
+        photonPoseEstimator = new PhotonPoseEstimator(fieldLayout, robotToCamera);
+
     }
 
     @Override
     public void periodic() {
-        // 1) Update odometry from gyro + wheels
-        poseEstimator.update(
+        double currentTime = Timer.getFPGATimestamp();
+
+        List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
+        if (!results.isEmpty()) {
+            Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(results.get(0));
+            if (estimatedPose.isPresent()) {
+                Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
+                double poseTime = estimatedPose.get().timestampSeconds;
+                poseEstimator.addVisionMeasurement(photonPose, poseTime);
+                currentTime = poseTime;
+            }
+        }
+
+        // Only update odometry from gyro + wheels every loop
+        poseEstimator.updateWithTime(
+                currentTime,
                 imu.getRotation2d(),
                 modulePositions.get()
         );
-
-        // 2) Fuse vision measurement (if a new one exists)
-        AprilTagCamera.Result visionResult =
-                aprilTagCamera.getLatestEstimatedPose();
-
-        
-
-        if (visionResult != null) {
-                double visionDistance = visionResult.estimatedRobotPose.estimatedPose.toPose2d().getTranslation()
-                .getDistance(poseEstimator.getEstimatedPosition().getTranslation());
-                if (visionDistance < 1.0) {
-                        poseEstimator.addVisionMeasurement(
-                        visionResult.estimatedRobotPose.estimatedPose.toPose2d(),
-                        visionResult.estimatedRobotPose.timestampSeconds,
-                        visionResult.standardDeviation
-            );
-                }
-        }
     }
-
     /** Best assumed robot pose on the field */
     public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();

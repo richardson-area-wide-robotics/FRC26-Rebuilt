@@ -1,30 +1,90 @@
 package frc.robot.pearce.subsystems;
 
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel;
-import com.revrobotics.spark.config.SparkBaseConfig;
-import frc.robot.common.components.EasyMotor;
 import frc.robot.common.subsystems.DashboardSubsystem;
+import org.lasarobotics.hardware.revrobotics.Spark;
+import org.lasarobotics.hardware.revrobotics.Spark.ID;
+import org.lasarobotics.hardware.revrobotics.Spark.MotorKind;
+import org.littletonrobotics.junction.Logger;
+
+import com.revrobotics.spark.SparkBase.ControlType;
+import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.ResetMode;
+import com.revrobotics.PersistMode;
+
+import edu.wpi.first.units.Units;
 
 public class ProtoShooter extends DashboardSubsystem {
 
-    private SparkFlex motor1;
-    private SparkFlex motor2;
+    private final Spark motor1;
+    private final Spark motor2;
 
+    public ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
 
-    public ProtoShooter(int id1, int id2){
-         motor1 = EasyMotor.createEasySparkFlex(id1, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
-         motor2 = EasyMotor.createEasySparkFlex(id2, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+    public enum ShooterPosition {
+        AGAINST_HUB(4000);
+
+        public final double rpm;
+
+        ShooterPosition(double rpm) {
+            this.rpm = rpm;
+        }
     }
 
-    public void runShooter(){
-        motor1.set(-2);
-        motor2.set(2);
+    public ProtoShooter(int id1, int id2) {
+        motor1 = new Spark(
+                new ID("ShooterHardware/ShooterLeader", id1),
+                MotorKind.NEO_VORTEX,
+                Units.Hertz.of(50)
+        );
+
+        motor2 = new Spark(
+                new ID("ShooterHardware/ShooterFollower", id2),
+                MotorKind.NEO_VORTEX,
+                Units.Hertz.of(50)
+        );
+
+        // PID + current limit config
+        SparkFlexConfig leaderConfig = new SparkFlexConfig();
+        leaderConfig.idleMode(IdleMode.kCoast);
+        leaderConfig.smartCurrentLimit(65);
+        leaderConfig.closedLoop
+                .p(0.00035)
+                .i(0.000001)
+                .d(0.0065);
+
+        motor1.configure(
+                leaderConfig,
+                ResetMode.kResetSafeParameters,
+                PersistMode.kPersistParameters
+        );
+
+        // Follower
+        SparkFlexConfig followerConfig = new SparkFlexConfig();
+        followerConfig.idleMode(IdleMode.kCoast);
+        followerConfig.smartCurrentLimit(65);
+        followerConfig.closedLoop
+                .p(0.00035)
+                .i(0.000001)
+                .d(0.0065);
+
+                followerConfig.follow(id1, true);
+        motor2.configure(
+                followerConfig,
+                ResetMode.kResetSafeParameters,
+                PersistMode.kPersistParameters
+        );
     }
 
-    public void stopShooter(){
-        motor1.set(0);
-        motor2.set(0);
-
+    public void runShooter() {
+        motor1.set(
+                currentShooterPosition.rpm,
+                ControlType.kVelocity
+        );
     }
+
+    public void stopShooter() {
+        motor1.stopMotor();
+    }
+
 }

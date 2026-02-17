@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 16.54 8.21"
+  width="800"
+  preserveAspectRatio="xMidYMid meet">
+
+  <rect x="0" y="0"
+        width="16.54"
+        height="8.21"
+        fill="#1e1e1e"/>
+
+  <path d="M 1.1686022727272727 2.21 C 2.1686022727272696 2.21, 6.02675 2.21, 7.0 2.21"
+        fill="none"
+        stroke="#42a5f5"
+        stroke-width="0.05"/>
+
+  <path d="M 7.0 2.21 C 7.97325 2.21, 0.16860227272727268 2.21, 1.1686022727272727 2.21"
+        fill="none"
+        stroke="#42a5f5"
+        stroke-width="0.05"/>
+
+  <circle cx="1.1686022727272727"
+          cy="2.21"
+          r="0.08"
+          fill="#66bb6a"/>
+
+  <circle cx="7.0"
+          cy="2.21"
+          r="0.08"
+          fill="#66bb6a"/>
+
+  <circle cx="1.1686022727272727"
+          cy="2.21"
+          r="0.08"
+          fill="#66bb6a"/>
+
+  <circle cx="1.1686022727272727" cy="2.21" r="0.1" fill="#00ff00"/>
+  <circle cx="1.1686022727272727" cy="2.21" r="0.1" fill="#ff0000"/>
+</svg>
