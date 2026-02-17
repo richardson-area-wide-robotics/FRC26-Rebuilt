@@ -5,6 +5,7 @@
 package frc.robot.pearce;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Dimensionless;
@@ -24,10 +25,12 @@ import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.HubStatus;
+import frc.robot.pearce.components.RobotSector;
 import frc.robot.pearce.subsystems.ProtoClimber;
 import frc.robot.pearce.subsystems.ProtoFeeder;
 import frc.robot.pearce.subsystems.ProtoIntake;
 import frc.robot.pearce.subsystems.ProtoShooter;
+import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.pearce.subsystems.smart.TeleopAssistSubsystem;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -70,7 +73,7 @@ public class PearceContainer implements IRobotContainer {
       Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
   public static final TeleopAssistSubsystem TELEOP_ASSIST = new TeleopAssistSubsystem(DRIVE_SUBSYSTEM);
-
+  public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
   private static SendableChooser<Command> automodeChooser;
 
   public static IRobotContainer createContainer(){
@@ -91,6 +94,8 @@ public class PearceContainer implements IRobotContainer {
       // Set up the auto chooser
       automodeChooser = AutoBuilder.buildAutoChooser();
       SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
+
+      SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(),1,1);
 
       return new PearceContainer();
   }
