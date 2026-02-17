@@ -6,6 +6,7 @@ package frc.robot.pearce;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Dimensionless;
@@ -95,7 +96,10 @@ public class PearceContainer implements IRobotContainer {
       automodeChooser = AutoBuilder.buildAutoChooser();
       SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
 
-      SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(),1,1);
+      SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(1.,1.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(3.,1.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
 
       return new PearceContainer();
   }

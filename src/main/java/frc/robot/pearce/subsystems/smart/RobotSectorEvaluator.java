@@ -24,12 +24,12 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
                 return robotSector;
             }
         }
-        return new RobotSector(RobotSector.baseSector.NONE, RobotSector.sectorType.NONE,new Pose2d(67.,67.,new Rotation2d()), 0,0);
+        return new RobotSector(RobotSector.baseSector.NONE, RobotSector.sectorType.NONE,new Pose2d(67.,67.,new Rotation2d()), 0,0,-1);
     }
 
     public boolean createSector(RobotSector.baseSector base , RobotSector.sectorType type, Pose2d center, double width, double hight){
        try {
-           sectorArr[sectorArrPtr] = new RobotSector(base, type, center, width, hight);
+           sectorArr[sectorArrPtr] = new RobotSector(base, type, center, width, hight,sectorArrPtr);
            sectorArrPtr++;
        } catch (Exception e) {
            return false;
@@ -38,8 +38,7 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
     }
     @Override
     public void periodic() {
-        if(getSector().center != null)Logger.recordOutput(getName() +"/Sector ", getSector().center);
-
+        getSector().updateAdvantage();
     }
 
 }
