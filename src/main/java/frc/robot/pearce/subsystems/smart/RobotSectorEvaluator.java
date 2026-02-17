@@ -6,14 +6,35 @@ import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.RobotSector;
 import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
+import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
+import org.littletonrobotics.junction.mechanism.LoggedMechanismRoot2d;
 
 public class RobotSectorEvaluator extends DashboardSubsystem {
     private RobotSector sectorArr[] = new RobotSector[10];
     private int sectorArrPtr = 0;
     SwerveDriveSubsystem drive;
 
+
+    // AdvantageKit visualization
+    private final LoggedMechanism2d mechanism;
+    private final LoggedMechanismLigament2d mechanismLigament;
+
     public RobotSectorEvaluator(SwerveDriveSubsystem drive) {
     this.drive = drive;
+
+        mechanism = new LoggedMechanism2d(2.0, 2.0);
+
+        LoggedMechanismRoot2d root =
+                mechanism.getRoot("ClimberRoot", 1.0, 0.0);
+
+        mechanismLigament = root.append(
+                new LoggedMechanismLigament2d(
+                        "Climber",
+                        3,
+                        90
+                )
+        );
     }
     public RobotSector getSector(){ //
         Pose2d pose = drive.getPose();
@@ -38,7 +59,14 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
     }
     @Override
     public void periodic() {
-        if(getSector().center != null)Logger.recordOutput(getName() +"/Sector ", getSector().center);
+        if(getSector().center != null){
+            Logger.recordOutput(getName() +"/Sector ", getSector().center);
+
+
+            mechanismLigament.setLength(getSector().hight);
+
+            Logger.recordOutput(getName() + "/3d", mechanism);
+        }
 
     }
 
