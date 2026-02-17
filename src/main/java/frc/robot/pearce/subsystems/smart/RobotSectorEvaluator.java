@@ -5,10 +5,9 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.RobotSector;
-import org.littletonrobotics.junction.Logger;
 
 public class RobotSectorEvaluator extends DashboardSubsystem {
-    private RobotSector sectorArr[] = new RobotSector[10];
+    private RobotSector sectorArr[] = new RobotSector[999];
     private int sectorArrPtr = 0;
     SwerveDriveSubsystem drive;
 
@@ -27,14 +26,9 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
         return new RobotSector(RobotSector.baseSector.NONE, RobotSector.sectorType.NONE,new Pose2d(67.,67.,new Rotation2d()), 0,0,-1);
     }
 
-    public boolean createSector(RobotSector.baseSector base , RobotSector.sectorType type, Pose2d center, double width, double hight){
-       try {
+    public void createSector(RobotSector.baseSector base , RobotSector.sectorType type, Pose2d center, double width, double hight){
            sectorArr[sectorArrPtr] = new RobotSector(base, type, center, width, hight,sectorArrPtr);
            sectorArrPtr++;
-       } catch (Exception e) {
-           return false;
-       }
-       return true;
     }
     @Override
     public void periodic() {
