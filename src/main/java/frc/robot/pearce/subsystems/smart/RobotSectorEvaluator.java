@@ -21,6 +21,7 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
     private final LoggedMechanismLigament2d mechanismLigament;
 
     public RobotSectorEvaluator(SwerveDriveSubsystem drive) {
+<<<<<<< Updated upstream
     this.drive = drive;
 
         mechanism = new LoggedMechanism2d(2.0, 2.0);
@@ -35,30 +36,36 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
                         90
                 )
         );
+=======
+        this.drive = drive;
+>>>>>>> Stashed changes
     }
-    public RobotSector getSector(){ //
+
+    public RobotSector getSector() { //
         Pose2d pose = drive.getPose();
         for (RobotSector robotSector : sectorArr) {
-            if(robotSector == null) break;
+            if (robotSector == null) break;
             if ((Math.abs(robotSector.center.getX() - pose.getX()) < robotSector.width) &&
                     (Math.abs(robotSector.center.getY() - pose.getY()) < robotSector.hight)) {
                 return robotSector;
             }
         }
-        return new RobotSector(RobotSector.baseSector.NONE, RobotSector.sectorType.NONE,new Pose2d(67.,67.,new Rotation2d()), 0,0);
+        return new RobotSector(RobotSector.baseSector.NONE, RobotSector.sectorType.NONE, new Pose2d(67., 67., new Rotation2d()), 0, 0, -1);
     }
 
-    public boolean createSector(RobotSector.baseSector base , RobotSector.sectorType type, Pose2d center, double width, double hight){
-       try {
-           sectorArr[sectorArrPtr] = new RobotSector(base, type, center, width, hight);
-           sectorArrPtr++;
-       } catch (Exception e) {
-           return false;
-       }
-       return true;
+    public boolean createSector(RobotSector.baseSector base, RobotSector.sectorType type, Pose2d center, double width, double hight) {
+        try {
+            sectorArr[sectorArrPtr] = new RobotSector(base, type, center, width, hight, sectorArrPtr);
+            sectorArrPtr++;
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
     }
+
     @Override
     public void periodic() {
+<<<<<<< Updated upstream
         if(getSector().center != null){
             Logger.recordOutput(getName() +"/Sector ", getSector().center);
 
@@ -68,6 +75,13 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
             Logger.recordOutput(getName() + "/3d", mechanism);
         }
 
+=======
+        if (getSector().center != null){
+            Logger.recordOutput(getName() + "/CurrentSector/info/center ", getSector().center);
+            Logger.recordOutput(getName() + "/CurrentSector/info/width ", getSector().width);
+            Logger.recordOutput(getName() + "/CurrentSector/info/hight ", getSector().hight);
+            RobotSector.updateAdvantage(getSector());
+        }
+>>>>>>> Stashed changes
     }
-
 }
