@@ -6,12 +6,12 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 
-public class DynamicPather {
+public class DynamicPather {//statless
 
     /**
      * Builds a pose offset backward from the goal along its facing direction.
      */
-    public Pose2d buildApproachPose(Pose2d robotPose, Pose2d goalPose, double approachDistance) {
+    public static Pose2d buildApproachPose(Pose2d robotPose, Pose2d goalPose, double approachDistance) {
         // Vector from robot to goal
         Translation2d delta = goalPose.getTranslation().minus(robotPose.getTranslation());
         double distance = delta.getNorm();
@@ -26,7 +26,7 @@ public class DynamicPather {
         return new Pose2d(approachTranslation, goalPose.getRotation());
     }
 
-   public Command computePathfindCommand(Pose2d targetPose,PathConstraints pathConstraints,  double timeout){
+   public static Command computePathfindCommand(Pose2d targetPose,PathConstraints pathConstraints,  double timeout){
 
        return AutoBuilder.pathfindToPose(targetPose, pathConstraints)
                .withTimeout(timeout);
