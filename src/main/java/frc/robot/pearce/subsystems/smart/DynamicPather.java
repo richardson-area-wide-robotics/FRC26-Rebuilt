@@ -7,11 +7,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 
 public class DynamicPather {
-    private final PathConstraints pathConstraints
-
-    public DynamicPather(PathConstraints pathConstraints){
-        this.pathConstraints = pathConstraints;
-    }
 
     /**
      * Builds a pose offset backward from the goal along its facing direction.
@@ -31,7 +26,7 @@ public class DynamicPather {
         return new Pose2d(approachTranslation, goalPose.getRotation());
     }
 
-   public Command computePathfindCommand(Pose2d targetPose, double timeout){
+   public Command computePathfindCommand(Pose2d targetPose,PathConstraints pathConstraints,  double timeout){
 
        return AutoBuilder.pathfindToPose(targetPose, pathConstraints)
                .withTimeout(timeout);

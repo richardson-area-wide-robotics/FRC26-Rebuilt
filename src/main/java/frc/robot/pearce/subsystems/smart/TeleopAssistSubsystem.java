@@ -28,12 +28,7 @@ public class TeleopAssistSubsystem extends SubsystemBase {
     @Getter
     private HubStatus.HubState cachedHubState = HubStatus.HubState.ACTIVE;
 
-    private DynamicPather dynamicPather = new DynamicPather(
-            new PathConstraints(
-                    7.0,
-                    3.0,
-                    Math.toRadians(540),
-                    Math.toRadians(720)));
+    private final DynamicPather dynamicPather = new DynamicPather();
 
     public enum Goal {
         NONE(null, 0.0),
@@ -200,10 +195,18 @@ public class TeleopAssistSubsystem extends SubsystemBase {
 
         cancelAI();
 
-        Pose2d approachPose = dynamicPather.buildApproachPose(drive.getPose(), goalPose, currentGoal.getApproachDistance());
+        Pose2d approachPose = dynamicPather.buildApproachPose(robotPose, goalPose, currentGoal.getApproachDistance());
 
         // Schedule path with a longer timeout for smoother motion
-        activeCommand = dynamicPather.computePathfindCommand(approachPose, 1);
+        activeCommand = dynamicPather.computePathfindCommand(
+                approachPose,
+                new PathConstraints(
+                    7.0,
+                    3.0,
+                    Math.toRadians(540),
+                    Math.toRadians(720)),
+                1);
+
         CommandScheduler.getInstance().schedule(activeCommand);
 
         lastGoalPose = goalPose;
