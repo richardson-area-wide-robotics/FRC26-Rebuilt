@@ -29,7 +29,6 @@ import frc.robot.pearce.components.RobotSector;
 import frc.robot.pearce.subsystems.ProtoFeeder;
 import frc.robot.pearce.subsystems.ProtoShooter;
 import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
-import frc.robot.pearce.subsystems.smart.TeleopAssistSubsystem;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
@@ -70,7 +69,6 @@ public class PearceContainer implements IRobotContainer {
       Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
       Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
-  public static final TeleopAssistSubsystem TELEOP_ASSIST = new TeleopAssistSubsystem(DRIVE_SUBSYSTEM);
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
   private static SendableChooser<Command> automodeChooser;
 
@@ -112,16 +110,6 @@ public class PearceContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(PROTO_SHOOTER::runShooter, PROTO_SHOOTER), Commands.runOnce(PROTO_SHOOTER::stopShooter));
-
-    RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.leftBumper(),
-            Commands.runOnce(TELEOP_ASSIST::toggle), Commands.none()
-    );
-
-    RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.povUp(),
-            Commands.runOnce(TELEOP_ASSIST::disable), Commands.none()
-    );
 
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.b(),
