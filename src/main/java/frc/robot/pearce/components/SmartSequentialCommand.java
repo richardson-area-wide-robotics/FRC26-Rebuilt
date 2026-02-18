@@ -19,12 +19,22 @@ public class SmartSequentialCommand {
     public Reference<SmartSequentialCommand> nextSmartSequentialCommand;
 
 
+    /**
+     * Create a {@link SmartSequentialCommand}, allowing the robot to preform actions
+     *
+     * @param path The {@link UncomputedPath} the robot should drive on
+     * @param action The {@link Command} to run when the robot is finished driving, can be null
+     * @param next The next {@link SmartSequentialCommand} to run, can be null
+     */
     public SmartSequentialCommand(@Nullable UncomputedPath path, @Nullable Command action, @Nullable Reference<SmartSequentialCommand> next){
         this.path = Objects.requireNonNullElse(path, new UncomputedPath(null,null));
         this.action = Objects.requireNonNullElse(action, Commands.none());
         this.nextSmartSequentialCommand = next;
     }
 
+    /**
+     * Run the {@link SmartSequentialCommand}. This builds the path using the current robot pose, runs that path, and executes the next {@link SmartSequentialCommand}
+     */
     public void execute(){
         SequentialCommandGroup commandToExecute = new SequentialCommandGroup(path.compute(),action);
         CommandScheduler.getInstance().schedule(commandToExecute);
@@ -35,18 +45,27 @@ public class SmartSequentialCommand {
     }
 
 
-    private static class UncomputedPath{
+    public static class UncomputedPath{
         public Pose2d endPose;
         public PathConstraints constraints;
 
+        /**
+         * Create a {@link SmartSequentialCommand}, allowing us to path at runtime
+         *
+         * @param endPose The pose our robot wants to end up at, can be null (if we dont want to move)
+         * @param constraints The path constraints to control how fast we move, can be null (But only if {@code endPose} is null)
+         */
         public UncomputedPath(@Nullable Pose2d endPose, @Nullable PathConstraints constraints){
             this.endPose = endPose;
             this.constraints = constraints;
         }
 
+        /**
+         * Build the path into a command we can run
+         */
         public Command compute(){
             if(endPose == null) return Commands.none();
-            else return DynamicPather.computePathfindCommand(endPose,constraints,20.);
+            else return DynamicPather.computePathfindCommand(endPose,constraints,20);
         }
     }
 
