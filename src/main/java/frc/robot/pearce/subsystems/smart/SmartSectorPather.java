@@ -7,13 +7,58 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.pearce.PearceContainer;
 import frc.robot.pearce.components.SmartSequentialCommand;
 
+import java.lang.ref.Reference;
+import java.util.List;
+
 public class SmartSectorPather {
 
-    SmartSequentialCommand goToRedHub;
+    private SmartSequentialCommand rootCommand;
+    private SmartSequentialCommand tailCommand;
 
-    public SmartSectorPather(){
-        goToRedHub = new SmartSequentialCommand(new SmartSequentialCommand.UncomputedPath(new Pose2d(11,3,new Rotation2d()),new PathConstraints(1,1,1,1)), Commands.runOnce(PearceContainer.PROTO_SHOOTER::runShooter), null);
+    private static PathConstraints standardConstraints = new PathConstraints(1,1,1,1);
+    //Define all usable SmartSequentialCommands here.
 
+    public static SmartSequentialCommand goToRedHub = new SmartSequentialCommand(
+            new SmartSequentialCommand.UncomputedPath(
+                new Pose2d(11,3,new Rotation2d()),
+                standardConstraints),
+            Commands.none(),
+            null);
+    public static SmartSequentialCommand shootInPlace = new SmartSequentialCommand(
+            new SmartSequentialCommand.UncomputedPath(
+            null,
+            null),
+            Commands.runOnce(PearceContainer.PROTO_SHOOTER::runShooter),
+            null);
+
+
+    public SmartSectorPather(SmartSequentialCommand rootCommand){
+        this.rootCommand = rootCommand;
+        this.tailCommand = rootCommand;
+    }
+
+
+    public void append(SmartSequentialCommand appendantCommand){
+        if(rootCommand == null || tailCommand == null) throw new IllegalStateException();
+
+        tailCommand.nextSmartSequentialCommand = appendantCommand;
+        tailCommand = appendantCommand;
+    }
+    public void remove(){
+        if (rootCommand.nextSmartSequentialCommand == null) {
+            rootCommand = null;
+            tailCommand = null;
+            return;
+        }
+        SmartSequentialCommand deepestCommand = rootCommand;
+
+        while (deepestCommand.nextSmartSequentialCommand.nextSmartSequentialCommand != null) {
+            deepestCommand = deepestCommand.nextSmartSequentialCommand;
+        }
+        deepestCommand.nextSmartSequentialCommand = null;
+        tailCommand = deepestCommand;
 
     }
+
+
 }

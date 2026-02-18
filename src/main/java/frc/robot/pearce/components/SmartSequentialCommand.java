@@ -16,7 +16,7 @@ public class SmartSequentialCommand {
 
     public UncomputedPath path;
     public Command action;
-    public Reference<SmartSequentialCommand> nextSmartSequentialCommand;
+    public SmartSequentialCommand nextSmartSequentialCommand;
 
 
     /**
@@ -26,7 +26,7 @@ public class SmartSequentialCommand {
      * @param action The {@link Command} to run when the robot is finished driving, can be null
      * @param next The next {@link SmartSequentialCommand} to run, can be null
      */
-    public SmartSequentialCommand(@Nullable UncomputedPath path, @Nullable Command action, @Nullable Reference<SmartSequentialCommand> next){
+    public SmartSequentialCommand(@Nullable UncomputedPath path, @Nullable Command action, @Nullable SmartSequentialCommand next){
         this.path = Objects.requireNonNullElse(path, new UncomputedPath(null,null));
         this.action = Objects.requireNonNullElse(action, Commands.none());
         this.nextSmartSequentialCommand = next;
@@ -39,8 +39,8 @@ public class SmartSequentialCommand {
         SequentialCommandGroup commandToExecute = new SequentialCommandGroup(path.compute(),action);
         CommandScheduler.getInstance().schedule(commandToExecute);
 
-        if(nextSmartSequentialCommand.get() != null){
-            nextSmartSequentialCommand.get().execute();
+        if(nextSmartSequentialCommand != null){
+            nextSmartSequentialCommand.execute();
         }
     }
 
