@@ -22,7 +22,7 @@ public class ProtoShooter extends DashboardSubsystem {
     public ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
 
     public enum ShooterPosition {
-        AGAINST_HUB(2500);
+        AGAINST_HUB(2437.5);
 
         public final double rpm;
 
