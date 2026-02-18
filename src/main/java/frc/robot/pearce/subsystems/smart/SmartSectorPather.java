@@ -5,11 +5,15 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.pearce.PearceContainer;
+import frc.robot.pearce.components.ConditionalSmartSequentialCommand;
 import frc.robot.pearce.components.SmartSequentialCommand;
 import lombok.NonNull;
 
+import javax.annotation.Nullable;
 import java.lang.ref.Reference;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 public class SmartSectorPather {
     @NonNull
@@ -25,14 +29,29 @@ public class SmartSectorPather {
             new SmartSequentialCommand.UncomputedPath(
                 new Pose2d(11,3,new Rotation2d()),
                 standardConstraints),
-            Commands.none(),
+            null,
             null);
     public static SmartSequentialCommand shootInPlace = new SmartSequentialCommand(
-            new SmartSequentialCommand.UncomputedPath(
             null,
-            null),
             Commands.runOnce(PearceContainer.PROTO_SHOOTER::runShooter),
             null);
+    public static SmartSequentialCommand loadInPlace = new SmartSequentialCommand(
+            null,
+            Commands.runOnce(PearceContainer.PROTO_FEEDER::load),
+            null);
+
+
+    //Define all usable ConditionalSmartSequentialCommands here.
+    private static Boolean isLoaded(){return false;}//EXAMPLE CONDITIONAL
+    public static ConditionalSmartSequentialCommand climbOrShootInPlace = new ConditionalSmartSequentialCommand(
+            null,
+             null,
+            loadInPlace,
+            shootInPlace,
+            SmartSectorPather::isLoaded
+    );
+
+
 
 
     public SmartSectorPather(SmartSequentialCommand rootCommand){
@@ -50,7 +69,24 @@ public class SmartSectorPather {
 
 
         tailCommand.nextSmartSequentialCommand = appendantCommand;
+        tailCommand = Objects.requireNonNullElse(appendantCommand.nextSmartSequentialCommand, appendantCommand);
+    }
+    public void appendToConditional(SmartSequentialCommand appendantCommand){
+        if(rootCommand == null || tailCommand == null) throw new IllegalStateException();
+        if (!(tailCommand instanceof ConditionalSmartSequentialCommand)) {
+            throw new IllegalStateException();
+        }
+
+        ((ConditionalSmartSequentialCommand) tailCommand).nextSmartSequentialCommandFalse = appendantCommand;
         tailCommand = appendantCommand;
+    }
+    public void applyConditional(Supplier<Boolean> conditional){
+        if(rootCommand == null || tailCommand == null) throw new IllegalStateException();
+        if (!(tailCommand instanceof ConditionalSmartSequentialCommand)) {
+            throw new IllegalStateException();
+        }
+        ((ConditionalSmartSequentialCommand) tailCommand).conditional = conditional;
+
     }
     public void removeNode(){
         if (rootCommand == null) throw new IllegalStateException();
@@ -66,7 +102,6 @@ public class SmartSectorPather {
         }
         deepestCommand.nextSmartSequentialCommand = null;
         tailCommand = deepestCommand;
-
     }
 
 
