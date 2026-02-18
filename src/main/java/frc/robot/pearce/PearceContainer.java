@@ -12,7 +12,6 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -27,9 +26,7 @@ import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.HubStatus;
 import frc.robot.pearce.components.RobotSector;
-import frc.robot.pearce.subsystems.ProtoClimber;
 import frc.robot.pearce.subsystems.ProtoFeeder;
-import frc.robot.pearce.subsystems.ProtoIntake;
 import frc.robot.pearce.subsystems.ProtoShooter;
 import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.pearce.subsystems.smart.TeleopAssistSubsystem;
@@ -96,10 +93,10 @@ public class PearceContainer implements IRobotContainer {
       automodeChooser = AutoBuilder.buildAutoChooser();
       SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
 
-      SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(1.,1.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(3.,1.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
+      SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,1.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,1.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
 
       return new PearceContainer();
   }
