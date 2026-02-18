@@ -6,16 +6,19 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.pearce.PearceContainer;
 import frc.robot.pearce.components.SmartSequentialCommand;
+import lombok.NonNull;
 
 import java.lang.ref.Reference;
 import java.util.List;
 
 public class SmartSectorPather {
-
-    private SmartSequentialCommand rootCommand;
+    @NonNull
+    private SmartSequentialCommand rootCommand; //you cannot remove the root dont even try
+    @NonNull
     private SmartSequentialCommand tailCommand;
 
-    private static PathConstraints standardConstraints = new PathConstraints(1,1,1,1);
+    private static PathConstraints standardConstraints =
+            new PathConstraints(1,1,1,1);
     //Define all usable SmartSequentialCommands here.
 
     public static SmartSequentialCommand goToRedHub = new SmartSequentialCommand(
@@ -37,19 +40,25 @@ public class SmartSectorPather {
         this.tailCommand = rootCommand;
     }
 
+    public void executeSequence(){
+        rootCommand.execute();
+    }
 
-    public void append(SmartSequentialCommand appendantCommand){
+
+    public void appendNode(SmartSequentialCommand appendantCommand){
         if(rootCommand == null || tailCommand == null) throw new IllegalStateException();
+
 
         tailCommand.nextSmartSequentialCommand = appendantCommand;
         tailCommand = appendantCommand;
     }
-    public void remove(){
+    public void removeNode(){
+        if (rootCommand == null) throw new IllegalStateException();
+
         if (rootCommand.nextSmartSequentialCommand == null) {
-            rootCommand = null;
-            tailCommand = null;
             return;
         }
+
         SmartSequentialCommand deepestCommand = rootCommand;
 
         while (deepestCommand.nextSmartSequentialCommand.nextSmartSequentialCommand != null) {
