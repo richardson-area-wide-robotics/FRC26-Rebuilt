@@ -128,9 +128,12 @@ public class PearceContainer implements IRobotContainer {
 
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.b(),
-            Commands.runOnce(PROTO_FEEDER::load),
-            Commands.runOnce(PROTO_FEEDER::stopLoad));
+            Commands.runOnce(PROTO_FEEDER::load).alongWith(Commands.runOnce(PROTO_FEEDER::cycle)),
+            Commands.runOnce(PROTO_FEEDER::stopLoad).alongWith(Commands.runOnce(PROTO_FEEDER::stopCycle)));
 
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
+    Commands.runOnce(PROTO_FEEDER::cycle),
+    Commands.runOnce(PROTO_FEEDER::stopCycle));
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 

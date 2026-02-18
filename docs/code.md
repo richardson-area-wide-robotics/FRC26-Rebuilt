@@ -63,6 +63,7 @@ flowchart TD
     end
     subgraph frc_robot_pearce_components[frc.robot.pearce.components]
         HubStatus[HubStatus]
+        RobotSector[RobotSector]
     end
     subgraph frc_robot_pearce[frc.robot.pearce]
         PearceConstants[PearceConstants]
@@ -75,6 +76,8 @@ flowchart TD
         ProtoShooter[ProtoShooter]
     end
     subgraph frc_robot_pearce_subsystems_smart[frc.robot.pearce.subsystems.smart]
+        DynamicPather[DynamicPather]
+        RobotSectorEvaluator[RobotSectorEvaluator]
         TeleopAssistSubsystem[TeleopAssistSubsystem]
     end
     BaseInstanceable_CANDiagnostics[BaseInstanceable<CANDiagnostics]
@@ -94,6 +97,7 @@ flowchart TD
     ProtoClimber -->|extends| DashboardSubsystem
     ProtoIntake -->|extends| DashboardSubsystem
     ProtoShooter -->|extends| DashboardSubsystem
+    RobotSectorEvaluator -->|extends| DashboardSubsystem
     TeleopAssistSubsystem -->|extends| SubsystemBase
     LoggedRobot[LoggedRobot]
     Robot -->|extends| LoggedRobot
@@ -116,6 +120,7 @@ flowchart TD
     SwerveDriveSubsystem --> AssumedPoseSubsystem
     TankDriveSubsystem --> TankHardware
     AssumedPoseSubsystem --> RAWRNavX2
+    RobotSectorEvaluator --> SwerveDriveSubsystem
     TeleopAssistSubsystem --> SwerveDriveSubsystem
     Robot --> IRobotContainer
     style BuildConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -151,12 +156,15 @@ flowchart TD
     style CommonConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style HubStatus fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RobotSector fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoClimber fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoFeeder fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoIntake fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoShooter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style DynamicPather fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RobotSectorEvaluator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style TeleopAssistSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style BaseInstanceable_CANDiagnostics fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
