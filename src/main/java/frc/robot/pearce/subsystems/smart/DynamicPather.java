@@ -28,8 +28,7 @@ public class DynamicPather {//statless
 
    public static Command computePathfindCommand(Pose2d targetPose,PathConstraints pathConstraints,  double timeout){
 
-       return AutoBuilder.pathfindToPose(targetPose, pathConstraints)
-               .withTimeout(timeout);
+       return AutoBuilder.pathfindToPose(targetPose, pathConstraints);
 
    }
 }

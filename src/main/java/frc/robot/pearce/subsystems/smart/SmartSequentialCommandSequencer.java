@@ -4,6 +4,7 @@ import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.pearce.PearceContainer;
 import frc.robot.pearce.components.SmartSequentialCommand;
 import lombok.NonNull;
@@ -21,8 +22,14 @@ public class SmartSequentialCommandSequencer {
         this.tailCommand = rootCommand;
     }
 
-    public SmartSequentialCommand finalizeSequence(){
-        return rootCommand;
+    public SequentialCommandGroup finalizeSequence(){
+        SequentialCommandGroup commandToExecute = new SequentialCommandGroup(Commands.runOnce(()->rootCommand.updateAdvantage()),rootCommand.path.compute(),rootCommand.action);
+        SmartSequentialCommand current = rootCommand.nextSmartSequentialCommand;
+        while(current != null){
+            commandToExecute.addCommands(Commands.runOnce(current::updateAdvantage),current.path.compute(),current.action);
+            current = current.nextSmartSequentialCommand;
+        }
+        return commandToExecute;
     }
 
 

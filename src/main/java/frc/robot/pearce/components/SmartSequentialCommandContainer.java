@@ -16,20 +16,24 @@ public class SmartSequentialCommandContainer {
                     new Pose2d(11,3,new Rotation2d()),
                     standardConstraints),
             null,
-            null);
+            null,
+            "goToRedHub");
     public static SmartSequentialCommand shootInPlace = new SmartSequentialCommand(
             null,
             Commands.runOnce(PearceContainer.PROTO_SHOOTER::runShooter),
-            null);
+            null,
+                "shootInPlace");
     public static SmartSequentialCommand returnToStart = new SmartSequentialCommand(
             new SmartSequentialCommand.UncomputedPath(new Pose2d(0,0,new Rotation2d()),
                     standardConstraints),
             null,
-            null);
+            null,
+            "returnToStart");
     public static SmartSequentialCommand exampleComplexTask = new SmartSequentialCommand(
             new SmartSequentialCommand.UncomputedPath(new Pose2d(0,0,new Rotation2d()),
                     standardConstraints),
             Commands.runOnce(PearceContainer.SECTOR_EVALUATOR::getSector),
-            returnToStart);
+            returnToStart,
+            "exampleComplexTask");
 
 }

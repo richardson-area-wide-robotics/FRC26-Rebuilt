@@ -16,6 +16,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
@@ -26,7 +27,6 @@ import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.HubStatus;
 import frc.robot.pearce.components.RobotSector;
-import frc.robot.pearce.components.SmartSequentialCommand;
 import frc.robot.pearce.components.SmartSequentialCommandContainer;
 import frc.robot.pearce.subsystems.ProtoFeeder;
 import frc.robot.pearce.subsystems.ProtoShooter;
@@ -74,7 +74,7 @@ public class PearceContainer implements IRobotContainer {
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
   public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
-  private static SmartSequentialCommand SequencedTask;
+  public static SequentialCommandGroup sequencedCommand;
 
   private static SendableChooser<Command> automodeChooser;
 
@@ -86,15 +86,18 @@ public class PearceContainer implements IRobotContainer {
             HIDConstants.DRIVER_CONTROLLER::getLeftY,
             HIDConstants.DRIVER_CONTROLLER::getLeftX,
             HIDConstants.DRIVER_CONTROLLER::getRightX));
-        
+
+    // Set up the auto builder
+    DRIVE_SUBSYSTEM.configureAutoBuilder();
+
+
     COMMAND_SEQUENCER.appendNode(SmartSequentialCommandContainer.shootInPlace);
     COMMAND_SEQUENCER.appendNode(SmartSequentialCommandContainer.exampleComplexTask);
-    SequencedTask = COMMAND_SEQUENCER.finalizeSequence();
+    sequencedCommand = COMMAND_SEQUENCER.finalizeSequence();
       // Bind buttons and triggers
       configureBindings();
   
-      // Set up the auto builder
-      DRIVE_SUBSYSTEM.configureAutoBuilder();
+
 
       // Set up the auto chooser
       automodeChooser = AutoBuilder.buildAutoChooser();
@@ -130,7 +133,7 @@ public class PearceContainer implements IRobotContainer {
             Commands.runOnce(PROTO_FEEDER::stopLoad));
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.button(1),
-            Commands.runOnce(SequencedTask::execute),
+            sequencedCommand,
             Commands.none());
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
