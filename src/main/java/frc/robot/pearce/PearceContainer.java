@@ -91,8 +91,6 @@ public class PearceContainer implements IRobotContainer {
     DRIVE_SUBSYSTEM.configureAutoBuilder();
 
 
-    COMMAND_SEQUENCER.appendNode(SmartSequentialCommandContainer.shootInPlace);
-    COMMAND_SEQUENCER.appendNode(SmartSequentialCommandContainer.exampleComplexTask);
     sequencedCommand = COMMAND_SEQUENCER.finalizeSequence();
       // Bind buttons and triggers
       configureBindings();
@@ -132,7 +130,7 @@ public class PearceContainer implements IRobotContainer {
             Commands.runOnce(PROTO_FEEDER::load),
             Commands.runOnce(PROTO_FEEDER::stopLoad));
     RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.button(1),
+            HIDConstants.DRIVER_CONTROLLER.button(4),
             sequencedCommand,
             Commands.none());
 

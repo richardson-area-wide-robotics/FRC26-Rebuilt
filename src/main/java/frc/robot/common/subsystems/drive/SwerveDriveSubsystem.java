@@ -425,6 +425,10 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
    * @param speeds Calculated swerve module states
    */
   public void autoDrive(ChassisSpeeds speeds) {
+
+    double tmpSpeed = speeds.vxMetersPerSecond;
+    speeds.vxMetersPerSecond = -speeds.vyMetersPerSecond;
+    speeds.vyMetersPerSecond = tmpSpeed;
     // Get requested chassis speeds, correcting for second order kinematics
     desiredChassisSpeeds = AdvancedSwerveKinematics.correctForDynamics(speeds);
 
