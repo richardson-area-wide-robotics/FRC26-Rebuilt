@@ -20,7 +20,6 @@ import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 import org.lasarobotics.drive.swerve.AdvancedSwerveKinematics;
 import org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity;
-import org.lasarobotics.drive.swerve.SwerveModule;
 import org.lasarobotics.drive.RotatePIDController;
 import org.lasarobotics.drive.ThrottleMap;
 import org.lasarobotics.utils.PIDConstants;
@@ -49,7 +48,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.common.components.RobotUtils;
-import frc.robot.common.swerve.RAWRSwerveModule;
 
 /**
  * Drive Subsystem for Swerve Drive bots with 4 motors in each corner
@@ -108,7 +106,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
         // Initialize subsystem name
         setSubsystem(this.getClass().getSimpleName());
 
-        this.DRIVETRAIN_HARDWARE = initializeHardware(drivetrainHardwareParams);
+        this.DRIVETRAIN_HARDWARE = drivetrainHardwareParams.initializeHardware();
 
         // Drivetrain constants
         DRIVE_MAX_LINEAR_SPEED = DRIVETRAIN_HARDWARE.lFrontModule().getMaxLinearVelocity();
@@ -167,39 +165,6 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
     }
 }
 
-/**
- * Initialize hardware devices for drive subsystem
- *
- * @return A Hardware object containing all necessary devices for this subsystem
- */
-private static SwerveHardware initializeHardware(SwerveHardwareParams params) {
-
-  RAWRSwerveModule lFrontModule = RAWRSwerveModule.createSwerve(
-          params.leftFrontDriveId(),
-          params.leftFrontRotateId(),
-          SwerveModule.Location.LeftFront
-  );
-
-  RAWRSwerveModule rFrontModule = RAWRSwerveModule.createSwerve(
-          params.rightFrontDriveId(),
-          params.rightFrontRotateId(),
-          SwerveModule.Location.RightFront
-  );
-
-  RAWRSwerveModule lRearModule = RAWRSwerveModule.createSwerve(
-          params.leftRearDriveId(),
-          params.leftRearRotateId(),
-          SwerveModule.Location.LeftRear
-  );
-
-  RAWRSwerveModule rRearModule = RAWRSwerveModule.createSwerve(
-          params.rightRearDriveId(),
-          params.rightRearRotateId(),
-          SwerveModule.Location.RightRear
-  );
-
-  return new SwerveHardware(params.imu(), lFrontModule, rFrontModule, lRearModule, rRearModule);
-}
 
   /**
    * Drive the robot
