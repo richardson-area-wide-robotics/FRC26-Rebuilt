@@ -8,40 +8,21 @@ import frc.robot.pearce.PearceContainer;
 import frc.robot.pearce.components.SmartSequentialCommand;
 import lombok.NonNull;
 
-import java.lang.ref.Reference;
-import java.util.List;
-
-public class SmartSectorPather {
+public class SmartSequentialCommandSequencer {
     @NonNull
     private SmartSequentialCommand rootCommand; //you cannot remove the root dont even try
     @NonNull
     private SmartSequentialCommand tailCommand;
 
-    private static PathConstraints standardConstraints =
-            new PathConstraints(1,1,1,1);
-    //Define all usable SmartSequentialCommands here.
-
-    public static SmartSequentialCommand goToRedHub = new SmartSequentialCommand(
-            new SmartSequentialCommand.UncomputedPath(
-                new Pose2d(11,3,new Rotation2d()),
-                standardConstraints),
-            Commands.none(),
-            null);
-    public static SmartSequentialCommand shootInPlace = new SmartSequentialCommand(
-            new SmartSequentialCommand.UncomputedPath(
-            null,
-            null),
-            Commands.runOnce(PearceContainer.PROTO_SHOOTER::runShooter),
-            null);
 
 
-    public SmartSectorPather(SmartSequentialCommand rootCommand){
+    public SmartSequentialCommandSequencer(SmartSequentialCommand rootCommand){
         this.rootCommand = rootCommand;
         this.tailCommand = rootCommand;
     }
 
-    public void executeSequence(){
-        rootCommand.execute();
+    public SmartSequentialCommand finalizeSequence(){
+        return rootCommand;
     }
 
 
@@ -68,6 +49,7 @@ public class SmartSectorPather {
         tailCommand = deepestCommand;
 
     }
+
 
 
 }

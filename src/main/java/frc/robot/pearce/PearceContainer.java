@@ -26,9 +26,12 @@ import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.HubStatus;
 import frc.robot.pearce.components.RobotSector;
+import frc.robot.pearce.components.SmartSequentialCommand;
+import frc.robot.pearce.components.SmartSequentialCommandContainer;
 import frc.robot.pearce.subsystems.ProtoFeeder;
 import frc.robot.pearce.subsystems.ProtoShooter;
 import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
+import frc.robot.pearce.subsystems.smart.SmartSequentialCommandSequencer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
@@ -70,6 +73,9 @@ public class PearceContainer implements IRobotContainer {
       Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
+  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
+  private static SmartSequentialCommand SequencedTask;
+
   private static SendableChooser<Command> automodeChooser;
 
   public static IRobotContainer createContainer(){
@@ -80,7 +86,10 @@ public class PearceContainer implements IRobotContainer {
             HIDConstants.DRIVER_CONTROLLER::getLeftY,
             HIDConstants.DRIVER_CONTROLLER::getLeftX,
             HIDConstants.DRIVER_CONTROLLER::getRightX));
-
+        
+    COMMAND_SEQUENCER.appendNode(SmartSequentialCommandContainer.shootInPlace);
+    COMMAND_SEQUENCER.appendNode(SmartSequentialCommandContainer.exampleComplexTask);
+    SequencedTask = COMMAND_SEQUENCER.finalizeSequence();
       // Bind buttons and triggers
       configureBindings();
   
@@ -96,8 +105,12 @@ public class PearceContainer implements IRobotContainer {
     SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
     SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
 
-      return new PearceContainer();
+
+
+
+    return new PearceContainer();
   }
+
 
   private static void configureBindings() {
     // Driver Start - toggle traction control
@@ -115,7 +128,10 @@ public class PearceContainer implements IRobotContainer {
             HIDConstants.DRIVER_CONTROLLER.b(),
             Commands.runOnce(PROTO_FEEDER::load),
             Commands.runOnce(PROTO_FEEDER::stopLoad));
-
+    RobotUtils.bindControl(
+            HIDConstants.DRIVER_CONTROLLER.button(1),
+            Commands.runOnce(SequencedTask::execute),
+            Commands.none());
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 
