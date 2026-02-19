@@ -48,6 +48,7 @@ public class RobotContainerRegistry {
             return (IRobotContainer) containerClass.getMethod("createContainer").invoke(null);
         } catch (Exception e) {
             System.err.println("Error creating container for " + teamNumber + "!");
+            e.printStackTrace();
         }
 
         return null;
