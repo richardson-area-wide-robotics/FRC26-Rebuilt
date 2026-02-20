@@ -22,7 +22,8 @@ public class SmartSequentialCommand {
     public String commandName;
 
     public void updateAdvantage() {
-        Logger.recordOutput("Auto/currentCommand",commandName);
+        Logger.recordOutput("Assist/currentCommand",commandName);
+        Logger.recordOutput("Assist/path",path.endPose);
     }
 
 
