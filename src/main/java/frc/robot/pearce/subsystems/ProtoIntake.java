@@ -39,11 +39,11 @@ public class ProtoIntake extends DashboardSubsystem {
     }
 
     public void intake() {
-        intakeMotor.set(1.0);
+        intakeMotor.set(-0.5);
     }
 
     public void outtake() {
-        intakeMotor.set(-1.0);
+        intakeMotor.set(0.5);
     }
 
     public void stop() {

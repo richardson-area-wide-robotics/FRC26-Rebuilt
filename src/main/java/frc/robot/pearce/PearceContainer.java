@@ -48,6 +48,7 @@ public class PearceContainer implements IRobotContainer {
 
   public static final ProtoShooter PROTO_SHOOTER = new ProtoShooter(10, 11);
   public static final ProtoFeeder PROTO_FEEDER = new ProtoFeeder(18, 14);
+  public static final ProtoIntake PROTO_INTAKE = new ProtoIntake(13, 15);
 
   //public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
@@ -131,9 +132,9 @@ public class PearceContainer implements IRobotContainer {
             Commands.runOnce(PROTO_FEEDER::load).alongWith(Commands.runOnce(PROTO_FEEDER::cycle)),
             Commands.runOnce(PROTO_FEEDER::stopLoad).alongWith(Commands.runOnce(PROTO_FEEDER::stopCycle)));
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
-    Commands.runOnce(PROTO_FEEDER::cycle),
-    Commands.runOnce(PROTO_FEEDER::stopCycle));
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
+    Commands.runOnce(PROTO_INTAKE::intake),
+    Commands.runOnce(PROTO_INTAKE::stop));
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 
