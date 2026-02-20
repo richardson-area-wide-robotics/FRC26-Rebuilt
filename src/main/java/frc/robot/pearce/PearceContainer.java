@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.CommonConstants;
@@ -131,7 +132,7 @@ public class PearceContainer implements IRobotContainer {
             Commands.runOnce(PROTO_FEEDER::stopLoad));
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.button(4),
-            sequencedCommand,
+            Commands.runOnce(()->CommandScheduler.getInstance().schedule(sequencedCommand)),
             Commands.none());
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
