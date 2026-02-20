@@ -14,7 +14,7 @@ import com.revrobotics.PersistMode;
 
 import edu.wpi.first.units.Units;
 
-public class ProtoShooter extends DashboardSubsystem {
+public class Shooter extends DashboardSubsystem {
 
     private final Spark motor1;
     private final Spark motor2;
@@ -31,7 +31,7 @@ public class ProtoShooter extends DashboardSubsystem {
         }
     }
 
-    public ProtoShooter(int id1, int id2) {
+    public Shooter(int id1, int id2) {
         motor1 = new Spark(
                 new ID("ShooterHardware/ShooterLeader", id1),
                 MotorKind.NEO_VORTEX,

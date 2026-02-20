@@ -18,14 +18,14 @@ import frc.robot.common.components.EasyMotor;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.subsystems.DashboardSubsystem;
 
-public class ProtoIntake extends DashboardSubsystem {
+public class Intake extends DashboardSubsystem {
 
     private SparkFlex intakeMotor;
     private SparkFlex deployMotor;
     private RelativeEncoder deployEncoder;
     private BooleanSupplier isStalling;
 
-    public ProtoIntake(int intakeID, int deployID) {
+    public Intake(int intakeID, int deployID) {
         intakeMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
         deployMotor = EasyMotor.createEasySparkFlex(deployID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
         deployEncoder = deployMotor.getEncoder();
