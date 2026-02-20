@@ -1,6 +1,8 @@
 package frc.robot.common;
 
 import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.PathConstraints;
@@ -39,6 +41,8 @@ public class LocalADStarAK implements Pathfinder {
     return io.isNewPathAvailable;
   }
 
+  private PathPlannerPath cachedPath = null;
+
   /**
    * Get the most recently calculated path
    *
@@ -49,16 +53,16 @@ public class LocalADStarAK implements Pathfinder {
   @Override
   public PathPlannerPath getCurrentPath(PathConstraints constraints, GoalEndState goalEndState) {
     if (!Logger.hasReplaySource()) {
-      io.updateCurrentPathPoints(constraints, goalEndState);
+      if (io.adStar.isNewPathAvailable()) {
+        PathPlannerPath newPath = io.adStar.getCurrentPath(constraints, goalEndState);
+        cachedPath = newPath;
+        io.currentPathPoints =
+                newPath != null ? newPath.getAllPathPoints() : Collections.emptyList();
+      }
     }
 
     Logger.processInputs("LocalADStarAK", io);
-
-    if (io.currentPathPoints.isEmpty()) {
-      return null;
-    }
-
-    return PathPlannerPath.fromPathPoints(io.currentPathPoints, constraints, goalEndState);
+    return cachedPath;
   }
 
   /**
@@ -112,15 +116,17 @@ public class LocalADStarAK implements Pathfinder {
     public void toLog(LogTable table) {
       table.put("IsNewPathAvailable", isNewPathAvailable);
 
-      double[] pointsLogged = new double[currentPathPoints.size() * 2];
-      int idx = 0;
-      for (PathPoint point : currentPathPoints) {
-        pointsLogged[idx] = point.position.getX();
-        pointsLogged[idx + 1] = point.position.getY();
-        idx += 2;
-      }
+      Pose2d[] poses = currentPathPoints.stream()
+              .map(p -> {
+                Rotation2d rot =
+                        (p.rotationTarget != null && p.rotationTarget.rotation() != null)
+                                ? p.rotationTarget.rotation()
+                                : new Rotation2d(); // fallback
+                return new Pose2d(p.position, rot);
+              })
+              .toArray(Pose2d[]::new);
 
-      table.put("CurrentPathPoints", pointsLogged);
+      table.put("CurrentPathPoints", poses);
     }
 
     @Override
