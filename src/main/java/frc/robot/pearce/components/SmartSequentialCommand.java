@@ -7,6 +7,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import frc.robot.pearce.PearceContainer;
 import frc.robot.pearce.subsystems.smart.DynamicPather;
 import org.littletonrobotics.junction.Logger;
 
@@ -24,6 +25,7 @@ public class SmartSequentialCommand {
     public void updateAdvantage() {
         Logger.recordOutput("Assist/currentCommand",commandName);
         Logger.recordOutput("Assist/path",path.endPose);
+        Logger.recordOutput("Assist/startPose", PearceContainer.DRIVE_SUBSYSTEM.getPose());
     }
 
 
