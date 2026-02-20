@@ -7,7 +7,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.pearce.PearceContainer;
 
 public class SmartSequentialCommandContainer {
-    private static PathConstraints standardConstraints =
+    private static final PathConstraints standardConstraints =
             new PathConstraints(1,1,1,1);
     //Define all usable SmartSequentialCommands here.
 

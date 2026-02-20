@@ -344,7 +344,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
     AutoBuilder.configure(
             this::getPose,
             this::resetPose,
-            this::getChassisSpeeds,
+            this::getRobotRelativeSpeeds,
             (speeds, feedforwards) -> autoDrive(speeds),
             PATH_FOLLOWER_CONFIG,
             RobotUtils.getRobotConfig(),
@@ -627,6 +627,13 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
    */
   public ChassisSpeeds getChassisSpeeds() {
     return KINEMATICS.toChassisSpeeds(DRIVETRAIN_HARDWARE.getModuleStates());
+  }
+
+  private ChassisSpeeds getRobotRelativeSpeeds() {
+    return ChassisSpeeds.fromFieldRelativeSpeeds(
+            getChassisSpeeds(),
+            getPose().getRotation()
+    );
   }
 
   /**
