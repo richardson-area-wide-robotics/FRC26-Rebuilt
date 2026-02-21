@@ -77,7 +77,7 @@ public class PearceContainer implements IRobotContainer {
       Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
-  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
+  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToClosestShootingLocation);
   public static SequentialCommandGroup sequencedCommand;
 
   private static SendableChooser<Command> automodeChooser;
@@ -96,6 +96,7 @@ public class PearceContainer implements IRobotContainer {
 
 
     sequencedCommand = COMMAND_SEQUENCER.finalizeSequence();
+
       // Bind buttons and triggers
       configureBindings();
   
@@ -135,7 +136,7 @@ public class PearceContainer implements IRobotContainer {
     //        Commands.runOnce(PROTO_FEEDER::stopLoad));
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.y(),
-            Commands.runOnce(()->CommandScheduler.getInstance().schedule(sequencedCommand)),
+            ()-> AutoBuilder.pathfindToPose(ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),SmartSequentialCommandContainer.standardConstraints),
             Commands.none());
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
