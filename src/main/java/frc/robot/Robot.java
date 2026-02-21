@@ -68,6 +68,8 @@ public class Robot extends LoggedRobot {
     System.out.println("Starting with team: " + TeamUtils.getTeamNumber());
     RobotUtils.loadRobotConfig();
     robotContainer = RobotContainerRegistry.createContainerForTeam(TeamUtils.getTeamNumber());
+
+    robotContainer.robotInit();
 }
 
 
@@ -99,6 +101,8 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void autonomousInit() {
+    robotContainer.autonomousInit();
+
     autonomousCommand = robotContainer.getAutonomousCommand();
 
     if (autonomousCommand != null) {

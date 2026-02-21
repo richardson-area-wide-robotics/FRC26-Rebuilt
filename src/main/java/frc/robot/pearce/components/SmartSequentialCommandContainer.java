@@ -8,9 +8,10 @@ import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.pearce.PearceContainer;
+import frc.robot.pearce.subsystems.smart.ScoringLocationLookup;
 
 public class SmartSequentialCommandContainer {
-    private static final PathConstraints standardConstraints =
+    public static final PathConstraints standardConstraints =
             new PathConstraints(1,1,1,1);
     //Define all usable SmartSequentialCommands here.
 
@@ -21,6 +22,14 @@ public class SmartSequentialCommandContainer {
             null,
             null,
             "goToRedHub");
+
+    public static SmartSequentialCommand goToClosestShootingLocation = new SmartSequentialCommand(
+            new SmartSequentialCommand.UncomputedPath(
+                    ScoringLocationLookup.findClosest(PearceContainer.DRIVE_SUBSYSTEM.getPose()),
+                    standardConstraints),
+            null,
+            null,
+            "goToClosestShootingLocation");
     //public static SmartSequentialCommand shootInPlace = new SmartSequentialCommand(
     //        null,
     //        Commands.runOnce(PearceContainer.PROTO_SHOOTER::runShooter),

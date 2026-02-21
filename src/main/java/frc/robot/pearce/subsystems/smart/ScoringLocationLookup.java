@@ -6,11 +6,14 @@ import edu.wpi.first.wpilibj.DriverStation;
 import lombok.AllArgsConstructor;
 
 public class ScoringLocationLookup {
-    private ScoringLocationFinalized scoringLocations[] = new ScoringLocationFinalized[999];
+    private static ScoringLocationFinalized scoringLocationsRed[] = new ScoringLocationFinalized[6];
+    private static ScoringLocationFinalized scoringLocationsBlue[] = new ScoringLocationFinalized[6];
+    public static Boolean team = null;
 
 
-    public void buildScoringLocations(){
-        ScoringLocation scoringLocationsRaw[] = new ScoringLocation[999];
+
+    public static void buildScoringLocations(){
+        ScoringLocation scoringLocationsRaw[] = new ScoringLocation[6];
 
 
         scoringLocationsRaw[0] = new ScoringLocation("hub", new Pose2d(13,4, new Rotation2d()), null);
@@ -21,33 +24,38 @@ public class ScoringLocationLookup {
         scoringLocationsRaw[5] = new ScoringLocation("leftside_hub", new Pose2d(13,3, new Rotation2d()), null);
 
 
-        DriverStation.Alliance alliance = DriverStation.getAlliance().get();
-
         for (int i = 0; i < scoringLocationsRaw.length; i++) {
-            if(alliance == DriverStation.Alliance.Red){
-                ScoringLocation scoringLocation = scoringLocationsRaw[i];
+            ScoringLocation scoringLocation = scoringLocationsRaw[i];
+            scoringLocationsRed[i] = new ScoringLocationFinalized(scoringLocation.name, scoringLocation.redPose2d);
+            scoringLocationsBlue[i] = new ScoringLocationFinalized(scoringLocation.name, scoringLocation.bluePose2d);
 
-                scoringLocations[i] = new ScoringLocationFinalized(scoringLocation.name, scoringLocation.redPose2d);
-            }
-            else if(alliance == DriverStation.Alliance.Blue){
-                ScoringLocation scoringLocation = scoringLocationsRaw[i];
-
-                scoringLocations[i] = new ScoringLocationFinalized(scoringLocation.name, scoringLocation.bluePose2d);
-            }
         }
 
     }
-    public Pose2d findClosest(Pose2d robotPose){
-        double closestDist = Double.MAX_VALUE;
+    public static Pose2d findClosest(Pose2d robotPose){//false for blue
+        if(team== null) return new Pose2d();
+        double closestDist = 999;
         int closestI = -1;
-        for(int i = 0; i<scoringLocations.length;i++){
-            ScoringLocationFinalized scoringLocationFinalized = scoringLocations[i];
-            if(robotPose.getTranslation().getDistance(scoringLocationFinalized.finalizedPose2d.getTranslation()) > closestDist){
+
+        ScoringLocationFinalized[] arrayInQuestion = null;
+
+
+        if(team){
+            arrayInQuestion = scoringLocationsRed;
+        }
+        else if(!team){
+            arrayInQuestion = scoringLocationsBlue;
+        }
+
+
+        for(int i = 0; i<arrayInQuestion.length;i++){
+            ScoringLocationFinalized scoringLocationFinalized = arrayInQuestion[i];
+            if(robotPose.getTranslation().getDistance(scoringLocationFinalized.finalizedPose2d.getTranslation()) < closestDist){
                 closestDist = robotPose.getTranslation().getDistance(scoringLocationFinalized.finalizedPose2d.getTranslation());
                 closestI = i;
             };
         }
-        return scoringLocations[closestI].finalizedPose2d;
+        return arrayInQuestion[closestI].finalizedPose2d;
 
         }
 

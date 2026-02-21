@@ -5,6 +5,7 @@
 package frc.robot.pearce;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.Units;
@@ -31,7 +32,9 @@ import frc.robot.pearce.components.RobotSector;
 import frc.robot.pearce.components.SmartSequentialCommandContainer;
 import frc.robot.pearce.subsystems.ProtoFeeder;
 import frc.robot.pearce.subsystems.ProtoShooter;
+import frc.robot.pearce.subsystems.smart.DynamicPather;
 import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
+import frc.robot.pearce.subsystems.smart.ScoringLocationLookup;
 import frc.robot.pearce.subsystems.smart.SmartSequentialCommandSequencer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -108,7 +111,7 @@ public class PearceContainer implements IRobotContainer {
     SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
 
 
-
+    ScoringLocationLookup.buildScoringLocations();
 
     return new PearceContainer();
   }
@@ -161,12 +164,23 @@ public class PearceContainer implements IRobotContainer {
   }
 
   @Override
+  public void robotInit() {
+  }
+
+  @Override
+  public void autonomousInit() {
+
+  }
+
+  @Override
   public void autonomousPeriodic() {
   }
   
   @Override
   public void teleopPeriodic() {
     HubStatus.HubState[] statuses = HubStatus.getBothHubStatuses(DriverStation.getMatchTime());
+    if(ScoringLocationLookup.team == null) if(DriverStation.getAlliance().get() == DriverStation.Alliance.Red) ScoringLocationLookup.team = true;
+    Logger.recordOutput("/Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
     Logger.recordOutput("/Status/Red", statuses[0]);
     Logger.recordOutput("/Status/Blue", statuses[1]);
   }
