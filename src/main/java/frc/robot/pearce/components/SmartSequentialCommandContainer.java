@@ -3,6 +3,9 @@ package frc.robot.pearce.components;
 import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.units.AngleUnit;
+import edu.wpi.first.units.Units;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.pearce.PearceContainer;
 
@@ -13,7 +16,7 @@ public class SmartSequentialCommandContainer {
 
     public static SmartSequentialCommand goToRedHub = new SmartSequentialCommand(
             new SmartSequentialCommand.UncomputedPath(
-                    new Pose2d(11,3,new Rotation2d()),
+                    new Pose2d(11,3, Rotation2d.fromDegrees(180)),
                     standardConstraints),
             null,
             null,
