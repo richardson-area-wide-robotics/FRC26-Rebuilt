@@ -22,16 +22,16 @@ public class RobotSector {//
     public SectorType type;
     public Pose2d center;
     public double width;
-    public double hight;
+    public double height;
     int id;
 
-    public RobotSector(BaseSector base, @Nullable SectorType type, Pose2d center, double width, double hight, int id) {
+    public RobotSector(BaseSector base, @Nullable SectorType type, Pose2d center, double width, double height, int id) {
         this.base = base;
 
         this.type = Objects.requireNonNullElse(type, SectorType.NONE);
         this.center = center;
         this.width = width;
-        this.hight = hight;
+        this.height = height;
         this.id = id;
     }
     public void updateAdvantage(){
@@ -40,20 +40,20 @@ public class RobotSector {//
         Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/info/base", base);
         Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/info/type", type);
         Pose2d[] poseArr = new Pose2d[5];
-        poseArr[0]=center.plus(new Transform2d(-width,hight,new Rotation2d()));
-        poseArr[1]=center.plus(new Transform2d(width,hight,new Rotation2d()));
-        poseArr[2]=center.plus(new Transform2d(width,-hight,new Rotation2d()));
-        poseArr[3]=center.plus(new Transform2d(-width,-hight,new Rotation2d()));
-        poseArr[4]=center.plus(new Transform2d(-width,hight,new Rotation2d()));
+        poseArr[0]=center.plus(new Transform2d(-width, height,new Rotation2d()));
+        poseArr[1]=center.plus(new Transform2d(width, height,new Rotation2d()));
+        poseArr[2]=center.plus(new Transform2d(width,-height,new Rotation2d()));
+        poseArr[3]=center.plus(new Transform2d(-width,-height,new Rotation2d()));
+        poseArr[4]=center.plus(new Transform2d(-width, height,new Rotation2d()));
 
 
 
 
         Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds",poseArr);
-        //Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds/0", center.plus(new Transform2d(-width,-hight,new Rotation2d())));
-        //Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds/1", center.plus(new Transform2d(-width,hight,new Rotation2d())));
-        //Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds/2", center.plus(new Transform2d(width,-hight,new Rotation2d())));
-        //Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds/3", center.plus(new Transform2d(width,hight,new Rotation2d())));
+        //Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds/0", center.plus(new Transform2d(-width,-height,new Rotation2d())));
+        //Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds/1", center.plus(new Transform2d(-width,height,new Rotation2d())));
+        //Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds/2", center.plus(new Transform2d(width,-height,new Rotation2d())));
+        //Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds/3", center.plus(new Transform2d(width,height,new Rotation2d())));
 
     }
 }

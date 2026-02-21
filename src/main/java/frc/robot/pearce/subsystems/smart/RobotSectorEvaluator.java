@@ -19,7 +19,7 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
         for (RobotSector robotSector : sectorArr) {
             if(robotSector == null) break;
             if ((Math.abs(robotSector.center.getX() - pose.getX()) < robotSector.width) &&
-                    (Math.abs(robotSector.center.getY() - pose.getY()) < robotSector.hight)) {
+                    (Math.abs(robotSector.center.getY() - pose.getY()) < robotSector.height)) {
                 return robotSector;
             }
         }
