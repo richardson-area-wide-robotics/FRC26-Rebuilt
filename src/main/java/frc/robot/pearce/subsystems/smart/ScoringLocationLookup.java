@@ -3,14 +3,13 @@ package frc.robot.pearce.subsystems.smart;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
-import frc.robot.pearce.components.RobotSector;
 import lombok.AllArgsConstructor;
 
 public class ScoringLocationLookup {
     private ScoringLocationFinalized scoringLocations[] = new ScoringLocationFinalized[999];
 
 
-    public void buildScoreingLocations(){
+    public void buildScoringLocations(){
         ScoringLocation scoringLocationsRaw[] = new ScoringLocation[999];
 
 
@@ -38,6 +37,19 @@ public class ScoringLocationLookup {
         }
 
     }
+    public Pose2d findClosest(Pose2d robotPose){
+        double closestDist = Double.MAX_VALUE;
+        int closestI = -1;
+        for(int i = 0; i<scoringLocations.length;i++){
+            ScoringLocationFinalized scoringLocationFinalized = scoringLocations[i];
+            if(robotPose.getTranslation().getDistance(scoringLocationFinalized.finalizedPose2d.getTranslation()) > closestDist){
+                closestDist = robotPose.getTranslation().getDistance(scoringLocationFinalized.finalizedPose2d.getTranslation());
+                closestI = i;
+            };
+        }
+        return scoringLocations[closestI].finalizedPose2d;
+
+        }
 
 
     @AllArgsConstructor
