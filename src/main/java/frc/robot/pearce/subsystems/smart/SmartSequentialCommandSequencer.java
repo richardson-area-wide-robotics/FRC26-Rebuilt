@@ -1,13 +1,11 @@
 package frc.robot.pearce.subsystems.smart;
 
-import com.pathplanner.lib.path.PathConstraints;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import frc.robot.pearce.PearceContainer;
 import frc.robot.pearce.components.SmartSequentialCommand;
 import lombok.NonNull;
+
+import javax.annotation.Nonnull;
 
 public class SmartSequentialCommandSequencer {
     @NonNull
@@ -34,15 +32,10 @@ public class SmartSequentialCommandSequencer {
 
 
     public void appendNode(SmartSequentialCommand appendantCommand){
-        if(rootCommand == null || tailCommand == null) throw new IllegalStateException();
-
-
         tailCommand.nextSmartSequentialCommand = appendantCommand;
         tailCommand = appendantCommand;
     }
     public void removeNode(){
-        if (rootCommand == null) throw new IllegalStateException();
-
         if (rootCommand.nextSmartSequentialCommand == null) {
             return;
         }

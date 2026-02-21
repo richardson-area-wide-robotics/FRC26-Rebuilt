@@ -442,7 +442,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
             DRIVE_MAX_LINEAR_SPEED
     );
 
-    // Your hardware only supports states (no feedforward yet)
+    // Hardware only supports states (no feedforward yet)
     DRIVETRAIN_HARDWARE.setSwerveModules(moduleStates);
   }
   /**
