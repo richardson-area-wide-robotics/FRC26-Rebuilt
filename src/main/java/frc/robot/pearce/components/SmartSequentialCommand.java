@@ -23,11 +23,27 @@ public class SmartSequentialCommand {
     public String commandName;
 
     public void updateAdvantage() {
-        Logger.recordOutput("Assist/currentCommand",commandName);
-        Logger.recordOutput("Assist/path",path.endPose);
-        Logger.recordOutput("Assist/startPose", PearceContainer.DRIVE_SUBSYSTEM.getPose());
-    }
+        var currentPose = PearceContainer.DRIVE_SUBSYSTEM.getPose();
 
+        Logger.recordOutput("Assist/currentCommand", commandName);
+        Logger.recordOutput("Assist/pathEndPose", path.endPose);
+        Logger.recordOutput("Assist/startPose", currentPose);
+
+        if (path.endPose != null) {
+            double distanceMeters =
+                    currentPose.getTranslation().getDistance(path.endPose.getTranslation());
+
+            Logger.recordOutput("Assist/distanceToTargetMeters", distanceMeters);
+
+            // Optional: rotation error (VERY useful for swerve)
+            double rotationErrorDeg =
+                    path.endPose.getRotation()
+                            .minus(currentPose.getRotation())
+                            .getDegrees();
+
+            Logger.recordOutput("Assist/rotationErrorDeg", rotationErrorDeg);
+        }
+    }
 
     /**
      * Create a {@link SmartSequentialCommand}, allowing the robot to preform actions
@@ -67,8 +83,31 @@ public class SmartSequentialCommand {
          * Build the path into a command we can run
          */
         public Command compute(){
-            if(endPose == null) return Commands.none();
-            else return DynamicPather.computePathfindCommand(endPose,constraints,20);
+            if (endPose == null) return Commands.none();
+
+            Pose2d currentPose = PearceContainer.DRIVE_SUBSYSTEM.getPose();
+            double distance = currentPose.getTranslation().getDistance(endPose.getTranslation());
+            double rotationDiff = Math.abs(
+                    currentPose.getRotation().minus(endPose.getRotation()).getRadians()
+            );
+
+            // CRITICAL: Prevent malformed spline generation
+            if (distance < 0.05) {
+                // Too close to pathfind safely
+                // Just rotate or do nothing instead
+                if (rotationDiff < Math.toRadians(5)) {
+                    return Commands.none(); // Already there
+                }
+
+                // Only rotate in place instead of pathfinding
+                return Commands.runOnce(() ->
+                        PearceContainer.DRIVE_SUBSYSTEM.resetPose(
+                                new Pose2d(currentPose.getTranslation(), endPose.getRotation())
+                        )
+                );
+            }
+
+            return DynamicPather.computePathfindCommand(endPose, constraints, 20);
         }
     }
 

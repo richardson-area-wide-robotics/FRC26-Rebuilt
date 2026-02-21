@@ -5,6 +5,7 @@ import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.pearce.PearceContainer;
 
 public class DynamicPather {//statless
 
@@ -27,8 +28,6 @@ public class DynamicPather {//statless
     }
 
    public static Command computePathfindCommand(Pose2d targetPose,PathConstraints pathConstraints,  double timeout){
-
-       return AutoBuilder.pathfindToPose(targetPose, pathConstraints);
-
+        return AutoBuilder.pathfindToPose(targetPose, pathConstraints);
    }
 }
