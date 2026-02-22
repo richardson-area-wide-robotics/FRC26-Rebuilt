@@ -35,7 +35,7 @@ public class SmartSequentialCommand {
 
             Logger.recordOutput("Assist/distanceToTargetMeters", distanceMeters);
 
-            // Optional: rotation error (VERY useful for swerve)
+            // rotation error
             double rotationErrorDeg =
                     path.endPose.getRotation()
                             .minus(currentPose.getRotation())

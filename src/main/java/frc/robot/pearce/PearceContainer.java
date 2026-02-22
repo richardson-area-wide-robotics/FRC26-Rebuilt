@@ -198,6 +198,6 @@ public class PearceContainer implements IRobotContainer {
    */
   @Override
   public Command getAutonomousCommand() {
-    return Commands.none();
+    return automodeChooser.getSelected();
   }
 }
