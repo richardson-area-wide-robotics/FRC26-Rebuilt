@@ -2,18 +2,17 @@ package frc.robot.pearce.subsystems.smart;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import lombok.AllArgsConstructor;
 
 public class ScoringLocationLookup {
-    private static ScoringLocationFinalized scoringLocationsRed[] = new ScoringLocationFinalized[6];
-    private static ScoringLocationFinalized scoringLocationsBlue[] = new ScoringLocationFinalized[6];
+    private static final ScoringLocationFinalized[] scoringLocationsRed = new ScoringLocationFinalized[6];
+    private static final ScoringLocationFinalized[] scoringLocationsBlue = new ScoringLocationFinalized[6];
     public static Boolean team = null;
 
 
 
     public static void buildScoringLocations(){
-        ScoringLocation scoringLocationsRaw[] = new ScoringLocation[6];
+        ScoringLocation[] scoringLocationsRaw = new ScoringLocation[6];
 
 
         scoringLocationsRaw[0] = new ScoringLocation("hub", new Pose2d(13,4, new Rotation2d()), null);
@@ -43,7 +42,7 @@ public class ScoringLocationLookup {
         if(team){
             arrayInQuestion = scoringLocationsRed;
         }
-        else if(!team){
+        else{
             arrayInQuestion = scoringLocationsBlue;
         }
 

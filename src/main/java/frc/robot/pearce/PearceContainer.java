@@ -5,7 +5,6 @@
 package frc.robot.pearce;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.Units;
@@ -16,7 +15,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.CommonConstants;
@@ -30,8 +28,6 @@ import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.HubStatus;
 import frc.robot.pearce.components.RobotSector;
 import frc.robot.pearce.components.SmartSequentialCommandContainer;
-import frc.robot.pearce.subsystems.ProtoFeeder;
-import frc.robot.pearce.subsystems.ProtoShooter;
 import frc.robot.pearce.subsystems.smart.DynamicPather;
 import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.pearce.subsystems.smart.ScoringLocationLookup;
@@ -79,7 +75,7 @@ public class PearceContainer implements IRobotContainer {
       Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
-  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToClosestShootingLocation);
+  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
   public static SequentialCommandGroup sequencedCommand;
 
   private static SendableChooser<Command> automodeChooser;
@@ -139,9 +135,9 @@ public class PearceContainer implements IRobotContainer {
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.y(),
             Commands.defer(
-                    () -> AutoBuilder.pathfindToPose(
+                    () -> DynamicPather.computeApprochPathfindCommand(
                             ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
-                            SmartSequentialCommandContainer.standardConstraints),
+                            DynamicPather.STANDARD_CONSTRAINTS, 5, 0.1),
                     Set.of(DRIVE_SUBSYSTEM)
             ),
             Commands.none());

@@ -10,24 +10,48 @@ import frc.robot.pearce.PearceContainer;
 public class DynamicPather {//statless
 
     /**
+     * The Standard Constraints for a path                   
+     */
+    public static final PathConstraints STANDARD_CONSTRAINTS =
+            new PathConstraints(1,1,1,1);
+    
+    /**
      * Builds a pose offset backward from the goal along its facing direction.
      */
     public static Pose2d buildApproachPose(Pose2d robotPose, Pose2d goalPose, double approachDistance) {
-        // Vector from robot to goal
-        Translation2d delta = goalPose.getTranslation().minus(robotPose.getTranslation());
-        double distance = delta.getNorm();
+        // Unit vector in the direction the goal is facing
+        Translation2d facingDirection =
+                new Translation2d(
+                        goalPose.getRotation().getCos(),
+                        goalPose.getRotation().getSin()
+                );
 
-        // Avoid division by zero
-        Translation2d direction = distance > 1e-6 ? delta.times(1.0 / distance) : new Translation2d();
+        // Move backwards from the goal along its facing direction
+        Translation2d approachTranslation =
+                goalPose.getTranslation().minus(facingDirection.times(approachDistance));
 
-        // Move back from the goal along this line
-        Translation2d approachTranslation = goalPose.getTranslation().minus(direction.times(approachDistance));
-
-        // Keep the goal rotation
         return new Pose2d(approachTranslation, goalPose.getRotation());
     }
 
+    /**
+     * Computes a path as a {@link Command} to a Pose2d
+     * 
+     * @param targetPose the pose we want to go to
+     * @param pathConstraints path constraints controlling speeds
+     * @param timeout time in seconds to consider the path failed and escape early                       
+     */
    public static Command computePathfindCommand(Pose2d targetPose,PathConstraints pathConstraints,  double timeout){
-        return AutoBuilder.pathfindToPose(targetPose, pathConstraints);
+        return AutoBuilder.pathfindToPose(targetPose, pathConstraints).withTimeout(timeout);
    }
+
+    /**
+     * Computes a path as a {@link Command} to a Pose2d, accounting for the approach
+     *
+     * @param targetPose the pose we want to go to
+     * @param pathConstraints path constraints controlling speeds
+     * @param timeout time in seconds to consider the path failed and escape early
+     */
+    public static Command computeApprochPathfindCommand(Pose2d targetPose,PathConstraints pathConstraints,  double timeout, double approachDistance){
+        return AutoBuilder.pathfindToPose(buildApproachPose(PearceContainer.DRIVE_SUBSYSTEM.getPose(),targetPose, approachDistance), pathConstraints).withTimeout(timeout);
+    }
 }

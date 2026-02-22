@@ -1,35 +1,19 @@
 package frc.robot.pearce.components;
 
-import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.units.AngleUnit;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.wpilibj2.command.Commands;
-import frc.robot.pearce.PearceContainer;
-import frc.robot.pearce.subsystems.smart.ScoringLocationLookup;
+import frc.robot.pearce.subsystems.smart.DynamicPather;
 
 public class SmartSequentialCommandContainer {
-    public static final PathConstraints standardConstraints =
-            new PathConstraints(1,1,1,1);
     //Define all usable SmartSequentialCommands here.
 
     public static SmartSequentialCommand goToRedHub = new SmartSequentialCommand(
             new SmartSequentialCommand.UncomputedPath(
                     new Pose2d(11,3, Rotation2d.fromDegrees(180)),
-                    standardConstraints),
+                    DynamicPather.STANDARD_CONSTRAINTS),
             null,
             null,
             "goToRedHub");
-
-    public static SmartSequentialCommand goToClosestShootingLocation = new SmartSequentialCommand(
-            new SmartSequentialCommand.UncomputedPath(
-                    ScoringLocationLookup.findClosest(PearceContainer.DRIVE_SUBSYSTEM.getPose()),
-                    standardConstraints),
-            null,
-            null,
-            "goToClosestShootingLocation");
     //public static SmartSequentialCommand shootInPlace = new SmartSequentialCommand(
     //        null,
     //        Commands.runOnce(PearceContainer.PROTO_SHOOTER::runShooter),
