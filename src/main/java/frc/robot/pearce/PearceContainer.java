@@ -41,6 +41,8 @@ import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.Set;
+
 import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity.FIELD_CENTRIC;
 
 
@@ -136,7 +138,12 @@ public class PearceContainer implements IRobotContainer {
     //        Commands.runOnce(PROTO_FEEDER::stopLoad));
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.y(),
-            ()-> AutoBuilder.pathfindToPose(ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),SmartSequentialCommandContainer.standardConstraints),
+            Commands.defer(
+                    () -> AutoBuilder.pathfindToPose(
+                            ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
+                            SmartSequentialCommandContainer.standardConstraints),
+                    Set.of(DRIVE_SUBSYSTEM)
+            ),
             Commands.none());
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
@@ -180,7 +187,9 @@ public class PearceContainer implements IRobotContainer {
   @Override
   public void teleopPeriodic() {
     HubStatus.HubState[] statuses = HubStatus.getBothHubStatuses(DriverStation.getMatchTime());
-    if(ScoringLocationLookup.team == null) if(DriverStation.getAlliance().get() == DriverStation.Alliance.Red) ScoringLocationLookup.team = true;
+    if(ScoringLocationLookup.team == null){
+        ScoringLocationLookup.team = DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
+    }
     Logger.recordOutput("/Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
     Logger.recordOutput("/Status/Red", statuses[0]);
     Logger.recordOutput("/Status/Blue", statuses[1]);
