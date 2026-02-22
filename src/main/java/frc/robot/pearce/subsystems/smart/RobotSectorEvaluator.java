@@ -2,9 +2,11 @@ package frc.robot.pearce.subsystems.smart;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.RobotSector;
+import org.littletonrobotics.junction.Logger;
 
 public class RobotSectorEvaluator extends DashboardSubsystem {
     private RobotSector sectorArr[] = new RobotSector[999];
@@ -32,7 +34,27 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
     }
     @Override
     public void periodic() {
-        getSector().updateAdvantage();
+        updateAdvantage();
+    }
+
+    public void updateAdvantage(){
+        RobotSector sector = getSector();
+        Logger.recordOutput("/RobotSectorEvaluator/CurrentSector", sector.center);
+        Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/info/id", sector.id);
+        Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/info/base", sector.base);
+        Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/info/type", sector.type);
+        Pose2d[] poseArr = new Pose2d[5];
+        poseArr[0]=sector.center.plus(new Transform2d(-sector.width, sector.height,new Rotation2d()));
+        poseArr[1]=sector.center.plus(new Transform2d(sector.width, sector.height,new Rotation2d()));
+        poseArr[2]=sector.center.plus(new Transform2d(sector.width,-sector.height,new Rotation2d()));
+        poseArr[3]=sector.center.plus(new Transform2d(-sector.width,-sector.height,new Rotation2d()));
+        poseArr[4]=sector.center.plus(new Transform2d(-sector.width, sector.height,new Rotation2d()));
+
+
+
+
+        Logger.recordOutput("/RobotSectorEvaluator/CurrentSector/Bounds",poseArr);
+
     }
 
 }

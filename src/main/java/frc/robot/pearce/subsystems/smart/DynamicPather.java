@@ -18,7 +18,7 @@ public class DynamicPather {//statless
     /**
      * Builds a pose offset backward from the goal along its facing direction.
      */
-    public static Pose2d buildApproachPose(Pose2d robotPose, Pose2d goalPose, double approachDistance) {
+    public static Pose2d buildApproachPose(Pose2d goalPose, double approachDistance) {
         // Unit vector in the direction the goal is facing
         Translation2d facingDirection =
                 new Translation2d(
@@ -52,6 +52,6 @@ public class DynamicPather {//statless
      * @param timeout time in seconds to consider the path failed and escape early
      */
     public static Command computeApprochPathfindCommand(Pose2d targetPose,PathConstraints pathConstraints,  double timeout, double approachDistance){
-        return AutoBuilder.pathfindToPose(buildApproachPose(PearceContainer.DRIVE_SUBSYSTEM.getPose(),targetPose, approachDistance), pathConstraints).withTimeout(timeout);
+        return AutoBuilder.pathfindToPose(buildApproachPose(targetPose, approachDistance), pathConstraints).withTimeout(timeout);
     }
 }
