@@ -146,15 +146,5 @@ public class LocalADStarAK implements Pathfinder {
     public void updateIsNewPathAvailable() {
       isNewPathAvailable = adStar.isNewPathAvailable();
     }
-
-    public void updateCurrentPathPoints(PathConstraints constraints, GoalEndState goalEndState) {
-      PathPlannerPath currentPath = adStar.getCurrentPath(constraints, goalEndState);
-
-      if (currentPath != null) {
-        currentPathPoints = currentPath.getAllPathPoints();
-      } else {
-        currentPathPoints = Collections.emptyList();
-      }
-    }
   }
 }
