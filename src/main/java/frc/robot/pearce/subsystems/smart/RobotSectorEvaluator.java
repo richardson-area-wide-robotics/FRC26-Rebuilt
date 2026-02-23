@@ -9,7 +9,7 @@ import frc.robot.pearce.components.RobotSector;
 import org.littletonrobotics.junction.Logger;
 
 public class RobotSectorEvaluator extends DashboardSubsystem {
-    private RobotSector sectorArr[] = new RobotSector[999];
+    private final RobotSector[] sectorArr = new RobotSector[999];
     private int sectorArrPtr = 0;
     SwerveDriveSubsystem drive;
 

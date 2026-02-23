@@ -5,23 +5,23 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import lombok.AllArgsConstructor;
 
 public class ScoringLocationLookup {
-    private static final ScoringLocationFinalized[] scoringLocationsRed = new ScoringLocationFinalized[6];
-    private static final ScoringLocationFinalized[] scoringLocationsBlue = new ScoringLocationFinalized[6];
+    private static final ScoringLocationFinalized[] scoringLocationsRed = new ScoringLocationFinalized[8];
+    private static final ScoringLocationFinalized[] scoringLocationsBlue = new ScoringLocationFinalized[8];
     public static Boolean team = null;
 
 
 
     public static void buildScoringLocations(){
-        ScoringLocation[] scoringLocationsRaw = new ScoringLocation[6];
+        ScoringLocation[] scoringLocationsRaw = new ScoringLocation[8];
 
-        scoringLocationsRaw[3] = new ScoringLocation("right_corner", new Pose2d(16,7.5, new Rotation2d()), new Pose2d(0.5,7.5, new Rotation2d()));
+        scoringLocationsRaw[0] = new ScoringLocation("right_corner", new Pose2d(16,7.5, new Rotation2d()), new Pose2d(0.5,7.5, new Rotation2d()));
         scoringLocationsRaw[1] = new ScoringLocation("left_corner", new Pose2d(16,0.5, new Rotation2d()), new Pose2d(0.5,0.5, new Rotation2d()));
         scoringLocationsRaw[2] = new ScoringLocation("left_trench", new Pose2d(13.2,0.5, new Rotation2d()), new Pose2d(3.5,7.5, new Rotation2d()));
-        scoringLocationsRaw[2] = new ScoringLocation("right_trench", new Pose2d(13.2,7.5, new Rotation2d()), new Pose2d(3.5,0.5, new Rotation2d()));
-        scoringLocationsRaw[2] = new ScoringLocation("climber", new Pose2d(14.5,4, new Rotation2d()), new Pose2d(2,3.5, new Rotation2d()));
-        scoringLocationsRaw[4] = new ScoringLocation("rightside_hub", new Pose2d(13,5, new Rotation2d()), new Pose2d(3.5,5, new Rotation2d()));
-        scoringLocationsRaw[0] = new ScoringLocation("hub", new Pose2d(13,4, new Rotation2d()), new Pose2d(3.5,4, new Rotation2d()));
-        scoringLocationsRaw[5] = new ScoringLocation("leftside_hub", new Pose2d(13,3, new Rotation2d()), new Pose2d(3.5,3, new Rotation2d()));
+        scoringLocationsRaw[3] = new ScoringLocation("right_trench", new Pose2d(13.2,7.5, new Rotation2d()), new Pose2d(3.5,0.5, new Rotation2d()));
+        scoringLocationsRaw[4] = new ScoringLocation("climber", new Pose2d(14.5,4, new Rotation2d()), new Pose2d(2,3.5, new Rotation2d()));
+        scoringLocationsRaw[5] = new ScoringLocation("rightside_hub", new Pose2d(13,5, new Rotation2d()), new Pose2d(3.5,5, new Rotation2d()));
+        scoringLocationsRaw[6] = new ScoringLocation("hub", new Pose2d(13,4, new Rotation2d()), new Pose2d(3.5,4, new Rotation2d()));
+        scoringLocationsRaw[7] = new ScoringLocation("leftside_hub", new Pose2d(13,3, new Rotation2d()), new Pose2d(3.5,3, new Rotation2d()));
 
 
         for (int i = 0; i < scoringLocationsRaw.length; i++) {
@@ -37,7 +37,7 @@ public class ScoringLocationLookup {
         double closestDist = 999;
         int closestI = -1;
 
-        ScoringLocationFinalized[] arrayInQuestion = null;
+        ScoringLocationFinalized[] arrayInQuestion;
 
 
         if(team){
