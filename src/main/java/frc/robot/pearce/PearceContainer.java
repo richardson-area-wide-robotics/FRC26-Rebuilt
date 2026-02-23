@@ -109,9 +109,6 @@ public class PearceContainer implements IRobotContainer {
     SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
     SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
 
-
-    ScoringLocationLookup.buildScoringLocations();
-
     return new PearceContainer();
   }
 
@@ -186,9 +183,9 @@ public class PearceContainer implements IRobotContainer {
     if(ScoringLocationLookup.team == null){
         ScoringLocationLookup.team = DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
     }
-    Logger.recordOutput("/Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
-    Logger.recordOutput("/Status/Red", statuses[0]);
-    Logger.recordOutput("/Status/Blue", statuses[1]);
+    Logger.recordOutput("Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
+    Logger.recordOutput("Status/Red", statuses[0]);
+    Logger.recordOutput("Status/Blue", statuses[1]);
   }
 
   /**
