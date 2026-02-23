@@ -10,26 +10,28 @@ public class ScoringLocationLookup {
     public static Boolean team = null;
 
 
-    private static final ScoringLocation[] SCORING_LOCATIONS = {
-            new ScoringLocation("right_corner", new Pose2d(16,7.5,new Rotation2d()), new Pose2d(0.5,7.5,new Rotation2d())),
-            new ScoringLocation("left_corner", new Pose2d(16,0.5,new Rotation2d()), new Pose2d(0.5,0.5,new Rotation2d())),
-            new ScoringLocation("left_trench", new Pose2d(13.2,0.5,new Rotation2d()), new Pose2d(3.5,7.5,new Rotation2d())),
-            new ScoringLocation("right_trench", new Pose2d(13.2,7.5,new Rotation2d()), new Pose2d(3.5,0.5,new Rotation2d())),
-            new ScoringLocation("climber", new Pose2d(14.5,4,new Rotation2d()), new Pose2d(2,3.5,new Rotation2d())),
-            new ScoringLocation("rightside_hub", new Pose2d(13,5,new Rotation2d()), new Pose2d(3.5,5,new Rotation2d())),
-            new ScoringLocation("hub", new Pose2d(13,4,new Rotation2d()), new Pose2d(3.5,4,new Rotation2d())),
-            new ScoringLocation("leftside_hub", new Pose2d(13,3,new Rotation2d()), new Pose2d(3.5,3,new Rotation2d()))
-    };
 
-    static { //This will happen when the class is first loaded
-        for (int i = 0; i < SCORING_LOCATIONS.length; i++) {
-            ScoringLocation loc = SCORING_LOCATIONS[i];
-            scoringLocationsRed[i] = new ScoringLocationFinalized(loc.name, loc.redPose2d);
-            scoringLocationsBlue[i] = new ScoringLocationFinalized(loc.name, loc.bluePose2d);
+    public static void buildScoringLocations(){
+        ScoringLocation[] scoringLocationsRaw = new ScoringLocation[8];
+
+        scoringLocationsRaw[0] = new ScoringLocation("right_corner", new Pose2d(16,7.5, new Rotation2d()), new Pose2d(0.5,7.5, new Rotation2d()));
+        scoringLocationsRaw[1] = new ScoringLocation("left_corner", new Pose2d(16,0.5, new Rotation2d()), new Pose2d(0.5,0.5, new Rotation2d()));
+        scoringLocationsRaw[2] = new ScoringLocation("left_trench", new Pose2d(13.2,0.5, new Rotation2d()), new Pose2d(3.5,7.5, new Rotation2d()));
+        scoringLocationsRaw[3] = new ScoringLocation("right_trench", new Pose2d(13.2,7.5, new Rotation2d()), new Pose2d(3.5,0.5, new Rotation2d()));
+        scoringLocationsRaw[4] = new ScoringLocation("climber", new Pose2d(14.5,4, new Rotation2d()), new Pose2d(2,3.5, new Rotation2d()));
+        scoringLocationsRaw[5] = new ScoringLocation("rightside_hub", new Pose2d(13,5, new Rotation2d()), new Pose2d(3.5,5, new Rotation2d()));
+        scoringLocationsRaw[6] = new ScoringLocation("hub", new Pose2d(13,4, new Rotation2d()), new Pose2d(3.5,4, new Rotation2d()));
+        scoringLocationsRaw[7] = new ScoringLocation("leftside_hub", new Pose2d(13,3, new Rotation2d()), new Pose2d(3.5,3, new Rotation2d()));
+
+
+        for (int i = 0; i < scoringLocationsRaw.length; i++) {
+            ScoringLocation scoringLocation = scoringLocationsRaw[i];
+            scoringLocationsRed[i] = new ScoringLocationFinalized(scoringLocation.name, scoringLocation.redPose2d);
+            scoringLocationsBlue[i] = new ScoringLocationFinalized(scoringLocation.name, scoringLocation.bluePose2d);
+
         }
+
     }
-
-
     public static Pose2d findClosest(Pose2d robotPose){//false for blue
         if(team== null) return new Pose2d();
         double closestDist = 999;
@@ -46,14 +48,12 @@ public class ScoringLocationLookup {
         }
 
 
-        for (int i = 0; i < arrayInQuestion.length; i++) {
-            Pose2d pose = arrayInQuestion[i].finalizedPose2d;
-            double dist = robotPose.getTranslation().getDistance(pose.getTranslation());
-
-            if (dist < closestDist) {
-                closestDist = dist;
+        for(int i = 0; i<arrayInQuestion.length;i++){
+            ScoringLocationFinalized scoringLocationFinalized = arrayInQuestion[i];
+            if(robotPose.getTranslation().getDistance(scoringLocationFinalized.finalizedPose2d.getTranslation()) < closestDist){
+                closestDist = robotPose.getTranslation().getDistance(scoringLocationFinalized.finalizedPose2d.getTranslation());
                 closestI = i;
-            }
+            };
         }
         return arrayInQuestion[closestI].finalizedPose2d;
 
