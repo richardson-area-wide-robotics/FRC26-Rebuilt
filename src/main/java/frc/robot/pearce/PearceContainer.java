@@ -135,9 +135,9 @@ public class PearceContainer implements IRobotContainer {
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.y(),
             Commands.defer(
-                    () -> DynamicPather.computeApprochPathfindCommand(
+                    () -> DynamicPather.computePathfindCommand(
                             ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
-                            DynamicPather.STANDARD_CONSTRAINTS, 5, 0.1),
+                            DynamicPather.STANDARD_CONSTRAINTS, 5),
                     Set.of(DRIVE_SUBSYSTEM)
             ),
             Commands.none());
