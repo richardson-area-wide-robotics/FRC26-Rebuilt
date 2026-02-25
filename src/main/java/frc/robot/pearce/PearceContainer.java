@@ -27,8 +27,10 @@ import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.pearce.components.HubStatus;
 import frc.robot.pearce.components.RobotSector;
-import frc.robot.pearce.components.SmartSequentialCommandContainer;
-import frc.robot.pearce.subsystems.smart.DynamicPather;
+import frc.robot.pearce.subsystems.Climber;
+import frc.robot.pearce.subsystems.Feeder;
+import frc.robot.pearce.subsystems.Intake;
+import frc.robot.pearce.subsystems.Shooter;
 import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.pearce.subsystems.smart.ScoringLocationLookup;
 import frc.robot.pearce.subsystems.smart.SmartSequentialCommandSequencer;
@@ -47,8 +49,9 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 public class PearceContainer implements IRobotContainer {
 
 
-//public static final ProtoShooter PROTO_SHOOTER = new ProtoShooter(10, 11);
-//public static final ProtoFeeder PROTO_FEEDER = new ProtoFeeder(18, 14);
+  public static final Shooter SHOOTER = new Shooter(10, 11);
+  public static final Feeder FEEDER = new Feeder(18, 14);
+  public static final Intake INTAKE = new Intake(13, 15);
 
   //public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
@@ -126,13 +129,30 @@ public class PearceContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(PROTO_SHOOTER::runShooter, PROTO_SHOOTER), Commands.runOnce(PROTO_SHOOTER::stopShooter));
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(SHOOTER::runShooter, SHOOTER), Commands.runOnce(SHOOTER::stopShooter));
+
+    RobotUtils.bindControl(
+            HIDConstants.DRIVER_CONTROLLER.leftBumper(),
+            Commands.runOnce(TELEOP_ASSIST::toggle), Commands.none()
+    );
 
     //RobotUtils.bindControl(
     //        HIDConstants.DRIVER_CONTROLLER.b(),
     //        Commands.runOnce(PROTO_FEEDER::load),
     //        Commands.runOnce(PROTO_FEEDER::stopLoad));
     RobotUtils.bindControl(
+            HIDConstants.DRIVER_CONTROLLER.povUp(),
+            Commands.runOnce(TELEOP_ASSIST::disable), Commands.none()
+    );
+
+    RobotUtils.bindControl(
+            HIDConstants.DRIVER_CONTROLLER.b(),
+            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
+            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
+
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
+    Commands.runOnce(INTAKE::intake),
+    Commands.runOnce(INTAKE::stop));
             HIDConstants.DRIVER_CONTROLLER.y(),
             Commands.defer(
                     () -> DynamicPather.computePathfindCommand(
