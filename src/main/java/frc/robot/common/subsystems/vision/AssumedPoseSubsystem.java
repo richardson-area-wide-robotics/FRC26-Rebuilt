@@ -16,12 +16,15 @@ import frc.robot.common.gyro.RAWRNavX2;
 import java.util.List;
 import java.util.Optional;
 
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
 public class AssumedPoseSubsystem extends SubsystemBase {
+
+    public boolean useVisionData = true;
 
     private final RAWRNavX2 imu;
     private final SwerveDrivePoseEstimator poseEstimator;
@@ -67,7 +70,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         double currentTime = Timer.getFPGATimestamp();
 
         List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
-        if (!results.isEmpty()) {
+        if (!results.isEmpty() & useVisionData) {
             Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(results.get(0));
             if (estimatedPose.isPresent()) {
                 Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
@@ -77,7 +80,6 @@ public class AssumedPoseSubsystem extends SubsystemBase {
             }
         }
 
-        // Only update odometry from gyro + wheels every loop
         poseEstimator.updateWithTime(
                 currentTime,
                 imu.getRotation2d(),

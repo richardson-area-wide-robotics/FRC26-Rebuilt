@@ -19,6 +19,12 @@ public interface IRobotContainer {
     /**Ran periodically when the robot is disabled. (Dont try it lmao) */
     void disabledPeriodic();
 
+    void robotInit();
+
+
+    /**Ran at the start of  auto */
+    void autonomousInit();
+
     /**Ran periodically during auto */
     void autonomousPeriodic();
 

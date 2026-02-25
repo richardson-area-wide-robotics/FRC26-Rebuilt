@@ -12,11 +12,11 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
@@ -32,11 +32,14 @@ import frc.robot.pearce.subsystems.Feeder;
 import frc.robot.pearce.subsystems.Intake;
 import frc.robot.pearce.subsystems.Shooter;
 import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
-import frc.robot.pearce.subsystems.smart.TeleopAssistSubsystem;
+import frc.robot.pearce.subsystems.smart.ScoringLocationLookup;
+import frc.robot.pearce.subsystems.smart.SmartSequentialCommandSequencer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
 import org.littletonrobotics.junction.Logger;
+
+import java.util.Set;
 
 import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity.FIELD_CENTRIC;
 
@@ -74,8 +77,10 @@ public class PearceContainer implements IRobotContainer {
       Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
       Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
-  public static final TeleopAssistSubsystem TELEOP_ASSIST = new TeleopAssistSubsystem(DRIVE_SUBSYSTEM);
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
+  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
+  public static SequentialCommandGroup sequencedCommand;
+
   private static SendableChooser<Command> automodeChooser;
 
   public static IRobotContainer createContainer(){
@@ -87,23 +92,32 @@ public class PearceContainer implements IRobotContainer {
             HIDConstants.DRIVER_CONTROLLER::getLeftX,
             HIDConstants.DRIVER_CONTROLLER::getRightX));
 
+    // Set up the auto builder
+    DRIVE_SUBSYSTEM.configureAutoBuilder();
+
+
+    sequencedCommand = COMMAND_SEQUENCER.finalizeSequence();
+
       // Bind buttons and triggers
       configureBindings();
   
-      // Set up the auto builder
-      DRIVE_SUBSYSTEM.configureAutoBuilder();
+
 
       // Set up the auto chooser
       automodeChooser = AutoBuilder.buildAutoChooser();
       SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
 
-      SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(1.,1.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(3.,1.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
+      SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,1.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,1.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
 
-      return new PearceContainer();
+
+    ScoringLocationLookup.buildScoringLocations();
+
+    return new PearceContainer();
   }
+
 
   private static void configureBindings() {
     // Driver Start - toggle traction control
@@ -122,6 +136,10 @@ public class PearceContainer implements IRobotContainer {
             Commands.runOnce(TELEOP_ASSIST::toggle), Commands.none()
     );
 
+    //RobotUtils.bindControl(
+    //        HIDConstants.DRIVER_CONTROLLER.b(),
+    //        Commands.runOnce(PROTO_FEEDER::load),
+    //        Commands.runOnce(PROTO_FEEDER::stopLoad));
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.povUp(),
             Commands.runOnce(TELEOP_ASSIST::disable), Commands.none()
@@ -135,6 +153,14 @@ public class PearceContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
     Commands.runOnce(INTAKE::intake),
     Commands.runOnce(INTAKE::stop));
+            HIDConstants.DRIVER_CONTROLLER.y(),
+            Commands.defer(
+                    () -> DynamicPather.computePathfindCommand(
+                            ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
+                            DynamicPather.STANDARD_CONSTRAINTS, 5),
+                    Set.of(DRIVE_SUBSYSTEM)
+            ),
+            Commands.none());
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 
@@ -162,12 +188,25 @@ public class PearceContainer implements IRobotContainer {
   }
 
   @Override
+  public void robotInit() {
+  }
+
+  @Override
+  public void autonomousInit() {
+
+  }
+
+  @Override
   public void autonomousPeriodic() {
   }
   
   @Override
   public void teleopPeriodic() {
     HubStatus.HubState[] statuses = HubStatus.getBothHubStatuses(DriverStation.getMatchTime());
+    if(ScoringLocationLookup.team == null){
+        ScoringLocationLookup.team = DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
+    }
+    Logger.recordOutput("/Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
     Logger.recordOutput("/Status/Red", statuses[0]);
     Logger.recordOutput("/Status/Blue", statuses[1]);
   }
@@ -179,6 +218,6 @@ public class PearceContainer implements IRobotContainer {
    */
   @Override
   public Command getAutonomousCommand() {
-    return Commands.none();
+    return automodeChooser.getSelected();
   }
 }
