@@ -78,10 +78,9 @@ flowchart TD
         ProtoIntake[ProtoIntake]
     end
     subgraph frc_robot_pearce_subsystems_smart[frc.robot.pearce.subsystems.smart]
-        SmartSequentialCommandSequencer[SmartSequentialCommandSequencer]
-        ScoringLocationLookup[ScoringLocationLookup]
         DynamicPather[DynamicPather]
         RobotSectorEvaluator[RobotSectorEvaluator]
+        TeleopAssistSubsystem[TeleopAssistSubsystem]
     end
     LoggableHardware[LoggableHardware]
     RAWRNavX2 -->|extends| LoggableHardware
@@ -122,10 +121,10 @@ flowchart TD
     TankDriveSubsystem --> TankHardware
     SwerveDriveSubsystem --> SwerveHardware
     SwerveDriveSubsystem --> AssumedPoseSubsystem
-    SmartSequentialCommand --> SmartSequentialCommand
-    SmartSequentialCommandSequencer --> SmartSequentialCommand
-    SmartSequentialCommandSequencer --> SmartSequentialCommand
+    TankDriveSubsystem --> TankHardware
+    AssumedPoseSubsystem --> RAWRNavX2
     RobotSectorEvaluator --> SwerveDriveSubsystem
+    TeleopAssistSubsystem --> SwerveDriveSubsystem
     Robot --> IRobotContainer
     style LocalADStarAK fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RAWRNavX2 fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -161,18 +160,16 @@ flowchart TD
     style PearceContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RobotSector fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style HubStatus fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style SmartSequentialCommand fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style SmartSequentialCommandContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RobotSector fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PearceConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoShooter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoFeeder fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoClimber fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ProtoIntake fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style SmartSequentialCommandSequencer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style ScoringLocationLookup fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style ProtoShooter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DynamicPather fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RobotSectorEvaluator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style TeleopAssistSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style LoggableHardware fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style BaseInstanceable_CANDiagnostics fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
