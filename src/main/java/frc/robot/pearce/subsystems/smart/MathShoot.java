@@ -1,4 +1,4 @@
-package frc.robot.pearce.subsystems.MathSub;
+package frc.robot.pearce.subsystems.smart;
 
 import edu.wpi.first.units.Units;
 
