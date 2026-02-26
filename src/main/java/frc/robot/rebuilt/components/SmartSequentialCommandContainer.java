@@ -1,8 +1,8 @@
-package frc.robot.pearce.components;
+package frc.robot.rebuilt.components;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import frc.robot.pearce.subsystems.smart.DynamicPather;
+import frc.robot.rebuilt.subsystems.smart.DynamicPather;
 
 public class SmartSequentialCommandContainer {
     //Define all usable SmartSequentialCommands here.

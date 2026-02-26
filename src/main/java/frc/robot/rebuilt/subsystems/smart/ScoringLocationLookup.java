@@ -1,4 +1,4 @@
-package frc.robot.pearce.subsystems.smart;
+package frc.robot.rebuilt.subsystems.smart;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;

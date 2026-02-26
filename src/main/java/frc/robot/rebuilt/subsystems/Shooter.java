@@ -1,10 +1,9 @@
-package frc.robot.pearce.subsystems;
+package frc.robot.rebuilt.subsystems;
 
 import frc.robot.common.subsystems.DashboardSubsystem;
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.hardware.revrobotics.Spark.ID;
 import org.lasarobotics.hardware.revrobotics.Spark.MotorKind;
-import org.littletonrobotics.junction.Logger;
 
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.config.SparkFlexConfig;

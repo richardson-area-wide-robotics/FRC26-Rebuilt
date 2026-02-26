@@ -1,11 +1,9 @@
-package frc.robot.pearce.subsystems.smart;
+package frc.robot.rebuilt.subsystems.smart;
 
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import frc.robot.pearce.components.SmartSequentialCommand;
+import frc.robot.rebuilt.components.SmartSequentialCommand;
 import lombok.NonNull;
-
-import javax.annotation.Nonnull;
 
 public class SmartSequentialCommandSequencer {
     @NonNull

@@ -1,4 +1,4 @@
-package frc.robot.pearce;
+package frc.robot.rebuilt;
 
 
 /**
@@ -13,7 +13,7 @@ package frc.robot.pearce;
  * wherever the
  * constants are needed, to reduce verbosity.
  */
-public class PearceConstants {
+public class RebuildConstants {
 
 
 

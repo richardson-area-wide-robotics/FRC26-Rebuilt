@@ -2,7 +2,7 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package frc.robot.pearce;
+package frc.robot.rebuilt;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -25,15 +25,14 @@ import frc.robot.common.components.hardware.SwerveHardwareParams;
 import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
-import frc.robot.pearce.components.HubStatus;
-import frc.robot.pearce.components.RobotSector;
-import frc.robot.pearce.subsystems.Climber;
-import frc.robot.pearce.subsystems.Feeder;
-import frc.robot.pearce.subsystems.Intake;
-import frc.robot.pearce.subsystems.Shooter;
-import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
-import frc.robot.pearce.subsystems.smart.ScoringLocationLookup;
-import frc.robot.pearce.subsystems.smart.SmartSequentialCommandSequencer;
+import frc.robot.rebuilt.components.HubStatus;
+import frc.robot.rebuilt.components.RobotSector;
+import frc.robot.rebuilt.subsystems.Feeder;
+import frc.robot.rebuilt.subsystems.Intake;
+import frc.robot.rebuilt.subsystems.Shooter;
+import frc.robot.rebuilt.subsystems.smart.RobotSectorEvaluator;
+import frc.robot.rebuilt.subsystems.smart.ScoringLocationLookup;
+import frc.robot.rebuilt.subsystems.smart.SmartSequentialCommandSequencer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
@@ -46,7 +45,7 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Robot(team = 1745)
-public class PearceContainer implements IRobotContainer {
+public class RebuiltContainer implements IRobotContainer {
 
 
   public static final Shooter SHOOTER = new Shooter(10, 11);
@@ -115,7 +114,7 @@ public class PearceContainer implements IRobotContainer {
 
     ScoringLocationLookup.buildScoringLocations();
 
-    return new PearceContainer();
+    return new RebuiltContainer();
   }
 
 

@@ -1,9 +1,6 @@
-package frc.robot.pearce.components;
+package frc.robot.rebuilt.components;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import org.littletonrobotics.junction.Logger;
 
 import javax.annotation.Nullable;
 import java.util.Objects;

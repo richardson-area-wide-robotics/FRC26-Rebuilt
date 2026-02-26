@@ -1,18 +1,14 @@
-package frc.robot.pearce.components;
+package frc.robot.rebuilt.components;
 
 import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import frc.robot.pearce.PearceContainer;
-import frc.robot.pearce.subsystems.smart.DynamicPather;
+import frc.robot.rebuilt.RebuiltContainer;
+import frc.robot.rebuilt.subsystems.smart.DynamicPather;
 import org.littletonrobotics.junction.Logger;
 
 import javax.annotation.Nullable;
-import java.lang.ref.Reference;
 import java.util.Objects;
 
 public class SmartSequentialCommand {
@@ -23,7 +19,7 @@ public class SmartSequentialCommand {
     public String commandName;
 
     public void updateAdvantage() {
-        var currentPose = PearceContainer.DRIVE_SUBSYSTEM.getPose();
+        var currentPose = RebuiltContainer.DRIVE_SUBSYSTEM.getPose();
 
         Logger.recordOutput("Assist/currentCommand", commandName);
         Logger.recordOutput("Assist/pathEndPose", path.endPose);
@@ -85,7 +81,7 @@ public class SmartSequentialCommand {
         public Command compute(){
             if (endPose == null) return Commands.none();
 
-            Pose2d currentPose = PearceContainer.DRIVE_SUBSYSTEM.getPose();
+            Pose2d currentPose = RebuiltContainer.DRIVE_SUBSYSTEM.getPose();
             double distance = currentPose.getTranslation().getDistance(endPose.getTranslation());
             double rotationDiff = Math.abs(
                     currentPose.getRotation().minus(endPose.getRotation()).getRadians()
@@ -101,7 +97,7 @@ public class SmartSequentialCommand {
 
                 // Only rotate in place instead of pathfinding
                 return Commands.runOnce(() ->
-                        PearceContainer.DRIVE_SUBSYSTEM.resetPose(
+                        RebuiltContainer.DRIVE_SUBSYSTEM.resetPose(
                                 new Pose2d(currentPose.getTranslation(), endPose.getRotation())
                         )
                 );

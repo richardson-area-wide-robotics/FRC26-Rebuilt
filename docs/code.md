@@ -61,23 +61,23 @@ flowchart TD
         Main[Main]
         Robot[Robot]
     end
-    subgraph frc_robot_pearce[frc.robot.pearce]
+    subgraph frc_robot_pearce[frc.robot.rebuilt]
         PearceContainer[PearceContainer]
         PearceConstants[PearceConstants]
     end
-    subgraph frc_robot_pearce_components[frc.robot.pearce.components]
+    subgraph frc_robot_pearce_components[frc.robot.rebuilt.components]
         RobotSector[RobotSector]
         HubStatus[HubStatus]
         SmartSequentialCommand[SmartSequentialCommand]
         SmartSequentialCommandContainer[SmartSequentialCommandContainer]
     end
-    subgraph frc_robot_pearce_subsystems[frc.robot.pearce.subsystems]
+    subgraph frc_robot_pearce_subsystems[frc.robot.rebuilt.subsystems]
         ProtoShooter[ProtoShooter]
         ProtoFeeder[ProtoFeeder]
         ProtoClimber[ProtoClimber]
         ProtoIntake[ProtoIntake]
     end
-    subgraph frc_robot_pearce_subsystems_smart[frc.robot.pearce.subsystems.smart]
+    subgraph frc_robot_pearce_subsystems_smart[frc.robot.rebuilt.subsystems.smart]
         DynamicPather[DynamicPather]
         RobotSectorEvaluator[RobotSectorEvaluator]
         TeleopAssistSubsystem[TeleopAssistSubsystem]

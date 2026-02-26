@@ -1,11 +1,11 @@
-package frc.robot.pearce.subsystems.smart;
+package frc.robot.rebuilt.subsystems.smart;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
-import frc.robot.pearce.components.RobotSector;
+import frc.robot.rebuilt.components.RobotSector;
 import org.littletonrobotics.junction.Logger;
 
 public class RobotSectorEvaluator extends DashboardSubsystem {

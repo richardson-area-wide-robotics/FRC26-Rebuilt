@@ -1,11 +1,10 @@
-package frc.robot.pearce.subsystems.smart;
+package frc.robot.rebuilt.subsystems.smart;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.pearce.PearceContainer;
 
 public class DynamicPather {//statless
 
