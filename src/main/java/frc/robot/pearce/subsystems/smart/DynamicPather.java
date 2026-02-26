@@ -13,7 +13,7 @@ public class DynamicPather {//statless
      * The Standard Constraints for a path                   
      */
     public static final PathConstraints STANDARD_CONSTRAINTS =
-            new PathConstraints(200,200,200,200, 12, true);
+            new PathConstraints(100,100,10,10, 12);
     
     /**
      * Builds a pose offset backward from the goal along its facing direction.

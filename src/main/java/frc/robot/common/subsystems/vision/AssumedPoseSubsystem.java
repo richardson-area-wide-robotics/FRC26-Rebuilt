@@ -70,7 +70,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         double currentTime = Timer.getFPGATimestamp();
 
         List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
-        if (!results.isEmpty() & useVisionData) {
+        if (!results.isEmpty() && useVisionData) {
             Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(results.get(0));
             if (estimatedPose.isPresent()) {
                 Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
