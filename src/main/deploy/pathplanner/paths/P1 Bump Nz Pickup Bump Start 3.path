@@ -93,7 +93,7 @@
   "folder": "Start_3",
   "idealStartingState": {
     "velocity": 0,
-    "rotation": -0.6740368979845371
+    "rotation": -0.6740368979845373
   },
   "useDefaultConstraints": true
 }
