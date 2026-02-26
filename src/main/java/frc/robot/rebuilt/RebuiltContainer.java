@@ -30,9 +30,11 @@ import frc.robot.rebuilt.components.RobotSector;
 import frc.robot.rebuilt.subsystems.Feeder;
 import frc.robot.rebuilt.subsystems.Intake;
 import frc.robot.rebuilt.subsystems.Shooter;
+import frc.robot.rebuilt.subsystems.smart.DynamicPather;
 import frc.robot.rebuilt.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.rebuilt.subsystems.smart.ScoringLocationLookup;
 import frc.robot.rebuilt.subsystems.smart.SmartSequentialCommandSequencer;
+import frc.robot.rebuilt.components.SmartSequentialCommandContainer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
@@ -130,19 +132,10 @@ public class RebuiltContainer implements IRobotContainer {
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(SHOOTER::runShooter, SHOOTER), Commands.runOnce(SHOOTER::stopShooter));
 
-    RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.leftBumper(),
-            Commands.runOnce(TELEOP_ASSIST::toggle), Commands.none()
-    );
-
     //RobotUtils.bindControl(
     //        HIDConstants.DRIVER_CONTROLLER.b(),
     //        Commands.runOnce(PROTO_FEEDER::load),
     //        Commands.runOnce(PROTO_FEEDER::stopLoad));
-    RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.povUp(),
-            Commands.runOnce(TELEOP_ASSIST::disable), Commands.none()
-    );
 
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.b(),
@@ -150,9 +143,6 @@ public class RebuiltContainer implements IRobotContainer {
             Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
-    Commands.runOnce(INTAKE::intake),
-    Commands.runOnce(INTAKE::stop));
-            HIDConstants.DRIVER_CONTROLLER.y(),
             Commands.defer(
                     () -> DynamicPather.computePathfindCommand(
                             ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
