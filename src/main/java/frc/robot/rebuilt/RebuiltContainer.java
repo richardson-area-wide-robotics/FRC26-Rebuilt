@@ -50,9 +50,9 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 public class RebuiltContainer implements IRobotContainer {
 
 
-  public static final Shooter SHOOTER = new Shooter(10, 11);
-  public static final Feeder FEEDER = new Feeder(18, 14);
-  public static final Intake INTAKE = new Intake(13, 15);
+  //public static final Shooter SHOOTER = new Shooter(10, 11);
+  //public static final Feeder FEEDER = new Feeder(18, 14);
+  //public static final Intake INTAKE = new Intake(13, 15);
 
   //public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
@@ -130,23 +130,23 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(SHOOTER::runShooter, SHOOTER), Commands.runOnce(SHOOTER::stopShooter));
+    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(SHOOTER::runShooter, SHOOTER), Commands.runOnce(SHOOTER::stopShooter));
 
     //RobotUtils.bindControl(
     //        HIDConstants.DRIVER_CONTROLLER.b(),
     //        Commands.runOnce(PROTO_FEEDER::load),
     //        Commands.runOnce(PROTO_FEEDER::stopLoad));
 
-    RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.b(),
-            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
-            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
+//    RobotUtils.bindControl(
+//            HIDConstants.DRIVER_CONTROLLER.b(),
+//            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
+//            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
             Commands.defer(
                     () -> DynamicPather.computePathfindCommand(
                             ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
-                            DynamicPather.STANDARD_CONSTRAINTS, 5),
+                            DynamicPather.STANDARD_CONSTRAINTS, 15),
                     Set.of(DRIVE_SUBSYSTEM)
             ),
             Commands.none());
