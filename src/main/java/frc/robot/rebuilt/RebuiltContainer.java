@@ -130,22 +130,28 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(SHOOTER::runShooter, SHOOTER), Commands.runOnce(SHOOTER::stopShooter));
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(INTAKE::intake, INTAKE), Commands.runOnce(INTAKE::stop));
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
+      Commands.runOnce(SHOOTER::runShooter, SHOOTER),
+      Commands.runOnce(SHOOTER::stopShooter));
+
 
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.b(),
             Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
             Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
-            Commands.defer(
-                    () -> DynamicPather.computePathfindCommand(
-                            ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
-                            DynamicPather.STANDARD_CONSTRAINTS, 15),
-                    Set.of(DRIVE_SUBSYSTEM)
-            ),
-            Commands.none());
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
+      Commands.runOnce(INTAKE::intake),
+      Commands.runOnce(INTAKE::stop));
+
+    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
+    //        Commands.defer(
+    //                () -> DynamicPather.computePathfindCommand(
+    //                        ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
+    //                        DynamicPather.STANDARD_CONSTRAINTS, 15),
+    //                Set.of(DRIVE_SUBSYSTEM)
+    //        ),
+    //        Commands.none());
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 
