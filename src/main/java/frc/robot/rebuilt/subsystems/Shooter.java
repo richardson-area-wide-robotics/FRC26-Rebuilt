@@ -21,7 +21,7 @@ public class Shooter extends DashboardSubsystem {
     public ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
 
     public enum ShooterPosition {
-        AGAINST_HUB(2437.5);
+        AGAINST_HUB(2438);
 
         public final double rpm;
 
@@ -51,6 +51,7 @@ public class Shooter extends DashboardSubsystem {
                 .p(0.00035)
                 .i(0.000001)
                 .d(0.0065);
+        leaderConfig.inverted(true);
 
         motor1.configure(
                 leaderConfig,
