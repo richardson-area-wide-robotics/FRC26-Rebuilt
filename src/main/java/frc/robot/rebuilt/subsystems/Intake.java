@@ -39,11 +39,11 @@ public class Intake extends DashboardSubsystem {
     }
 
     public void intake() {
-        intakeMotor.set(0.5);
+        intakeMotor.set(0.75);
     }
 
     public void outtake() {
-        intakeMotor.set(-0.5);
+        intakeMotor.set(-0.75);
     }
 
     public void stop() {
