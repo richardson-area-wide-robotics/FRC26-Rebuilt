@@ -120,7 +120,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
 
         // Path follower configuration
         this.PATH_FOLLOWER_CONFIG = new PPHolonomicDriveController(
-            new com.pathplanner.lib.config.PIDConstants(0.18, 0, 0.174),
+            new com.pathplanner.lib.config.PIDConstants(4.0, 0, 0.05),
             new com.pathplanner.lib.config.PIDConstants(2.1, 0, 0.2)
         );
 

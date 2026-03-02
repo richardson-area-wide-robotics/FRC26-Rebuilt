@@ -197,9 +197,9 @@ public class RebuiltContainer implements IRobotContainer {
     if(ScoringLocationLookup.team == null){
         ScoringLocationLookup.team = DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
     }
-    Logger.recordOutput("/Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
-    Logger.recordOutput("/Status/Red", statuses[0]);
-    Logger.recordOutput("/Status/Blue", statuses[1]);
+    Logger.recordOutput("Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
+    Logger.recordOutput("Status/Red", statuses[0]);
+    Logger.recordOutput("Status/Blue", statuses[1]);
   }
 
   /**
