@@ -67,21 +67,21 @@ public class AssumedPoseSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        double currentTime = Timer.getFPGATimestamp();
 
         List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
         if (!results.isEmpty() && useVisionData) {
-            Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(results.get(0));
-            if (estimatedPose.isPresent()) {
-                Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
-                double poseTime = estimatedPose.get().timestampSeconds;
-                poseEstimator.addVisionMeasurement(photonPose, poseTime);
-                currentTime = poseTime;
+            for (int i = 0; i < results.size(); i++) {
+                Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(results.get(i));
+                if (estimatedPose.isPresent()) {
+                    Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
+                    double poseTime = estimatedPose.get().timestampSeconds;
+                    poseEstimator.addVisionMeasurement(photonPose, poseTime);
+                }
             }
         }
 
         poseEstimator.updateWithTime(
-                currentTime,
+                Timer.getFPGATimestamp(),
                 imu.getRotation2d(),
                 modulePositions.get()
         );
