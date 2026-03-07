@@ -1,5 +1,6 @@
 package frc.robot.rebuilt.subsystems;
 
+import frc.robot.common.components.RobotUtils;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.hardware.revrobotics.Spark.ID;
@@ -12,6 +13,7 @@ import com.revrobotics.ResetMode;
 import com.revrobotics.PersistMode;
 
 import edu.wpi.first.units.Units;
+import org.littletonrobotics.junction.Logger;
 
 public class Shooter extends DashboardSubsystem {
 
@@ -77,14 +79,23 @@ public class Shooter extends DashboardSubsystem {
     }
 
     public void runShooter() {
+        shooterRunning = true;
         motor1.set(
                 currentShooterPosition.rpm,
                 ControlType.kVelocity
         );
     }
 
+    boolean shooterRunning = false;
+
     public void stopShooter() {
+        shooterRunning = false;
         motor1.stopMotor();
+    }
+
+    @Override
+    public void periodic() {
+        Logger.recordOutput(getName() + "/Activity/Shooter", shooterRunning);
     }
 
 }

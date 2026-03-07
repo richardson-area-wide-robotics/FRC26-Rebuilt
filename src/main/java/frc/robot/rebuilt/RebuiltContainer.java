@@ -121,52 +121,37 @@ public class RebuiltContainer implements IRobotContainer {
 
 
   private static void configureBindings() {
-    // Driver Start - toggle traction control
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.start(), DRIVE_SUBSYSTEM.toggleTractionControlCommand(), Commands.none());
+    // Operator Start - toggle traction control
+    RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.start(), DRIVE_SUBSYSTEM.toggleTractionControlCommand(), Commands.none());
 
-    // Driver Left Stick Button - Reset pose
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftStick(), DRIVE_SUBSYSTEM.resetPoseCommand(Pose2d::new), Commands.none());
+    // Operator Left Stick Button - Reset pose
+    RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.leftStick(), DRIVE_SUBSYSTEM.resetPoseCommand(Pose2d::new), Commands.none());
 
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
+    // Driver Right Trigger - Run Shooter
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
       Commands.runOnce(SHOOTER::runShooter, SHOOTER),
       Commands.runOnce(SHOOTER::stopShooter));
 
+    // Driver A Button - Reverse Load
+    RobotUtils.bindControl(
+            HIDConstants.DRIVER_CONTROLLER.a(),
+            Commands.runOnce(FEEDER::reverseLoad).alongWith(Commands.runOnce(FEEDER::reverseCycle)),
+            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 
+    // Driver A Button - Load
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.b(),
             Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
             Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
+    // Driver Left Trigger - Load
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(),
       Commands.runOnce(INTAKE::intake),
       Commands.runOnce(INTAKE::stop));
 
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
-    //        Commands.defer(
-    //                () -> DynamicPather.computePathfindCommand(
-    //                        ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
-    //                        DynamicPather.STANDARD_CONSTRAINTS, 15),
-    //                Set.of(DRIVE_SUBSYSTEM)
-    //        ),
-    //        Commands.none());
-
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
-
-      //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(), Commands.runOnce(PROTO_CLIMBER::unRunClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
-
-//    RobotUtils.bindControl(
-//      HIDConstants.DRIVER_CONTROLLER.b(),
-//      Commands.runOnce(() -> {
-//          Command coolPathCommand = AutoBuilder.buildAuto("coolpath.auto");
-//          if (coolPathCommand != null) {
-//              coolPathCommand.schedule();
-//         }
-//      }),
-//      Commands.none()
-//    );
   }
 
 

@@ -6,11 +6,13 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 
 import frc.robot.common.components.EasyMotor;
+import frc.robot.common.subsystems.DashboardSubsystem;
+import org.littletonrobotics.junction.Logger;
 
 //Will handle getting balls from intake to shooter
 //Motor Count:
 // One (Tower)
-public class Feeder {
+public class Feeder extends DashboardSubsystem {
 
     private SparkMax feederMotor;
     private SparkFlex spindexerMotor;
@@ -43,4 +45,18 @@ public class Feeder {
     public void reverseLoad() {
         feederMotor.set(-1.0);
     }
+
+
+    @Override
+    public void periodic() {
+
+        boolean spindexterRunning = spindexerMotor.get() > 0;
+        boolean feederRunning = feederMotor.get() > 0;
+
+
+        Logger.recordOutput(getName() + "/Activity/Spindexter", spindexterRunning);
+        Logger.recordOutput(getName() + "/Activity/Feeder", feederRunning);
+
+    }
+
 }
