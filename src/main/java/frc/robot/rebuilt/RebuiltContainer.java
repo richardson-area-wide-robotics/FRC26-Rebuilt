@@ -30,7 +30,6 @@ import frc.robot.rebuilt.components.RobotSector;
 import frc.robot.rebuilt.subsystems.Feeder;
 import frc.robot.rebuilt.subsystems.Intake;
 import frc.robot.rebuilt.subsystems.Shooter;
-import frc.robot.rebuilt.subsystems.smart.DynamicPather;
 import frc.robot.rebuilt.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.rebuilt.subsystems.smart.ScoringLocationLookup;
 import frc.robot.rebuilt.subsystems.smart.SmartSequentialCommandSequencer;
@@ -39,8 +38,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
 import org.littletonrobotics.junction.Logger;
-
-import java.util.Set;
 
 import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity.FIELD_CENTRIC;
 
@@ -133,20 +130,33 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    // Driver Right Trigger - Run Shooter
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
-      Commands.runOnce(SHOOTER::runShooter, SHOOTER),
-      Commands.runOnce(SHOOTER::stopShooter));
+    // Driver A Button - Shoot from hub
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.AGAINST_HUB))
+                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
+            Commands.runOnce(SHOOTER::stopShooter));
 
-    // Driver A Button - Reverse Load
+    // Driver B Button - Shoot from climber
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.b(),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CLIMBER))
+                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
+            Commands.runOnce(SHOOTER::stopShooter));
+
+    // Driver Y Button - Shoot from corner
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER))
+                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
+            Commands.runOnce(SHOOTER::stopShooter));
+
+    // Driver Left Trigger - Reverse Load
     RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.a(),
+            HIDConstants.DRIVER_CONTROLLER.rightBumper(),
             Commands.runOnce(FEEDER::reverseLoad).alongWith(Commands.runOnce(FEEDER::reverseCycle)),
             Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 
-    // Driver A Button - Load
+    // Driver Right Trigger - Load (fire balls if shooter is on)
     RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.b(),
+            HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
             Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
             Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 

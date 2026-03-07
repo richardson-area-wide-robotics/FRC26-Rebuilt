@@ -2,6 +2,7 @@ package frc.robot.rebuilt.subsystems;
 
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.subsystems.DashboardSubsystem;
+import lombok.Setter;
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.hardware.revrobotics.Spark.ID;
 import org.lasarobotics.hardware.revrobotics.Spark.MotorKind;
@@ -20,10 +21,14 @@ public class Shooter extends DashboardSubsystem {
     private final Spark motor1;
     private final Spark motor2;
 
-    public ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
+    @Setter
+    private ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
+    public float operatorRMPModifer = 0;
 
     public enum ShooterPosition {
-        AGAINST_HUB(2438);
+        AGAINST_HUB(2438),
+        CORNER(2438),
+        CLIMBER(2438);
 
         public final double rpm;
 
@@ -81,7 +86,7 @@ public class Shooter extends DashboardSubsystem {
     public void runShooter() {
         shooterRunning = true;
         motor1.set(
-                currentShooterPosition.rpm,
+                currentShooterPosition.rpm + operatorRMPModifer,
                 ControlType.kVelocity
         );
     }
