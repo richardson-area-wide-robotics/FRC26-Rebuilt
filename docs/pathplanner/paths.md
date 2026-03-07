@@ -52,6 +52,10 @@
 
 ![Start 2 Mix it up](paths/Start_2_Mix_it_up.svg)
 
+## Start 2 Outpost
+
+![Start 2 Outpost](paths/Start_2_Outpost.svg)
+
 ## Start 3 Mix it up
 
 ![Start 3 Mix it up](paths/Start_3_Mix_it_up.svg)
@@ -59,4 +63,20 @@
 ## Start 3 Shoot PL 
 
 ![Start 3 Shoot PL ](paths/Start_3_Shoot_PL_.svg)
+
+## Trench 1
+
+![Trench 1](paths/Trench_1.svg)
+
+## Trench 2
+
+![Trench 2](paths/Trench_2.svg)
+
+## Trench 3
+
+![Trench 3](paths/Trench_3.svg)
+
+## Trench Curve
+
+![Trench Curve](paths/Trench_Curve.svg)
 

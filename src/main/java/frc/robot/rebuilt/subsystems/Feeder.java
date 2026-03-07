@@ -1,4 +1,4 @@
-package frc.robot.pearce.subsystems;
+package frc.robot.rebuilt.subsystems;
 
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
@@ -10,12 +10,12 @@ import frc.robot.common.components.EasyMotor;
 //Will handle getting balls from intake to shooter
 //Motor Count:
 // One (Tower)
-public class ProtoFeeder {
+public class Feeder {
 
     private SparkMax feederMotor;
     private SparkFlex spindexerMotor;
 
-    public ProtoFeeder(int feederID, int spindexerID) {
+    public Feeder(int feederID, int spindexerID) {
         feederMotor = EasyMotor.createEasySparkMax(feederID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
         spindexerMotor = EasyMotor.createEasySparkFlex(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
     }

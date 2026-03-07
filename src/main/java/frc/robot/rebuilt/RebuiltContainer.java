@@ -2,7 +2,7 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package frc.robot.pearce;
+package frc.robot.rebuilt;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -12,11 +12,11 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
@@ -25,29 +25,34 @@ import frc.robot.common.components.hardware.SwerveHardwareParams;
 import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
-import frc.robot.pearce.components.HubStatus;
-import frc.robot.pearce.components.RobotSector;
-import frc.robot.pearce.subsystems.ProtoClimber;
-import frc.robot.pearce.subsystems.ProtoFeeder;
-import frc.robot.pearce.subsystems.ProtoIntake;
-import frc.robot.pearce.subsystems.ProtoShooter;
-import frc.robot.pearce.subsystems.smart.RobotSectorEvaluator;
-import frc.robot.pearce.subsystems.smart.TeleopAssistSubsystem;
+import frc.robot.rebuilt.components.HubStatus;
+import frc.robot.rebuilt.components.RobotSector;
+import frc.robot.rebuilt.subsystems.Feeder;
+import frc.robot.rebuilt.subsystems.Intake;
+import frc.robot.rebuilt.subsystems.Shooter;
+import frc.robot.rebuilt.subsystems.smart.DynamicPather;
+import frc.robot.rebuilt.subsystems.smart.RobotSectorEvaluator;
+import frc.robot.rebuilt.subsystems.smart.ScoringLocationLookup;
+import frc.robot.rebuilt.subsystems.smart.SmartSequentialCommandSequencer;
+import frc.robot.rebuilt.components.SmartSequentialCommandContainer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.lasarobotics.utils.PIDConstants;
 import org.littletonrobotics.junction.Logger;
+
+import java.util.Set;
 
 import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity.FIELD_CENTRIC;
 
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Robot(team = 1745)
-public class PearceContainer implements IRobotContainer {
+public class RebuiltContainer implements IRobotContainer {
 
 
-  public static final ProtoShooter PROTO_SHOOTER = new ProtoShooter(10, 11);
-  public static final ProtoFeeder PROTO_FEEDER = new ProtoFeeder(18, 14);
+  public static final Shooter SHOOTER = new Shooter(10, 11);
+  public static final Feeder FEEDER = new Feeder(18, 14);
+  public static final Intake INTAKE = new Intake(13, 15);
 
   //public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
@@ -73,8 +78,10 @@ public class PearceContainer implements IRobotContainer {
       Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
       Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
-  public static final TeleopAssistSubsystem TELEOP_ASSIST = new TeleopAssistSubsystem(DRIVE_SUBSYSTEM);
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
+  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
+  public static SequentialCommandGroup sequencedCommand;
+
   private static SendableChooser<Command> automodeChooser;
 
   public static IRobotContainer createContainer(){
@@ -86,23 +93,32 @@ public class PearceContainer implements IRobotContainer {
             HIDConstants.DRIVER_CONTROLLER::getLeftX,
             HIDConstants.DRIVER_CONTROLLER::getRightX));
 
+    // Set up the auto builder
+    DRIVE_SUBSYSTEM.configureAutoBuilder();
+
+
+    sequencedCommand = COMMAND_SEQUENCER.finalizeSequence();
+
       // Bind buttons and triggers
       configureBindings();
   
-      // Set up the auto builder
-      DRIVE_SUBSYSTEM.configureAutoBuilder();
+
 
       // Set up the auto chooser
       automodeChooser = AutoBuilder.buildAutoChooser();
       SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
 
-      SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(1.,1.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(3.,1.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
-    SECTOR_EVALUATOR.createSector(RobotSector.baseSector.BLUE, RobotSector.sectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
+      SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,1.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,1.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,3.,new Rotation2d()),1,1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,3.,new Rotation2d()),1,1);
 
-      return new PearceContainer();
+
+    ScoringLocationLookup.buildScoringLocations();
+
+    return new RebuiltContainer();
   }
+
 
   private static void configureBindings() {
     // Driver Start - toggle traction control
@@ -114,23 +130,28 @@ public class PearceContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.runOnce(PROTO_SHOOTER::runShooter, PROTO_SHOOTER), Commands.runOnce(PROTO_SHOOTER::stopShooter));
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
+      Commands.runOnce(SHOOTER::runShooter, SHOOTER),
+      Commands.runOnce(SHOOTER::stopShooter));
 
-    RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.leftBumper(),
-            Commands.runOnce(TELEOP_ASSIST::toggle), Commands.none()
-    );
-
-    RobotUtils.bindControl(
-            HIDConstants.DRIVER_CONTROLLER.povUp(),
-            Commands.runOnce(TELEOP_ASSIST::disable), Commands.none()
-    );
 
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.b(),
-            Commands.runOnce(PROTO_FEEDER::load),
-            Commands.runOnce(PROTO_FEEDER::stopLoad));
+            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
+            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
+      Commands.runOnce(INTAKE::intake),
+      Commands.runOnce(INTAKE::stop));
+
+    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
+    //        Commands.defer(
+    //                () -> DynamicPather.computePathfindCommand(
+    //                        ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()),
+    //                        DynamicPather.STANDARD_CONSTRAINTS, 15),
+    //                Set.of(DRIVE_SUBSYSTEM)
+    //        ),
+    //        Commands.none());
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(), Commands.runOnce(PROTO_CLIMBER::runClimber, PROTO_CLIMBER), Commands.runOnce(PROTO_CLIMBER::stopClimber));
 
@@ -158,14 +179,27 @@ public class PearceContainer implements IRobotContainer {
   }
 
   @Override
+  public void robotInit() {
+  }
+
+  @Override
+  public void autonomousInit() {
+
+  }
+
+  @Override
   public void autonomousPeriodic() {
   }
   
   @Override
   public void teleopPeriodic() {
     HubStatus.HubState[] statuses = HubStatus.getBothHubStatuses(DriverStation.getMatchTime());
-    Logger.recordOutput("/Status/Red", statuses[0]);
-    Logger.recordOutput("/Status/Blue", statuses[1]);
+    if(ScoringLocationLookup.team == null){
+        ScoringLocationLookup.team = DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
+    }
+    Logger.recordOutput("Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
+    Logger.recordOutput("Status/Red", statuses[0]);
+    Logger.recordOutput("Status/Blue", statuses[1]);
   }
 
   /**
@@ -175,6 +209,6 @@ public class PearceContainer implements IRobotContainer {
    */
   @Override
   public Command getAutonomousCommand() {
-    return Commands.none();
+    return automodeChooser.getSelected();
   }
 }

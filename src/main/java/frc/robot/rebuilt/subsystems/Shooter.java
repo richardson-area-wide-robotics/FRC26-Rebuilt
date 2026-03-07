@@ -1,10 +1,9 @@
-package frc.robot.pearce.subsystems;
+package frc.robot.rebuilt.subsystems;
 
 import frc.robot.common.subsystems.DashboardSubsystem;
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.hardware.revrobotics.Spark.ID;
 import org.lasarobotics.hardware.revrobotics.Spark.MotorKind;
-import org.littletonrobotics.junction.Logger;
 
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.config.SparkFlexConfig;
@@ -14,7 +13,7 @@ import com.revrobotics.PersistMode;
 
 import edu.wpi.first.units.Units;
 
-public class ProtoShooter extends DashboardSubsystem {
+public class Shooter extends DashboardSubsystem {
 
     private final Spark motor1;
     private final Spark motor2;
@@ -22,7 +21,7 @@ public class ProtoShooter extends DashboardSubsystem {
     public ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
 
     public enum ShooterPosition {
-        AGAINST_HUB(4000);
+        AGAINST_HUB(2438);
 
         public final double rpm;
 
@@ -31,7 +30,7 @@ public class ProtoShooter extends DashboardSubsystem {
         }
     }
 
-    public ProtoShooter(int id1, int id2) {
+    public Shooter(int id1, int id2) {
         motor1 = new Spark(
                 new ID("ShooterHardware/ShooterLeader", id1),
                 MotorKind.NEO_VORTEX,
@@ -52,6 +51,7 @@ public class ProtoShooter extends DashboardSubsystem {
                 .p(0.00035)
                 .i(0.000001)
                 .d(0.0065);
+        leaderConfig.inverted(true);
 
         motor1.configure(
                 leaderConfig,

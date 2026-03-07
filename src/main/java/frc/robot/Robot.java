@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.common.LocalADStarAK;
 import frc.robot.common.components.TeamUtils;
 import frc.robot.common.components.dashboard.DashboardAutoUpdater;
@@ -67,17 +68,31 @@ public class Robot extends LoggedRobot {
     System.out.println("Starting with team: " + TeamUtils.getTeamNumber());
     RobotUtils.loadRobotConfig();
     robotContainer = RobotContainerRegistry.createContainerForTeam(TeamUtils.getTeamNumber());
+
+    robotContainer.robotInit();
 }
 
 
   @Override
   public void robotPeriodic() {
+    logController("HID/Driver", CommonConstants.HIDConstants.DRIVER_CONTROLLER);
+    logController("HID/Operator", CommonConstants.HIDConstants.OPERATOR_CONTROLLER);
+
     PurpleManager.update();
     DashboardAutoUpdater.updateAll();
     //CANDiagnostics.getInstance().checkHealth();
     CommandScheduler.getInstance().run();
   }
 
+
+  private void logController(String name, CommandXboxController controller) {
+    Logger.recordOutput(name + "/LeftX", controller.getLeftX());
+    Logger.recordOutput(name + "/LeftY", controller.getLeftY());
+    Logger.recordOutput(name + "/RightX", controller.getRightX());
+    Logger.recordOutput(name + "/RightY", controller.getRightY());
+    Logger.recordOutput(name + "/AButton", controller.a().getAsBoolean());
+    Logger.recordOutput(name + "/BButton", controller.b().getAsBoolean());
+  }
   
   @Override
   public void disabledPeriodic() {
@@ -86,6 +101,8 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void autonomousInit() {
+    robotContainer.autonomousInit();
+
     autonomousCommand = robotContainer.getAutonomousCommand();
 
     if (autonomousCommand != null) {
