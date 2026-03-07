@@ -1,6 +1,5 @@
 package frc.robot.rebuilt.subsystems;
 
-import frc.robot.common.components.RobotUtils;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import lombok.Setter;
 import org.lasarobotics.hardware.revrobotics.Spark;
@@ -23,7 +22,14 @@ public class Shooter extends DashboardSubsystem {
 
     @Setter
     private ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
-    public float operatorRMPModifer = 0;
+    private float operatorRPMModifer = 0;
+
+    public void raiseOperatorModifer(float value){
+        operatorRPMModifer += value;
+    }
+    public void lowerOperatorModifer(float value){
+        operatorRPMModifer -= value;
+    }
 
     public enum ShooterPosition {
         AGAINST_HUB(2438),
@@ -86,7 +92,7 @@ public class Shooter extends DashboardSubsystem {
     public void runShooter() {
         shooterRunning = true;
         motor1.set(
-                currentShooterPosition.rpm + operatorRMPModifer,
+                currentShooterPosition.rpm + operatorRPMModifer,
                 ControlType.kVelocity
         );
     }
@@ -101,6 +107,7 @@ public class Shooter extends DashboardSubsystem {
     @Override
     public void periodic() {
         Logger.recordOutput(getName() + "/Activity/Shooter", shooterRunning);
+        Logger.recordOutput(getName() + "/Activity/DesiredRPM", currentShooterPosition.rpm + operatorRPMModifer);
     }
 
 }
