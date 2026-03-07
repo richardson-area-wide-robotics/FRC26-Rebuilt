@@ -140,19 +140,25 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.AGAINST_HUB))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.none());
 
     // Driver B Button - Shoot from climber
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.b(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CLIMBER))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.none());
 
     // Driver Y Button - Shoot from corner
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.none());
+
+    // Driver X Button - Stop Shooter
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
+            Commands.runOnce(SHOOTER::stopShooter),
+            Commands.none());
+
 
     // Driver Left Trigger - Reverse Load
     RobotUtils.bindControl(
