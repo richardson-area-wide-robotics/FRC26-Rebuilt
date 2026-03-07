@@ -73,7 +73,6 @@ public class RAWRSwerveModule extends SwerveModule implements Sendable {
   private SimpleMotorFeedforward driveFF;
   private final Rotation2d zeroOffset;
   
-  private final SwerveModule.Location location;
   private Rotation2d previousRotatePosition;
 
   private double simDrivePosition;
@@ -174,13 +173,13 @@ public class RAWRSwerveModule extends SwerveModule implements Sendable {
 
     DRIVE_TICKS_PER_METER =
       (encoderTicksPerRotation * gearRatio.getDriveRatio())
-      * (1 / (driveWheel.diameter.in(Units.Meters) * Math.PI));
+      * (1 / (getDriveWheel().diameter.in(Units.Meters) * Math.PI));
     DRIVE_METERS_PER_TICK = 1 / DRIVE_TICKS_PER_METER;
     DRIVE_METERS_PER_ROTATION = DRIVE_METERS_PER_TICK * encoderTicksPerRotation;
     DRIVE_MAX_LINEAR_SPEED = (swerveHardware.driveMotor().getKind().getMaxRPM() / 60) * DRIVE_METERS_PER_ROTATION * CommonConstants.DriveConstants.DRIVETRAIN_EFFICIENCY;
 
     // Set traction control controller
-    super.setTractionControlController(new TractionControlController(driveWheel, slipRatio, mass, Units.MetersPerSecond.of(DRIVE_MAX_LINEAR_SPEED)));
+    super.setTractionControlController(new TractionControlController(getDriveWheel(), slipRatio, mass, Units.MetersPerSecond.of(DRIVE_MAX_LINEAR_SPEED)));
 
     this.driveMotor = swerveHardware.driveMotor();
     this.rotateMotor = swerveHardware.rotateMotor();
@@ -190,13 +189,12 @@ public class RAWRSwerveModule extends SwerveModule implements Sendable {
       rotateMotor.getKind().motor, rotateFF.withKA((rotateFF.kA <= 0.0) ? SwerveModule.MIN_SIM_kA : rotateFF.kA)
     );
     this.driveFF = new SimpleMotorFeedforward(driveFF.kS, driveFF.kV, driveFF.kA);
-    this.location = location;
     this.zeroOffset = Rotation2d.fromRadians(zeroOffset.in(Units.Radians));
     this.simDrivePosition = 0.0;
     this.simModulePosition = new SwerveModulePosition();
-    this.desiredState = new SwerveModuleState(Units.MetersPerSecond.of(0.0), this.zeroOffset.plus(this.location.getLockPosition()));
+    this.desiredState = new SwerveModuleState(Units.MetersPerSecond.of(0.0), this.zeroOffset.plus(this.getModuleLocation().getLockPosition()));
     this.autoLockTime = MathUtil.clamp(autoLockTime.in(Units.Milliseconds), 0.0, CommonConstants.SwerveConstants.MAX_AUTO_LOCK_TIME * 1000);
-    this.previousRotatePosition = this.zeroOffset.plus(this.location.getLockPosition());
+    this.previousRotatePosition = this.zeroOffset.plus(this.getModuleLocation().getLockPosition());
     this.autoLockTimer = Instant.now();
 
     Logger.recordOutput(driveMotor.getID().name + CommonConstants.LogConstants.MAX_LINEAR_VELOCITY_LOG_ENTRY, DRIVE_MAX_LINEAR_SPEED);
@@ -417,7 +415,7 @@ public void configRotate(SwerveModule.MountOrientation motorOrientation, SwerveM
       state.speedMetersPerSecond = 0.0;
       // Time's up, lock now...
       if (Duration.between(autoLockTimer, Instant.now()).toMillis() > autoLockTime)
-        state.angle = location.getLockPosition();
+        state.angle = getModuleLocation().getLockPosition();
       // Waiting to lock...
       else state.angle = previousRotatePosition.minus(zeroOffset);
     } else {

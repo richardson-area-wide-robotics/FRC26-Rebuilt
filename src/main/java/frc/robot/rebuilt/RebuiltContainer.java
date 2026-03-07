@@ -127,6 +127,9 @@ public class RebuiltContainer implements IRobotContainer {
     // Operator Left Stick Button - Reset pose
     RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.leftStick(), DRIVE_SUBSYSTEM.resetPoseCommand(Pose2d::new), Commands.none());
 
+    // Operator A Button - Lock Wheels
+    RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.a(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE::lock, DRIVE_SUBSYSTEM), Commands.none());
+
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
@@ -147,7 +150,7 @@ public class RebuiltContainer implements IRobotContainer {
             Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
             Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
 
-    // Driver Left Trigger - Load
+    // Driver Left Trigger - Intake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(),
       Commands.runOnce(INTAKE::intake),
       Commands.runOnce(INTAKE::stop));
