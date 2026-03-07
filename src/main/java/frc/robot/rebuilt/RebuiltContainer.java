@@ -4,7 +4,10 @@
 
 package frc.robot.rebuilt;
 
+import com.fasterxml.jackson.databind.util.Named;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.Units;
@@ -99,7 +102,8 @@ public class RebuiltContainer implements IRobotContainer {
       // Bind buttons and triggers
       configureBindings();
   
-
+      // Register named commands
+      registerNamedCommands();
 
       // Set up the auto chooser
       automodeChooser = AutoBuilder.buildAutoChooser();
@@ -183,6 +187,16 @@ public class RebuiltContainer implements IRobotContainer {
 
   }
 
+  private static void registerNamedCommands() {
+    NamedCommands.registerCommand("Enable Shooter", SHOOTER.runShooterCommand());
+    NamedCommands.registerCommand("Disable Shooter", SHOOTER.stopShooterCommand());
+    NamedCommands.registerCommand("Enable Load", FEEDER.loadAndCycleCommand());
+    NamedCommands.registerCommand("Disable Load", FEEDER.stopLoadAndCycleCommand());
+    NamedCommands.registerCommand("Enable Intake", INTAKE.intakeCommand());
+    NamedCommands.registerCommand("Disable Intake", INTAKE.stopIntakeCommand());
+    NamedCommands.registerCommand("Deploy Intake", INTAKE.deploy());
+    NamedCommands.registerCommand("Reverse Deploy Intake", INTAKE.reverseDeploy());
+  }
 
   @Override
   public void simulationPeriodic() {

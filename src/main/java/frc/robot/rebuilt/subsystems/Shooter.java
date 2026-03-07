@@ -13,6 +13,8 @@ import com.revrobotics.ResetMode;
 import com.revrobotics.PersistMode;
 
 import edu.wpi.first.units.Units;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import org.littletonrobotics.junction.Logger;
 
 public class Shooter extends DashboardSubsystem {
@@ -110,4 +112,11 @@ public class Shooter extends DashboardSubsystem {
         Logger.recordOutput(getName() + "/Activity/DesiredRPM", currentShooterPosition.rpm + operatorRPMModifer);
     }
 
+    public Command runShooterCommand() {
+        return Commands.runOnce(() -> runShooter());
+    }
+
+    public Command stopShooterCommand() {
+        return Commands.runOnce(() -> stopShooter());
+    }
 }

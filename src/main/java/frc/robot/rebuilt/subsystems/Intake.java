@@ -50,6 +50,14 @@ public class Intake extends DashboardSubsystem {
         intakeMotor.set(0.0);
     }
 
+    public Command intakeCommand() {
+        return Commands.runOnce(() -> intake());
+    }
+
+    public Command stopIntakeCommand() {
+        return Commands.runOnce(() -> stop());
+    }
+
     //TODO: change to actual encoder position
     public Command deploy() {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 100)).until(isStalling);
