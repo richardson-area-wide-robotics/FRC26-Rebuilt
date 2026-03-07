@@ -136,6 +136,10 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(), Commands.runOnce(INTAKE::manualDeploy, INTAKE), Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(), Commands.runOnce(INTAKE::manualReverseDeploy, INTAKE), Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+
     // Driver A Button - Shoot from hub
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.AGAINST_HUB))

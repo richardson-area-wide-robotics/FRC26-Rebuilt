@@ -55,6 +55,19 @@ public class Intake extends DashboardSubsystem {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 100)).until(isStalling);
     }
 
+
+    public void stopDeploy() {
+        deployMotor.set(0.0);
+    }
+
+    public Command manualDeploy() {
+        return Commands.run(()->deployMotor.set(0.1));
+    }
+
+    public Command manualReverseDeploy() {
+        return Commands.run(()->deployMotor.set(-0.1));
+    }
+
     public Command reverseDeploy() {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0)).until(isStalling);
     }
