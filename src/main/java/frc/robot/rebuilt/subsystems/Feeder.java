@@ -52,11 +52,11 @@ public class Feeder extends DashboardSubsystem {
     @Override
     public void periodic() {
 
-        boolean spindexterRunning = spindexerMotor.get() > 0;
+        boolean spindexerRunning = spindexerMotor.get() > 0;
         boolean feederRunning = feederMotor.get() > 0;
 
 
-        Logger.recordOutput(getName() + "/Activity/Spindexter", spindexterRunning);
+        Logger.recordOutput(getName() + "/Activity/Spindexer", spindexerRunning);
         Logger.recordOutput(getName() + "/Activity/Feeder", feederRunning);
 
     }
