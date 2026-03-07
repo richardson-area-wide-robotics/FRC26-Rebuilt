@@ -35,8 +35,6 @@ public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerve
         rFrontModule.lock();
         lRearModule.lock();
         rRearModule.lock();
-
-        System.out.println("LOCKING WHEELS");
     }
 
     /**

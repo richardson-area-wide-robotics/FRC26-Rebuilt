@@ -128,7 +128,7 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.leftStick(), DRIVE_SUBSYSTEM.resetPoseCommand(Pose2d::new), Commands.none());
 
     // Operator A Button - Lock Wheels
-    RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.a(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE::lock, DRIVE_SUBSYSTEM), Commands.none());
+    RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.a(), DRIVE_SUBSYSTEM.lockCommand(), Commands.none());
 
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());

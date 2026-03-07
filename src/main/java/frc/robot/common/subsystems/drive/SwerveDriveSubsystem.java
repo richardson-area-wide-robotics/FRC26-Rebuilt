@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 import com.pathplanner.lib.util.DriveFeedforwards;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.CommonConstants;
 import frc.robot.common.components.hardware.SwerveHardware;
 import frc.robot.common.components.hardware.SwerveHardwareParams;
@@ -61,8 +62,6 @@ import frc.robot.common.components.RobotUtils;
  */
 public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoCloseable {
 
-  /**FOR TESTING ONLY - Skip loading the drive train*/
-  public final boolean ENABLE_DRIVE = true;
 
   public final SwerveHardware DRIVETRAIN_HARDWARE;
 
@@ -224,6 +223,10 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   private void logOutputs() {
     Logger.recordOutput(getName() + CommonConstants.LogConstants.POSE_LOG_ENTRY, getPose());
     Logger.recordOutput(getName() + CommonConstants.LogConstants.ACTUAL_SWERVE_STATE_LOG_ENTRY,   DRIVETRAIN_HARDWARE.getModuleStates());
+  }
+
+  public Command lockCommand() {
+    return runOnce(DRIVETRAIN_HARDWARE::lock);
   }
 
   /**
