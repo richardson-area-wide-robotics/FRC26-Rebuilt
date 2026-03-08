@@ -58,9 +58,8 @@ public class Intake extends DashboardSubsystem {
         return Commands.runOnce(() -> stop());
     }
 
-    //TODO: change to actual encoder position
     public Command deploy() {
-        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 100)).until(isStalling);
+        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 9)).until(isStalling);
     }
 
 
