@@ -227,6 +227,17 @@ public class RebuiltContainer implements IRobotContainer {
     Logger.recordOutput("Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
     Logger.recordOutput("Status/Red", statuses[0]);
     Logger.recordOutput("Status/Blue", statuses[1]);
+
+    boolean hubOn;
+
+    if(DriverStation.getAlliance().get() == DriverStation.Alliance.Red){
+      hubOn = statuses[0] == HubStatus.HubState.ACTIVE;
+    }
+    else{
+      hubOn = statuses[1] == HubStatus.HubState.ACTIVE;
+    }
+
+    Logger.recordOutput("HUB", hubOn);
   }
 
   /**
