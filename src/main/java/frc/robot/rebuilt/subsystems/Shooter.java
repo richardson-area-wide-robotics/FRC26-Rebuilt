@@ -66,7 +66,7 @@ public class Shooter extends DashboardSubsystem {
                 .p(0.00035)
                 .i(0.000001)
                 .d(0.0065);
-        leaderConfig.inverted(true);
+        leaderConfig.inverted(false);
 
         motor1.configure(
                 leaderConfig,

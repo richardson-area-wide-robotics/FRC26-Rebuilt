@@ -59,7 +59,7 @@ public class Intake extends DashboardSubsystem {
     }
 
     public Command deploy() {
-        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 9)).until(isStalling);
+        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 9));
     }
 
 
@@ -76,7 +76,7 @@ public class Intake extends DashboardSubsystem {
     }
 
     public Command reverseDeploy() {
-        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0)).until(isStalling);
+        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0));
     }
 
     //TODO: replace with actual PDH channel and current
