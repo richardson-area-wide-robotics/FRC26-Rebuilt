@@ -69,14 +69,12 @@ public class Intake extends DashboardSubsystem {
         deployMotor.set(0.0);
     }
 
-    public Command manualDeploy() {
-        System.out.println("DEPLOY!!");
-        return Commands.run(()->deployMotor.set(0.9));
+    public void manualDeploy() {
+        deployMotor.set(-0.25);
     }
 
-    public Command manualReverseDeploy() {
-        System.out.println("UNDEPLOY!!");
-        return Commands.run(()->deployMotor.set(-0.9));
+    public void manualReverseDeploy() {
+       deployMotor.set(0.25);
     }
 
     public Command reverseDeploy() {

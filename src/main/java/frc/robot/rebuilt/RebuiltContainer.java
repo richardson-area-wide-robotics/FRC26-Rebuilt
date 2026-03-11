@@ -139,21 +139,21 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(), Commands.run(INTAKE::manualDeploy, INTAKE), Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(), Commands.run(INTAKE::manualDeploy, INTAKE), Commands.runOnce(INTAKE::stopDeploy, INTAKE));
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.b(), Commands.run(INTAKE::manualReverseDeploy, INTAKE), Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(), Commands.run(INTAKE::manualReverseDeploy, INTAKE), Commands.runOnce(INTAKE::stopDeploy, INTAKE));
 
     // Driver A Button - Shoot from hub
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
-    //        Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.AGAINST_HUB))
-    //                .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-    //        Commands.none());
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.AGAINST_HUB))
+                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
+            Commands.none());
 
     // Driver B Button - Shoot from climber
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.b(),
-    //        Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CLIMBER))
-    //                .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-    //        Commands.none());
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.b(),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CLIMBER))
+                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
+            Commands.none());
 
     // Driver Y Button - Shoot from corner
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
