@@ -17,11 +17,11 @@ import org.littletonrobotics.junction.Logger;
 public class Feeder extends DashboardSubsystem {
 
     private SparkMax feederMotor;
-    private SparkFlex spindexerMotor;
+    private SparkMax spindexerMotor;
 
     public Feeder(int feederID, int spindexerID) {
         feederMotor = EasyMotor.createEasySparkMax(feederID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
-        spindexerMotor = EasyMotor.createEasySparkFlex(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+        spindexerMotor = EasyMotor.createEasySparkMax(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
     }
 
     public void cycle() {
