@@ -30,14 +30,14 @@ public class Intake extends DashboardSubsystem {
     public Intake(int intakeID, int deployID) {
         intakeMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
         deployMotor = EasyMotor.createEasySparkMax(deployID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
-        //deployEncoder = deployMotor.getEncoder();
+        deployEncoder = deployMotor.getEncoder();
 
-        //SparkMaxConfig deployConfig = new SparkMaxConfig();
-        //deployConfig.closedLoop.pid(0.1, 0, 0);
-        //deployConfig.closedLoop.outputRange(-1, 1);
+        SparkMaxConfig deployConfig = new SparkMaxConfig();
+        deployConfig.closedLoop.pid(0.1, 0, 0);
+        deployConfig.closedLoop.outputRange(-1, 1);
 
-        //deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-        //deployEncoder.setPosition(0);
+        deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        deployEncoder.setPosition(0);
     }
 
     public void intake() {
@@ -82,10 +82,17 @@ public class Intake extends DashboardSubsystem {
     }
 
     //TODO: replace with actual PDH channel and current
-    //@Override
-    //public void periodic() {
-    //    Logger.recordOutput(getName() + "/Encoder/Position", deployEncoder.getPosition());
+    @Override
+    public void periodic() {
+        Logger.recordOutput(getName() + "/Encoder/Position", deployEncoder.getPosition());
+        Logger.recordOutput(getName() + "Deploy/OutputCurrent", deployMotor.getOutputCurrent());
+        //if (deployEncoder.getPosition() < 0) {
+        //    RobotUtils.moveToPosition(deployMotor, 0);
+        //}
+        //if (deployEncoder.getPosition() > 9) {
+        //    RobotUtils.moveToPosition(deployMotor, 9);
+        //}
     //    double currentDraw = RobotUtils.getPDHCurrent(0);
     //    isStalling = RobotUtils.debounce(currentDraw, 35);
-    //}
+    }
 }

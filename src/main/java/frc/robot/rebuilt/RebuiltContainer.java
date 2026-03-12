@@ -69,7 +69,7 @@ public class RebuiltContainer implements IRobotContainer {
                         CommonConstants.DriveHardwareConstants.RIGHT_REAR_DRIVE_MOTOR_ID,
                         CommonConstants.DriveHardwareConstants.RIGHT_REAR_ROTATE_MOTOR_ID
                 ),
-          PIDConstants.of(4.0, 0.0, 0.05, 0.0, 0.0),
+          PIDConstants.of(10.0, 0.0, 0.05, 0.0, 0.0),
           FIELD_CENTRIC,
       CommonConstants.DriveConstants.BASIC_DRIVE_THROTTLE_INPUT_CURVE,
       CommonConstants.DriveConstants.BASIC_DRIVE_TURN_INPUT_CURVE,
@@ -139,9 +139,23 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Stick Button - Reset heading
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(), Commands.run(INTAKE::manualDeploy, INTAKE), Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+    //Driver DPad Up - Deploy intake
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(),
+    INTAKE.deploy(),
+    Commands.runOnce(INTAKE::stopDeploy, INTAKE));
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(), Commands.run(INTAKE::manualReverseDeploy, INTAKE), Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(),
+    //Commands.run(INTAKE::manualDeploy, INTAKE),
+    //Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+
+    //Driver DPad Down - Reverse deploy intake
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(),
+    INTAKE.reverseDeploy(),
+    Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+
+    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(),
+    //Commands.run(INTAKE::manualReverseDeploy, INTAKE),
+    //Commands.runOnce(INTAKE::stopDeploy, INTAKE));
 
     // Driver A Button - Shoot from hub
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
@@ -149,9 +163,9 @@ public class RebuiltContainer implements IRobotContainer {
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
             Commands.none());
 
-    // Driver B Button - Shoot from climber
+    // Driver B Button - Shoot from trench
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.b(),
-            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CLIMBER))
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TRENCH))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
             Commands.none());
 
@@ -167,7 +181,7 @@ public class RebuiltContainer implements IRobotContainer {
             Commands.none());
 
 
-    // Driver Left Trigger - Reverse Load
+    // Driver Right Bumper - Reverse Load
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.rightBumper(),
             Commands.runOnce(FEEDER::reverseLoad).alongWith(Commands.runOnce(FEEDER::reverseCycle)),
@@ -182,7 +196,11 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Left Trigger - Intake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(),
       Commands.runOnce(INTAKE::intake),
-      Commands.runOnce(INTAKE::stop));
+      Commands.none());
+
+      RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftBumper(),
+      Commands.runOnce(INTAKE::stop),
+      Commands.none());
 
   }
 

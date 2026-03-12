@@ -34,9 +34,9 @@ public class Shooter extends DashboardSubsystem {
     }
 
     public enum ShooterPosition {
-        AGAINST_HUB(2438),
-        CORNER(2438),
-        CLIMBER(2438);
+        AGAINST_HUB(2000),
+        TRENCH(3250),
+        CORNER(4000);
 
         public final double rpm;
 
