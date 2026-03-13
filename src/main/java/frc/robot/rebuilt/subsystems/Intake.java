@@ -33,7 +33,7 @@ public class Intake extends DashboardSubsystem {
         deployEncoder = deployMotor.getEncoder();
 
         SparkMaxConfig deployConfig = new SparkMaxConfig();
-        deployConfig.closedLoop.pid(0.1, 0, 0);
+        deployConfig.closedLoop.pid(0.075, 0, 0);
         deployConfig.closedLoop.outputRange(-1, 1);
 
         deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
