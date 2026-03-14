@@ -26,6 +26,7 @@ public class Intake extends DashboardSubsystem {
     private SparkMax deployMotor;
     private RelativeEncoder deployEncoder;
     private BooleanSupplier isStalling;
+    private boolean intakeRunning = false;
 
     public Intake(int intakeID, int deployID) {
         intakeMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
@@ -41,22 +42,27 @@ public class Intake extends DashboardSubsystem {
     }
 
     public void intake() {
-        intakeMotor.set(-0.75);
+        intakeMotor.set(-0.5);
+        intakeRunning = true;
     }
 
     public void outtake() {
-        intakeMotor.set(0.75);
+        intakeMotor.set(0.5);
+        intakeRunning = true;
     }
 
     public void stop() {
         intakeMotor.set(0.0);
+        intakeRunning = false;
     }
 
     public Command intakeCommand() {
+        intakeRunning = true;
         return Commands.runOnce(() -> intake());
     }
 
     public Command stopIntakeCommand() {
+        intakeRunning = false;
         return Commands.runOnce(() -> stop());
     }
 
@@ -70,11 +76,11 @@ public class Intake extends DashboardSubsystem {
     }
 
     public void manualDeploy() {
-        deployMotor.set(-0.25);
+        deployMotor.set(0.25);
     }
 
     public void manualReverseDeploy() {
-       deployMotor.set(0.25);
+       deployMotor.set(-0.25);
     }
 
     public Command reverseDeploy() {
@@ -86,6 +92,7 @@ public class Intake extends DashboardSubsystem {
     public void periodic() {
         Logger.recordOutput(getName() + "/Encoder/Position", deployEncoder.getPosition());
         Logger.recordOutput(getName() + "Deploy/OutputCurrent", deployMotor.getOutputCurrent());
+        Logger.recordOutput(getName() + "/Activity/Intake", intakeRunning);
         //if (deployEncoder.getPosition() < 0) {
         //    RobotUtils.moveToPosition(deployMotor, 0);
         //}

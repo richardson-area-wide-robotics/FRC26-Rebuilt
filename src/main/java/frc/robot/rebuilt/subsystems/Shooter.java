@@ -23,7 +23,7 @@ public class Shooter extends DashboardSubsystem {
     private final Spark motor2;
 
     @Setter
-    private ShooterPosition currentShooterPosition = ShooterPosition.AGAINST_HUB;
+    private ShooterPosition currentShooterPosition = ShooterPosition.HUB;
     private float operatorRPMModifer = 0;
 
     public void raiseOperatorModifer(float value){
@@ -34,7 +34,7 @@ public class Shooter extends DashboardSubsystem {
     }
 
     public enum ShooterPosition {
-        AGAINST_HUB(2000),
+        HUB(2100),
         TRENCH(3250),
         CORNER(4000);
 
