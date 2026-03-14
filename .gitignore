@@ -189,3 +189,4 @@ compile_commands.json
 # Build Constants
 src/main/java/frc/robot/BuildConstants.java
 local.properties
+simgui-ds.json
