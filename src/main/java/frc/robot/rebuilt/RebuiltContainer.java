@@ -149,13 +149,13 @@ public class RebuiltContainer implements IRobotContainer {
     //Commands.runOnce(INTAKE::stopDeploy, INTAKE));
 
     //Driver DPad Down - Reverse deploy intake
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(),
-    INTAKE.reverseDeploy(),
-    Commands.runOnce(INTAKE::stopDeploy, INTAKE));
-
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(),
-    //Commands.runOnce(INTAKE::manualReverseDeploy, INTAKE),
-    //Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+    //INTAKE.reverseDeploy(),
+    // Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(),
+    Commands.runOnce(INTAKE::manualReverseDeploy, INTAKE),
+    Commands.runOnce(INTAKE::stopDeploy, INTAKE));
 
     // Driver A Button - Shoot from hub
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
