@@ -2,7 +2,7 @@ package frc.robot.rebuilt;
 
 
 /**
- * The PearceConstants class provides a convenient place for teams to hold 1745 specific
+ * The RebuiltConstants class provides a convenient place for teams to hold game-specific
  * numerical or boolean
  * constants. This class should not be used for any other purpose. All constants
  * should be declared
@@ -13,7 +13,7 @@ package frc.robot.rebuilt;
  * wherever the
  * constants are needed, to reduce verbosity.
  */
-public class RebuildConstants {
+public class RebuiltConstants {
 
 
 

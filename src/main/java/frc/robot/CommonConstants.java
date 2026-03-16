@@ -109,7 +109,7 @@ public final class CommonConstants {
     public static final double DRIVE_LOOKAHEAD = 0.0;
 
     /**The time for the motors to lock, in seconds*/
-    public static final double AUTO_LOCK_TIME = 3.0;
+    public static final double AUTO_LOCK_TIME = 0.5;
 
     public static final AngularVelocity DRIVE_ROTATE_VELOCITY = Units.RadiansPerSecond.of(12.0 * Math.PI);
     public static final AngularVelocity AIM_VELOCITY_THRESHOLD = Units.DegreesPerSecond.of(5.0);
