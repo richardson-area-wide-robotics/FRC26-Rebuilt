@@ -25,11 +25,11 @@ public class RobotSectorEvaluator extends DashboardSubsystem {
                 return robotSector;
             }
         }
-        return new RobotSector(RobotSector.BaseSector.NONE, null, new Pose2d(67.,67.,new Rotation2d()), 0,0,-1);
+        return new RobotSector(RobotSector.BaseSector.NONE, null, new Pose2d(67,67, new Rotation2d()), 0,0,-1);
     }
 
-    public void createSector(RobotSector.BaseSector base , RobotSector.SectorType type, Pose2d center, double width, double hight){
-           sectorArr[sectorArrPtr] = new RobotSector(base, type, center, width, hight,sectorArrPtr);
+    public void createSector(RobotSector.BaseSector base , RobotSector.SectorType type, Pose2d center, double width, double height){
+           sectorArr[sectorArrPtr] = new RobotSector(base, type, center, width, height, sectorArrPtr);
            sectorArrPtr++;
     }
     @Override
