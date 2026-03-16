@@ -72,7 +72,7 @@ public class Intake extends DashboardSubsystem {
 
 
     public void stopDeploy() {
-        deployMotor.set(0.0);
+        deployMotor.set(-0.05);
     }
 
     public void manualDeploy() {
@@ -91,7 +91,7 @@ public class Intake extends DashboardSubsystem {
     @Override
     public void periodic() {
         Logger.recordOutput(getName() + "/Encoder/Position", deployEncoder.getPosition());
-        Logger.recordOutput(getName() + "Deploy/OutputCurrent", deployMotor.getOutputCurrent());
+        Logger.recordOutput(getName() + "/Deploy/OutputCurrent", deployMotor.getOutputCurrent());
         Logger.recordOutput(getName() + "/Activity/Intake", intakeRunning);
         //if (deployEncoder.getPosition() < 0) {
         //    RobotUtils.moveToPosition(deployMotor, 0);

@@ -5,6 +5,30 @@
     "data": {
       "commands": [
         {
+          "type": "path",
+          "data": {
+            "pathName": "Trench Outpost"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 3.0
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Outpost Hub"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.0
+          }
+        },
+        {
           "type": "named",
           "data": {
             "name": "Set Shooter Hub"
@@ -26,18 +50,6 @@
           "type": "named",
           "data": {
             "name": "Enable Load"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 5.0
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Hub No Move"
           }
         }
       ]

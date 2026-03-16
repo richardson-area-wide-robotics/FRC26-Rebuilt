@@ -82,6 +82,7 @@ public class RebuiltContainer implements IRobotContainer {
   public static SequentialCommandGroup sequencedCommand;
 
   private static SendableChooser<Command> automodeChooser;
+  public static boolean hubOn = true;
 
   public static IRobotContainer createContainer(){
         // Set drive command
@@ -243,8 +244,6 @@ public class RebuiltContainer implements IRobotContainer {
     Logger.recordOutput("Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
     Logger.recordOutput("Status/Red", statuses[0]);
     Logger.recordOutput("Status/Blue", statuses[1]);
-
-    boolean hubOn;
 
     if(DriverStation.getAlliance().get() == DriverStation.Alliance.Red){
       hubOn = statuses[0] == HubStatus.HubState.ACTIVE;

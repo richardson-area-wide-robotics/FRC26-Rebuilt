@@ -119,7 +119,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
 
         // Path follower configuration
         this.PATH_FOLLOWER_CONFIG = new PPHolonomicDriveController(
-            new com.pathplanner.lib.config.PIDConstants(4.0, 0, 0.05),
+            new com.pathplanner.lib.config.PIDConstants(14.0, 0, 0.1),
             new com.pathplanner.lib.config.PIDConstants(2.1, 0, 0.2)
         );
 
@@ -133,7 +133,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
                 (RAWRNavX2) DRIVETRAIN_HARDWARE.gyro(),
                 getKINEMATICS(),
                 DRIVETRAIN_HARDWARE::getModulePositions,
-                new Transform3d(0.323, 0, 0.345, new Rotation3d()),
+                new Transform3d(0.323, 0, 0.345, new Rotation3d(0, 0.087, 0)),
                 "OV9281"
         );
       // Chassis speeds

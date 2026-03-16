@@ -1,6 +1,7 @@
 package frc.robot.rebuilt.subsystems;
 
 import frc.robot.common.subsystems.DashboardSubsystem;
+import frc.robot.rebuilt.RebuiltContainer;
 import lombok.Setter;
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.hardware.revrobotics.Spark.ID;
@@ -92,11 +93,13 @@ public class Shooter extends DashboardSubsystem {
     }
 
     public void runShooter() {
-        shooterRunning = true;
-        motor1.set(
+        if (RebuiltContainer.hubOn) {
+            shooterRunning = true;
+            motor1.set(
                 currentShooterPosition.rpm + operatorRPMModifer,
                 ControlType.kVelocity
-        );
+            );
+        }
     }
 
     boolean shooterRunning = false;
