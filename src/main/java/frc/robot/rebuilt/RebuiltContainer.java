@@ -83,6 +83,7 @@ public class RebuiltContainer implements IRobotContainer {
 
   private static SendableChooser<Command> automodeChooser;
   public static boolean hubOn = true;
+  public static boolean hubBlinking = false;
 
   public static IRobotContainer createContainer(){
         // Set drive command
@@ -251,8 +252,15 @@ public class RebuiltContainer implements IRobotContainer {
     else{
       hubOn = statuses[1] == HubStatus.HubState.ACTIVE;
     }
+    if(DriverStation.getAlliance().get() == DriverStation.Alliance.Red){
+      hubBlinking = statuses[0] == HubStatus.HubState.BLINKING;
+    }
+    else{
+      hubBlinking = statuses[1] == HubStatus.HubState.BLINKING;
+    }
 
     Logger.recordOutput("HUB", hubOn);
+    Logger.recordOutput("HUBWARNING", hubBlinking);
   }
 
   /**

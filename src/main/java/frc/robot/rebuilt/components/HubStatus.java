@@ -1,6 +1,7 @@
 package frc.robot.rebuilt.components;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 
 public class HubStatus {
 
@@ -11,8 +12,10 @@ public class HubStatus {
 
     /** Current HUB state */
     public enum HubState {
-        ACTIVE, INACTIVE
+        ACTIVE, INACTIVE, BLINKING
     }
+
+    private static final double BLINK_WINDOW = 1.0; // seconds
 
     /** Returns the raw game data string sent by the FMS. */
     public static String getGameData() {
@@ -36,12 +39,16 @@ public class HubStatus {
     public static HubState getHubStatus(DriverStation.Alliance alliance, double matchTime) {
         AllianceGoalInactive firstInactive = getFirstInactiveAlliance();
 
-        // AUTO: 150–130 sec remaining, END GAME: 30–0 sec remaining
+        // AUTO and ENDGAME always active
         if ((matchTime > 130 && matchTime <= 150) || (matchTime >= 0 && matchTime <= 30)) {
             return HubState.ACTIVE;
         }
 
-        // Determine shift number
+        // BLINK during shift transitions
+        if (isNearShiftChange(matchTime)) {
+            return getBlinkOn() ? HubState.ACTIVE : HubState.INACTIVE;
+        }
+
         int shift = getShift(matchTime);
         if (shift == 0) { // Transition shift
             return HubState.ACTIVE;
@@ -70,6 +77,23 @@ public class HubStatus {
         // Odd shifts: firstInactive is INACTIVE
         // Even shifts: firstInactive is ACTIVE
         return (shift % 2 == 1) == isFirstInactiveAlliance;
+    }
+
+    private static boolean isNearShiftChange(double matchTime) {
+        double[] boundaries = {125, 105, 80, 55, 30};
+
+        for (double boundary : boundaries) {
+            if (Math.abs(matchTime - boundary) <= BLINK_WINDOW) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    private static boolean getBlinkOn() {
+        double time = Timer.getFPGATimestamp();
+        return ((int)(time * 4) % 2) == 0; // 4 Hz blink
     }
 
     /** Converts match time to the current ALLIANCE SHIFT number (1–4). Returns 0 for transition shift. */
