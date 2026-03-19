@@ -209,14 +209,6 @@ public class RebuiltContainer implements IRobotContainer {
     NamedCommands.registerCommand("Set Shooter Hub", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.HUB)));
     NamedCommands.registerCommand("Set Shooter Trench", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TRENCH)));
     NamedCommands.registerCommand("Set Shooter Corner", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER)));
-    NamedCommands.registerCommand("Enable Shooter", SHOOTER.runShooterCommand());
-    NamedCommands.registerCommand("Disable Shooter", SHOOTER.stopShooterCommand());
-    NamedCommands.registerCommand("Enable Load", FEEDER.loadAndCycleCommand());
-    NamedCommands.registerCommand("Disable Load", FEEDER.stopLoadAndCycleCommand());
-    NamedCommands.registerCommand("Enable Intake", INTAKE.intakeCommand());
-    NamedCommands.registerCommand("Disable Intake", INTAKE.stopIntakeCommand());
-    NamedCommands.registerCommand("Deploy Intake", INTAKE.deploy());
-    NamedCommands.registerCommand("Reverse Deploy Intake", INTAKE.reverseDeploy());
   }
 
   @Override

@@ -1,5 +1,6 @@
 package frc.robot.rebuilt.subsystems;
 
+import frc.robot.common.annotations.NamedAuto;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.rebuilt.RebuiltContainer;
 import lombok.Setter;
@@ -115,10 +116,12 @@ public class Shooter extends DashboardSubsystem {
         Logger.recordOutput(getName() + "/Activity/DesiredRPM", currentShooterPosition.rpm + operatorRPMModifer);
     }
 
+    @NamedAuto(value = "Enable Shooter")
     public Command runShooterCommand() {
         return Commands.runOnce(() -> runShooter());
     }
 
+    @NamedAuto(value = "Disable Shooter")
     public Command stopShooterCommand() {
         return Commands.runOnce(() -> stopShooter());
     }

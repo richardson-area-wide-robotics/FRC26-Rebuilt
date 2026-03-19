@@ -2,6 +2,7 @@ package frc.robot.rebuilt.subsystems;
 
 import java.util.function.BooleanSupplier;
 
+import frc.robot.common.annotations.NamedAuto;
 import org.littletonrobotics.junction.Logger;
 
 import com.revrobotics.PersistMode;
@@ -56,16 +57,19 @@ public class Intake extends DashboardSubsystem {
         intakeRunning = false;
     }
 
+    @NamedAuto(value = "Enable Intake")
     public Command intakeCommand() {
         intakeRunning = true;
         return Commands.runOnce(() -> intake());
     }
 
+    @NamedAuto(value = "Disable Intake")
     public Command stopIntakeCommand() {
         intakeRunning = false;
         return Commands.runOnce(() -> stop());
     }
 
+    @NamedAuto(value = "Deploy Intake")
     public Command deploy() {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 9));
     }
@@ -83,6 +87,7 @@ public class Intake extends DashboardSubsystem {
        deployMotor.set(-0.5);
     }
 
+    @NamedAuto(value = "Reverse Deploy Intake")
     public Command reverseDeploy() {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0));
     }

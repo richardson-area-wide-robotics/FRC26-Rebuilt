@@ -7,6 +7,7 @@ import com.revrobotics.spark.config.SparkBaseConfig;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.common.annotations.NamedAuto;
 import frc.robot.common.components.EasyMotor;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import org.littletonrobotics.junction.Logger;
@@ -61,10 +62,11 @@ public class Feeder extends DashboardSubsystem {
 
     }
 
+    @NamedAuto(value = "Enable Load")
     public Command loadAndCycleCommand() {
         return Commands.runOnce(() -> cycle()).alongWith(Commands.runOnce(() -> load()));
     }
-
+    @NamedAuto(value = "Disable Load")
     public Command stopLoadAndCycleCommand() {
         return Commands.runOnce(() -> stopCycle()).alongWith(Commands.runOnce(() -> stopLoad()));
     }
