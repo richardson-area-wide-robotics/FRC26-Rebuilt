@@ -9,6 +9,10 @@ public class ScoringLocationLookup {
     public static Boolean team = null;
 
 
+    private static Pose2d hubRedPose = new Pose2d(11,4, new Rotation2d());
+    private static Pose2d hubBluePose = new  Pose2d(4.5,4, new Rotation2d());
+
+
 
     public static void buildScoringLocations(){
 
@@ -51,6 +55,17 @@ public class ScoringLocationLookup {
         return closestPose;
 
         }
+
+    public static Pose2d findHub(){//false for blue
+        if(team== null) return new Pose2d();
+
+        if(team){
+            return hubRedPose;
+        }
+        else{
+            return hubBluePose;
+        }
+    }
 
 
     @AllArgsConstructor
