@@ -92,6 +92,10 @@ public class Intake extends DashboardSubsystem {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0));
     }
 
+    public Command jiggleItALittleCommand() {
+        return Commands.repeatingSequence(reverseDeploy(), deploy());
+    }
+
     //TODO: replace with actual PDH channel and current
     @Override
     public void periodic() {
