@@ -199,6 +199,10 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(),
       Commands.runOnce(INTAKE::intake),
       Commands.runOnce(INTAKE::stop));
+
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povCenter(),
+            DRIVE_SUBSYSTEM.aimAtPointCommand(ScoringLocationLookup.findHub().getTranslation(), false, false),
+            Commands.runOnce(DRIVE_SUBSYSTEM::stopCommand));
   }
 
   private static void registerNamedCommands() {
