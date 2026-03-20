@@ -200,9 +200,13 @@ public class RebuiltContainer implements IRobotContainer {
       Commands.runOnce(INTAKE::intake),
       Commands.runOnce(INTAKE::stop));
 
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povCenter(),
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povLeft(),
             DRIVE_SUBSYSTEM.aimAtPointCommand(ScoringLocationLookup.findHub().getTranslation(), false, false),
             Commands.runOnce(DRIVE_SUBSYSTEM::stopCommand));
+
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povRight(),
+      INTAKE.jiggleItALittleCommand(),
+      INTAKE.stopIntakeCommand());
   }
 
   private static void registerNamedCommands() {

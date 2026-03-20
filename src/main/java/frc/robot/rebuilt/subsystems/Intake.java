@@ -35,7 +35,7 @@ public class Intake extends DashboardSubsystem {
         deployEncoder = deployMotor.getEncoder();
 
         SparkMaxConfig deployConfig = new SparkMaxConfig();
-        deployConfig.closedLoop.pid(0.075, 0, 0);
+        deployConfig.closedLoop.pid(0.05, 0, 0);
         deployConfig.closedLoop.outputRange(-1, 1);
 
         deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -80,11 +80,11 @@ public class Intake extends DashboardSubsystem {
     }
 
     public void manualDeploy() {
-        deployMotor.set(0.5);
+        deployMotor.set(0.2);
     }
 
     public void manualReverseDeploy() {
-       deployMotor.set(-0.5);
+       deployMotor.set(-0.25);
     }
 
     @NamedAuto(value = "Reverse Deploy Intake")
@@ -93,7 +93,9 @@ public class Intake extends DashboardSubsystem {
     }
 
     public Command jiggleItALittleCommand() {
-        return Commands.repeatingSequence(reverseDeploy(), deploy());
+        return Commands.repeatingSequence(
+            RobotUtils.timedCommand(0.35, Commands.runOnce(() -> manualReverseDeploy()), Commands.none()),
+            RobotUtils.timedCommand(0.25, Commands.runOnce(() -> manualDeploy()), Commands.none()));
     }
 
     //TODO: replace with actual PDH channel and current
