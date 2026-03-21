@@ -133,7 +133,7 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
                 (RAWRNavX2) DRIVETRAIN_HARDWARE.gyro(),
                 getKINEMATICS(),
                 DRIVETRAIN_HARDWARE::getModulePositions,
-                new Transform3d(0.323, 0, 0.345, new Rotation3d(0, 0.087, 0)),
+                new Transform3d(0.27, 0.12, 0.6223, new Rotation3d(0, 0.087, 0)),
                 "OV9281"
         );
       // Chassis speeds
