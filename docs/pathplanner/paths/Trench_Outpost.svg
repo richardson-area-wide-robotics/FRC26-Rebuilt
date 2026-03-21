@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 16.54 8.21"
+  width="800"
+  preserveAspectRatio="xMidYMid meet">
+
+  <rect x="0" y="0"
+        width="16.54"
+        height="8.21"
+        fill="#1e1e1e"/>
+
+  <path d="M 3.5 7.585 C 2.0 7.5849999999999998, 1.073576436351046 6.7658479557110085, 0.5 7.585"
+        fill="none"
+        stroke="#42a5f5"
+        stroke-width="0.05"/>
+
+  <circle cx="3.5"
+          cy="7.585"
+          r="0.08"
+          fill="#66bb6a"/>
+
+  <circle cx="0.5"
+          cy="7.585"
+          r="0.08"
+          fill="#66bb6a"/>
+
+  <circle cx="3.5" cy="7.585" r="0.1" fill="#00ff00"/>
+  <circle cx="0.5" cy="7.585" r="0.1" fill="#ff0000"/>
+</svg>
