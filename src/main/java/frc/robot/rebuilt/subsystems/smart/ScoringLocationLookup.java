@@ -9,7 +9,7 @@ public class ScoringLocationLookup {
     public static Boolean team = null;
 
 
-    private static final Pose2d hubRedPose = new Pose2d(11,4, new Rotation2d());
+    private static final Pose2d hubRedPose = new Pose2d(12,4, new Rotation2d());
     private static final Pose2d hubBluePose = new  Pose2d(4.5,4, new Rotation2d());
 
 
