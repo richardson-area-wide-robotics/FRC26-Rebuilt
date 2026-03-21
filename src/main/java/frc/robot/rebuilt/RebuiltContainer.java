@@ -197,8 +197,8 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Trigger - Load (fire balls if shooter is on)
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
-            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle).alongWith(INTAKE.jiggleItALittleCommand())),
-            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle).alongWith(INTAKE.stopIntakeCommand())));
+            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle).alongWith(INTAKE.jiggleItALittleCommand()).alongWith(INTAKE.intakeCommand())),
+            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle).alongWith(INTAKE.stopIntakeCommand()).alongWith(INTAKE.stopIntakeCommand())));
 
     // Driver Left Trigger - Intake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(),
