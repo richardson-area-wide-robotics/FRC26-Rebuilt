@@ -171,6 +171,11 @@ public class RebuiltContainer implements IRobotContainer {
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
             Commands.runOnce(SHOOTER::stopShooter));
 
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CLIMBER))
+                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
+            Commands.runOnce(SHOOTER::stopShooter));
+
     // Driver Y Button - Shoot from corner
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER))
