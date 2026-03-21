@@ -94,8 +94,8 @@ public class Intake extends DashboardSubsystem {
 
     public Command jiggleItALittleCommand() {
         return Commands.repeatingSequence(
-            RobotUtils.timedCommand(0.35, Commands.runOnce(() -> manualReverseDeploy()), Commands.none()),
-            RobotUtils.timedCommand(0.25, Commands.runOnce(() -> manualDeploy()), Commands.none()));
+            RobotUtils.timedCommand(0.35, Commands.run(this::manualReverseDeploy), stopIntakeCommand()),
+            RobotUtils.timedCommand(0.25, Commands.run(this::manualDeploy), stopIntakeCommand()));
     }
 
     //TODO: replace with actual PDH channel and current

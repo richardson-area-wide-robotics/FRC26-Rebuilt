@@ -192,8 +192,8 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Trigger - Load (fire balls if shooter is on)
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
-            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle)),
-            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle)));
+            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle).alongWith(INTAKE.jiggleItALittleCommand())),
+            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle).alongWith(INTAKE.stopIntakeCommand())));
 
     // Driver Left Trigger - Intake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(),
@@ -203,10 +203,6 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povLeft(),
             DRIVE_SUBSYSTEM.aimAtPointCommand(ScoringLocationLookup.findHub().getTranslation(), false, false),
             Commands.runOnce(DRIVE_SUBSYSTEM::stopCommand));
-
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povRight(),
-      INTAKE.jiggleItALittleCommand(),
-      INTAKE.stopIntakeCommand());
   }
 
   private static void registerNamedCommands() {
