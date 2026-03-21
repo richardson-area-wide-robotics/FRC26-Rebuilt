@@ -12,7 +12,6 @@ import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
-import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.wpilibj2.command.Command;
@@ -23,37 +22,56 @@ import frc.robot.common.subsystems.DashboardSubsystem;
 
 public class Intake extends DashboardSubsystem {
 
-    private SparkFlex intakeMotor;
-    private SparkMax deployMotor;
+    private SparkFlex intakeMotor1;
+    private SparkFlex intakeMotor2;
+    private SparkMax deployMotor1;
+    private SparkMax deployMotor2;
     private RelativeEncoder deployEncoder;
+    private SparkMaxConfig deployLeaderConfig;
+    private SparkMaxConfig deployFollowerConfig;
     private BooleanSupplier isStalling;
     private boolean intakeRunning = false;
 
-    public Intake(int intakeID, int deployID) {
-        intakeMotor = EasyMotor.createEasySparkFlex(intakeID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
-        deployMotor = EasyMotor.createEasySparkMax(deployID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
-        deployEncoder = deployMotor.getEncoder();
+    public Intake(int intakeID1, int intakeID2, int deployID1, int deployID2) {
+        intakeMotor1 = EasyMotor.createEasySparkFlex(intakeID1, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+        intakeMotor2 = EasyMotor.createEasySparkFlex(intakeID2, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+        deployMotor1 = EasyMotor.createEasySparkMax(deployID1, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
+        deployMotor2 = EasyMotor.createEasySparkMax(deployID2, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
+        deployEncoder = deployMotor1.getEncoder();
 
-        SparkMaxConfig deployConfig = new SparkMaxConfig();
-        deployConfig.closedLoop.pid(0.05, 0, 0);
-        deployConfig.closedLoop.outputRange(-1, 1);
+        deployLeaderConfig = new SparkMaxConfig();
+        deployLeaderConfig.closedLoop.pid(0.05, 0, 0);
+        deployLeaderConfig.closedLoop.outputRange(-1, 1);
+        deployMotor1.configure(deployLeaderConfig,
+            ResetMode.kResetSafeParameters,
+            PersistMode.kPersistParameters);
+        
+        deployFollowerConfig = new SparkMaxConfig();
+        deployFollowerConfig.closedLoop.pid(0.05, 0, 0);
+        deployFollowerConfig.closedLoop.outputRange(-1, 1);
+        deployFollowerConfig.follow(deployID1, true);
+        deployMotor2.configure(deployFollowerConfig,
+            ResetMode.kResetSafeParameters,
+            PersistMode.kPersistParameters);
 
-        deployMotor.configure(deployConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         deployEncoder.setPosition(0);
     }
 
     public void intake() {
-        intakeMotor.set(-0.75);
+        intakeMotor1.set(-0.5);
+        intakeMotor2.set(0.5);
         intakeRunning = true;
     }
 
     public void outtake() {
-        intakeMotor.set(0.75);
+        intakeMotor1.set(0.5);
+        intakeMotor2.set(-0.5);
         intakeRunning = true;
     }
 
     public void stop() {
-        intakeMotor.set(0.0);
+        intakeMotor1.set(0.0);
+        intakeMotor2.set(0.0);
         intakeRunning = false;
     }
 
@@ -71,25 +89,25 @@ public class Intake extends DashboardSubsystem {
 
     @NamedAuto(value = "Deploy Intake")
     public Command deploy() {
-        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 9));
+        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor1, 9));
     }
 
 
     public void stopDeploy() {
-        deployMotor.set(-0.05);
+        deployMotor1.set(-0.05);
     }
 
     public void manualDeploy() {
-        deployMotor.set(0.2);
+        deployMotor1.set(0.2);
     }
 
     public void manualReverseDeploy() {
-       deployMotor.set(-0.25);
+       deployMotor1.set(-0.25);
     }
 
     @NamedAuto(value = "Reverse Deploy Intake")
     public Command reverseDeploy() {
-        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0));
+        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor1, 0));
     }
 
     public Command jiggleItALittleCommand() {
@@ -102,7 +120,7 @@ public class Intake extends DashboardSubsystem {
     @Override
     public void periodic() {
         Logger.recordOutput(getName() + "/Encoder/Position", deployEncoder.getPosition());
-        Logger.recordOutput(getName() + "/Deploy/OutputCurrent", deployMotor.getOutputCurrent());
+        Logger.recordOutput(getName() + "/Deploy/OutputCurrent", deployMotor1.getOutputCurrent());
         Logger.recordOutput(getName() + "/Activity/Intake", intakeRunning);
         //if (deployEncoder.getPosition() < 0) {
         //    RobotUtils.moveToPosition(deployMotor, 0);
