@@ -52,7 +52,7 @@ public class RebuiltContainer implements IRobotContainer {
   //TODO: Organize IDs
   public static final Shooter SHOOTER = new Shooter(10, 11);
   public static final Feeder FEEDER = new Feeder(18, 14);
-  public static final Intake INTAKE = new Intake(13, 15, 12, 16);
+  public static final Intake INTAKE = new Intake(13, 15, 12);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
                 new SwerveHardwareParams(
                         new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),

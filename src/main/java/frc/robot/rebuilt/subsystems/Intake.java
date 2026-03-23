@@ -25,18 +25,18 @@ public class Intake extends DashboardSubsystem {
     private SparkFlex intakeMotor1;
     private SparkFlex intakeMotor2;
     private SparkMax deployMotor1;
-    private SparkMax deployMotor2;
+    //private SparkMax deployMotor2;
     private RelativeEncoder deployEncoder;
     private SparkMaxConfig deployLeaderConfig;
-    private SparkMaxConfig deployFollowerConfig;
+    //private SparkMaxConfig deployFollowerConfig;
     private BooleanSupplier isStalling;
     private boolean intakeRunning = false;
 
-    public Intake(int intakeID1, int intakeID2, int deployID1, int deployID2) {
+    public Intake(int intakeID1, int intakeID2, int deployID1) {
         intakeMotor1 = EasyMotor.createEasySparkFlex(intakeID1, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
         intakeMotor2 = EasyMotor.createEasySparkFlex(intakeID2, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
         deployMotor1 = EasyMotor.createEasySparkMax(deployID1, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
-        deployMotor2 = EasyMotor.createEasySparkMax(deployID2, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
+        //deployMotor2 = EasyMotor.createEasySparkMax(deployID2, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
         deployEncoder = deployMotor1.getEncoder();
 
         deployLeaderConfig = new SparkMaxConfig();
@@ -46,13 +46,13 @@ public class Intake extends DashboardSubsystem {
             ResetMode.kResetSafeParameters,
             PersistMode.kPersistParameters);
         
-        deployFollowerConfig = new SparkMaxConfig();
-        deployFollowerConfig.closedLoop.pid(0.05, 0, 0);
-        deployFollowerConfig.closedLoop.outputRange(-1, 1);
-        deployFollowerConfig.follow(deployID1, true);
-        deployMotor2.configure(deployFollowerConfig,
-            ResetMode.kResetSafeParameters,
-            PersistMode.kPersistParameters);
+        //deployFollowerConfig = new SparkMaxConfig();
+        //deployFollowerConfig.closedLoop.pid(0.05, 0, 0);
+        //deployFollowerConfig.closedLoop.outputRange(-1, 1);
+        //deployFollowerConfig.follow(deployID1, true);
+        //deployMotor2.configure(deployFollowerConfig,
+        //    ResetMode.kResetSafeParameters,
+        //    PersistMode.kPersistParameters);
 
         deployEncoder.setPosition(0);
     }
