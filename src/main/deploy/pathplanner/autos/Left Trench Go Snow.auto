@@ -1,0 +1,61 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Left Trench Bump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Deploy Intake"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Enable Intake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Snow"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Disable Intake"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Reverse Deploy Intake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Snow Bump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Bump Climber"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
