@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Left Trench Bump"
+            "pathName": "Left Trench Left Bump"
           }
         },
         {
@@ -35,15 +35,9 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "Reverse Deploy Intake"
-          }
-        },
-        {
           "type": "path",
           "data": {
-            "pathName": "Snow Bump"
+            "pathName": "Snow Right Bump"
           }
         },
         {
