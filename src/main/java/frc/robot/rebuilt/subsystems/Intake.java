@@ -89,7 +89,7 @@ public class Intake extends DashboardSubsystem {
 
     @NamedAuto(value = "Deploy Intake")
     public Command deploy() {
-        return Commands.run(() -> RobotUtils.moveToPosition(deployMotor1, 9));
+        return Commands.runOnce(() -> RobotUtils.moveToPosition(deployMotor1, 9));
     }
 
 
