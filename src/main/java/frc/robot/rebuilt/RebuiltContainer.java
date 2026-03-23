@@ -49,11 +49,10 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 public class RebuiltContainer implements IRobotContainer {
 
 
+  //TODO: Organize IDs
   public static final Shooter SHOOTER = new Shooter(10, 11);
   public static final Feeder FEEDER = new Feeder(18, 14);
-  public static final Intake INTAKE = new Intake(13, 15);
-
-  //public static final ProtoClimber PROTO_CLIMBER = new ProtoClimber(15);
+  public static final Intake INTAKE = new Intake(13, 15, 12, 16);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
                 new SwerveHardwareParams(
                         new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),
@@ -172,7 +171,7 @@ public class RebuiltContainer implements IRobotContainer {
             Commands.runOnce(SHOOTER::stopShooter));
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
-            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CLIMBER))
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TOWER))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
             Commands.runOnce(SHOOTER::stopShooter));
 
@@ -197,8 +196,13 @@ public class RebuiltContainer implements IRobotContainer {
     // Driver Right Trigger - Load (fire balls if shooter is on)
     RobotUtils.bindControl(
             HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
-            Commands.runOnce(FEEDER::load).alongWith(Commands.runOnce(FEEDER::cycle).alongWith(INTAKE.jiggleItALittleCommand()).alongWith(INTAKE.intakeCommand())),
-            Commands.runOnce(FEEDER::stopLoad).alongWith(Commands.runOnce(FEEDER::stopCycle).alongWith(INTAKE.stopIntakeCommand()).alongWith(INTAKE.stopIntakeCommand())));
+            Commands.runOnce(FEEDER::load)
+              .alongWith(Commands.runOnce(FEEDER::cycle)
+              .alongWith(INTAKE.jiggleItALittleCommand())
+              .alongWith(INTAKE.intakeCommand())),
+            Commands.runOnce(FEEDER::stopLoad)
+              .alongWith(Commands.runOnce(FEEDER::stopCycle)
+              .alongWith(INTAKE.stopIntakeCommand())));
 
     // Driver Left Trigger - Intake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(),

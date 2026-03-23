@@ -38,8 +38,8 @@ public class Shooter extends DashboardSubsystem {
     public enum ShooterPosition {
         HUB(2100),
         TRENCH(3250),
-        CLIMBER(2800),
-        CORNER(4000);
+        TOWER(2800),
+        CORNER(4500);
 
         public final double rpm;
 
