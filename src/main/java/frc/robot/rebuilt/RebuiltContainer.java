@@ -162,24 +162,24 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.HUB))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.runOnce(SHOOTER::idleOrStop));
 
     // Driver B Button - Shoot from trench
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.b(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TRENCH))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.runOnce(SHOOTER::idleOrStop));
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TOWER))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.runOnce(SHOOTER::idleOrStop));
 
     // Driver Y Button - Shoot from corner
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
             Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER))
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.runOnce(SHOOTER::idleOrStop));
 
     // Driver X Button - Stop Shooter
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
