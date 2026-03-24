@@ -45,8 +45,8 @@ public class Shooter extends DashboardSubsystem {
     }
 
     public Shooter(int id1, int id2) {
-        motor2 = EasyMotor.createEasySparkFlex(id2, SparkLowLevel.MotorType.kBrushless, IdleMode.kCoast);
-        motor1 = EasyMotor.createEasySparkFlex(id1, id2, false, SparkLowLevel.MotorType.kBrushless, IdleMode.kCoast);
+        motor1 = new SparkFlex(id1, SparkLowLevel.MotorType.kBrushless);
+        motor2 = new SparkFlex(id2, SparkLowLevel.MotorType.kBrushless);
 
 
         // PID + current limit config
