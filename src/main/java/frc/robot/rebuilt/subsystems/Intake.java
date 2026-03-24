@@ -58,14 +58,14 @@ public class Intake extends DashboardSubsystem {
     }
 
     public void intake() {
-        intakeMotor1.set(-0.5);
-        intakeMotor2.set(0.5);
+        intakeMotor1.set(-0.75);
+        intakeMotor2.set(0.75);
         intakeRunning = true;
     }
 
     public void outtake() {
-        intakeMotor1.set(0.5);
-        intakeMotor2.set(-0.5);
+        intakeMotor1.set(0.75);
+        intakeMotor2.set(-0.75);
         intakeRunning = true;
     }
 
@@ -89,7 +89,7 @@ public class Intake extends DashboardSubsystem {
 
     @NamedAuto(value = "Deploy Intake")
     public Command deploy() {
-        return Commands.runOnce(() -> RobotUtils.moveToPosition(deployMotor1, 9));
+        return Commands.runOnce(() -> RobotUtils.moveToPosition(deployMotor1, 10));
     }
 
 

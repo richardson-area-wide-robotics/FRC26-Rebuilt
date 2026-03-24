@@ -7,7 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Left Trench Depot"
+            "pathName": "Left Bump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Small"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Small 2"
           }
         },
         {
@@ -31,19 +43,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Depot"
+            "pathName": "Long"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Disable Intake"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "Depot Bump"
+            "pathName": "Right Bump"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "Bump Hub"
+            "pathName": "Right Bump Hub"
           }
         },
         {

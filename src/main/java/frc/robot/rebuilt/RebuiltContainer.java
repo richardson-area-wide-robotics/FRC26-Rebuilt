@@ -194,7 +194,7 @@ public class RebuiltContainer implements IRobotContainer {
             HIDConstants.DRIVER_CONTROLLER.rightTrigger(),
             Commands.runOnce(FEEDER::load)
               .alongWith(Commands.runOnce(FEEDER::cycle)
-              .alongWith(INTAKE.jiggleItALittleCommand())
+              .alongWith(Commands.runOnce(() -> INTAKE.manualReverseDeploy()))
               .alongWith(INTAKE.intakeCommand())),
             Commands.runOnce(FEEDER::stopLoad)
               .alongWith(Commands.runOnce(FEEDER::stopCycle)
