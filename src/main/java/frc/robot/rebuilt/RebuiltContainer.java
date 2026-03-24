@@ -160,26 +160,22 @@ public class RebuiltContainer implements IRobotContainer {
 
     // Driver A Button - Shoot from hub
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.a(),
-            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.HUB))
-                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.HUB)),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.IDLE)));
 
     // Driver B Button - Shoot from trench
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.b(),
-            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TRENCH))
-                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TRENCH)),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.IDLE)));
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
-            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TOWER))
-                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TOWER)),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.IDLE)));
 
     // Driver Y Button - Shoot from corner
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.y(),
-            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER))
-                    .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
-            Commands.runOnce(SHOOTER::stopShooter));
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER)),
+            Commands.runOnce(()->SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.IDLE)));
 
     // Driver X Button - Stop Shooter
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
