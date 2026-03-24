@@ -112,6 +112,17 @@ public class Shooter extends DashboardSubsystem {
         motor1.stopMotor();
     }
 
+    private final boolean gonnaUseIdle = true;
+
+    public void idleOrStop(){
+        if(gonnaUseIdle){
+            setCurrentShooterPosition(ShooterPosition.IDLE);
+        }
+        else{
+            stopShooter();
+        }
+    }
+
     @Override
     public void periodic() {
         Logger.recordOutput(getName() + "/Activity/Shooter", shooterRunning);
@@ -126,6 +137,6 @@ public class Shooter extends DashboardSubsystem {
 
     @NamedAuto(value = "Disable Shooter")
     public Command stopShooterCommand() {
-        return Commands.runOnce(() -> stopShooter());
+        return Commands.runOnce(() -> idleOrStop());
     }
 }
