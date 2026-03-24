@@ -1,26 +1,31 @@
 package frc.robot.rebuilt.subsystems;
 
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel;
-import frc.robot.common.components.EasyMotor;
+import frc.robot.common.annotations.NamedAuto;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.rebuilt.RebuiltContainer;
 import lombok.Setter;
+import org.lasarobotics.hardware.revrobotics.Spark;
+import org.lasarobotics.hardware.revrobotics.Spark.ID;
+import org.lasarobotics.hardware.revrobotics.Spark.MotorKind;
 
+import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.ResetMode;
 import com.revrobotics.PersistMode;
 
+import edu.wpi.first.units.Units;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import org.littletonrobotics.junction.Logger;
 
 public class Shooter extends DashboardSubsystem {
 
-    private final SparkFlex motor1;
-    private final SparkFlex motor2;
+    private final Spark motor1;
+    private final Spark motor2;
 
     @Setter
-    private ShooterPosition currentShooterPosition = ShooterPosition.IDLE;
+    private ShooterPosition currentShooterPosition = ShooterPosition.HUB;
     private float operatorRPMModifer = 0;
 
     public void raiseOperatorModifer(float value){
@@ -45,9 +50,17 @@ public class Shooter extends DashboardSubsystem {
     }
 
     public Shooter(int id1, int id2) {
-        motor1 = new SparkFlex(id1, SparkLowLevel.MotorType.kBrushless);
-        motor2 = new SparkFlex(id2, SparkLowLevel.MotorType.kBrushless);
+        motor1 = new Spark(
+                new ID("ShooterHardware/ShooterLeader", id1),
+                MotorKind.NEO_VORTEX,
+                Units.Hertz.of(50)
+        );
 
+        motor2 = new Spark(
+                new ID("ShooterHardware/ShooterFollower", id2),
+                MotorKind.NEO_VORTEX,
+                Units.Hertz.of(50)
+        );
 
         // PID + current limit config
         SparkFlexConfig leaderConfig = new SparkFlexConfig();
@@ -82,35 +95,37 @@ public class Shooter extends DashboardSubsystem {
         );
     }
 
+    public void runShooter() {
+        if (RebuiltContainer.hubOn) {
+            shooterRunning = true;
+            motor1.set(
+                currentShooterPosition.rpm + operatorRPMModifer,
+                ControlType.kVelocity
+            );
+        }
+    }
+
     boolean shooterRunning = false;
 
+    public void stopShooter() {
+        shooterRunning = false;
+        motor1.stopMotor();
+    }
 
     @Override
     public void periodic() {
         Logger.recordOutput(getName() + "/Activity/Shooter", shooterRunning);
         Logger.recordOutput(getName() + "/Activity/DesiredRPM", currentShooterPosition.rpm + operatorRPMModifer);
-        Logger.recordOutput(getName() + "/Activity/CurrentRPM",  motor1.getEncoder().getVelocity());
-
-        shooterRunning = motor1.getEncoder().getVelocity() > 20;
-
-        if (RebuiltContainer.hubOn) {
-            motor1.set(
-                    currentShooterPosition.rpm + operatorRPMModifer
-            );
-        }
-        else{
-            motor1.stopMotor();
-        }
-
+        Logger.recordOutput(getName() + "/Activity/CurrentRPM",  motor1.getInputs().analogVelocity);
     }
 
-//    @NamedAuto(value = "Enable Shooter")
-//    public Command runShooterCommand() {
-//        return Commands.runOnce(() -> runShooter());
-//    }
-//
-//    @NamedAuto(value = "Disable Shooter")
-//    public Command stopShooterCommand() {
-//        return Commands.runOnce(() -> stopShooter());
-//    }
+    @NamedAuto(value = "Enable Shooter")
+    public Command runShooterCommand() {
+        return Commands.runOnce(() -> runShooter());
+    }
+
+    @NamedAuto(value = "Disable Shooter")
+    public Command stopShooterCommand() {
+        return Commands.runOnce(() -> stopShooter());
+    }
 }
