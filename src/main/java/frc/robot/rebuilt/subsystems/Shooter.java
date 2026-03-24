@@ -36,6 +36,7 @@ public class Shooter extends DashboardSubsystem {
     }
 
     public enum ShooterPosition {
+        IDLE(1100),
         HUB(2100),
         TRENCH(3250),
         TOWER(2800),
@@ -115,6 +116,7 @@ public class Shooter extends DashboardSubsystem {
     public void periodic() {
         Logger.recordOutput(getName() + "/Activity/Shooter", shooterRunning);
         Logger.recordOutput(getName() + "/Activity/DesiredRPM", currentShooterPosition.rpm + operatorRPMModifer);
+        Logger.recordOutput(getName() + "/Activity/CurrentRPM",  motor1.getInputs().analogVelocity);
     }
 
     @NamedAuto(value = "Enable Shooter")
