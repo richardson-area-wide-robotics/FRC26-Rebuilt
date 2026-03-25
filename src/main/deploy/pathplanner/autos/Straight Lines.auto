@@ -29,15 +29,15 @@
           }
         },
         {
-          "type": "named",
+          "type": "wait",
           "data": {
-            "name": "Enable Intake"
+            "waitTime": 1.5
           }
         },
         {
-          "type": "wait",
+          "type": "named",
           "data": {
-            "waitTime": 1.0
+            "name": "Enable Intake"
           }
         },
         {
@@ -61,7 +61,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Right Bump Hub"
+            "pathName": "Right Bump Tower"
           }
         },
         {
