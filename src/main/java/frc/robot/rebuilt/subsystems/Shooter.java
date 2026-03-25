@@ -117,6 +117,7 @@ public class Shooter extends DashboardSubsystem {
     public void idleOrStop(){
         if(gonnaUseIdle){
             setCurrentShooterPosition(ShooterPosition.IDLE);
+            runShooter();
         }
         else{
             stopShooter();
