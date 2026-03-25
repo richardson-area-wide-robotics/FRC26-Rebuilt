@@ -32,6 +32,7 @@ import frc.robot.rebuilt.components.RobotSector;
 import frc.robot.rebuilt.subsystems.Feeder;
 import frc.robot.rebuilt.subsystems.Intake;
 import frc.robot.rebuilt.subsystems.Shooter;
+import frc.robot.rebuilt.subsystems.Shooter.ShooterPosition;
 import frc.robot.rebuilt.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.rebuilt.subsystems.smart.ScoringLocationLookup;
 import frc.robot.rebuilt.subsystems.smart.SmartSequentialCommandSequencer;
@@ -218,6 +219,7 @@ public class RebuiltContainer implements IRobotContainer {
     NamedCommands.registerCommand("Set Shooter Hub", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.HUB)));
     NamedCommands.registerCommand("Set Shooter Trench", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TRENCH)));
     NamedCommands.registerCommand("Set Shooter Corner", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER)));
+    NamedCommands.registerCommand("Set Shooter Tower", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(ShooterPosition.TOWER)));
   }
 
   @Override
