@@ -112,7 +112,7 @@ public class Shooter extends DashboardSubsystem {
         motor1.stopMotor();
     }
 
-    private final boolean gonnaUseIdle = true;
+    private final boolean gonnaUseIdle = false;
 
     public void idleOrStop(){
         if(gonnaUseIdle & (RebuiltContainer.hubOn || RebuiltContainer.hubBlinking)){
