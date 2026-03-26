@@ -94,9 +94,13 @@ public class Intake extends DashboardSubsystem {
        deployMotor.set(-0.25);
     }
 
-    @NamedAuto(value = "Reverse Deploy Intake")
     public Command reverseDeploy() {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0));
+    }
+
+    @NamedAuto(value = "Reverse Deploy Intake")
+    public Command manualReverseDeployCommand() {
+        return Commands.runOnce(() -> manualReverseDeploy());
     }
 
     public Command jiggleItALittleCommand() {
