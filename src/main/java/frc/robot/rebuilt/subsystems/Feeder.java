@@ -1,6 +1,5 @@
 package frc.robot.rebuilt.subsystems;
 
-import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
@@ -34,7 +33,7 @@ public class Feeder extends DashboardSubsystem {
     }
 
     public void stopCycle() {
-        spindexerMotor.set(0.0);
+        spindexerMotor.set(0.1);
     }
 
     public void stopLoad() {
