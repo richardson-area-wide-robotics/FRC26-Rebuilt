@@ -115,7 +115,7 @@ public class Shooter extends DashboardSubsystem {
     private final boolean gonnaUseIdle = true;
 
     public void idleOrStop(){
-        if(gonnaUseIdle){
+        if(gonnaUseIdle & (RebuiltContainer.hubOn || RebuiltContainer.hubBlinking)){
             setCurrentShooterPosition(ShooterPosition.IDLE);
             runShooter();
         }
