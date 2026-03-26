@@ -82,6 +82,7 @@ public class RebuiltContainer implements IRobotContainer {
   public static SequentialCommandGroup sequencedCommand;
 
   private static SendableChooser<Command> automodeChooser;
+  public static boolean weWonAuton = false;
   public static boolean hubOn = true;
   public static boolean hubBlinking = false;
 
@@ -268,7 +269,14 @@ public class RebuiltContainer implements IRobotContainer {
       hubBlinking = statuses[1] == HubStatus.HubState.BLINKING;
     }
 
-    Logger.recordOutput("AUTONWINNERS", DriverStation.getGameSpecificMessage());
+    if(DriverStation.getAlliance().get() == DriverStation.Alliance.Red){
+        weWonAuton = DriverStation.getGameSpecificMessage() == "r";
+    }
+    if(DriverStation.getAlliance().get() == DriverStation.Alliance.Blue){
+      weWonAuton = DriverStation.getGameSpecificMessage() == "b";
+    }
+
+    Logger.recordOutput("AUTONWINNERS", weWonAuton);
 
     Logger.recordOutput("HUB", hubOn);
     Logger.recordOutput("HUBWARNING", hubBlinking);
