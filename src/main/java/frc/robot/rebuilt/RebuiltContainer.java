@@ -268,6 +268,8 @@ public class RebuiltContainer implements IRobotContainer {
       hubBlinking = statuses[1] == HubStatus.HubState.BLINKING;
     }
 
+    Logger.recordOutput("AUTONWINNERS", DriverStation.getGameSpecificMessage());
+
     Logger.recordOutput("HUB", hubOn);
     Logger.recordOutput("HUBWARNING", hubBlinking);
   }
