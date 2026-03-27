@@ -36,7 +36,7 @@ public class Shooter extends DashboardSubsystem {
     }
 
     public enum ShooterPosition {
-        IDLE(1100),
+        IDLE(1700),
         HUB(2100),
         TRENCH(3250),
         TOWER(2800),
