@@ -83,7 +83,7 @@ public class Intake extends DashboardSubsystem {
 
 
     public void stopDeploy() {
-        deployMotor.set(-0.05);
+        deployMotor.set(-0.03);
     }
 
     public void manualDeploy() {
