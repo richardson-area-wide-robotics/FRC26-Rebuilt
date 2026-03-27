@@ -1,0 +1,121 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "named",
+          "data": {
+            "name": "Set Shooter Hub"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Enable Shooter"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.3
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Enable Load"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.3
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Disable Shooter"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Hub Inline Bump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Deploy Intake"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Enable Intake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Inline Bump Depot"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 0.13
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Disable Intake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Depot Climber"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Set Shooter Tower"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Enable Shooter"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Set Shooter Tower"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.3
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Enable Load"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
