@@ -39,7 +39,7 @@ public class Shooter extends DashboardSubsystem {
         IDLE(1700),
         HUB(2100),
         TRENCH(3250),
-        TOWER(2800),
+        TOWER(2900),
         CORNER(4500);
 
         public final double rpm;
@@ -65,7 +65,7 @@ public class Shooter extends DashboardSubsystem {
         // PID + current limit config
         SparkFlexConfig leaderConfig = new SparkFlexConfig();
         leaderConfig.idleMode(IdleMode.kCoast);
-        leaderConfig.smartCurrentLimit(65);
+        leaderConfig.smartCurrentLimit(60);
         leaderConfig.closedLoop
                 .p(0.00035)
                 .i(0.000001)
@@ -81,7 +81,7 @@ public class Shooter extends DashboardSubsystem {
         // Follower
         SparkFlexConfig followerConfig = new SparkFlexConfig();
         followerConfig.idleMode(IdleMode.kCoast);
-        followerConfig.smartCurrentLimit(65);
+        followerConfig.smartCurrentLimit(60);
         followerConfig.closedLoop
                 .p(0.00035)
                 .i(0.000001)

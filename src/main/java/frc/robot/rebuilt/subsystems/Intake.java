@@ -59,8 +59,8 @@ public class Intake extends DashboardSubsystem {
     }
 
     public void stop() {
-        intakeMotor1.set(0.0);
-        intakeMotor2.set(0.0);
+        intakeMotor1.set(-0.1);
+        intakeMotor2.set(0.1);
         intakeRunning = false;
     }
 
@@ -76,11 +76,9 @@ public class Intake extends DashboardSubsystem {
         return Commands.runOnce(() -> stop());
     }
 
-    @NamedAuto(value = "Deploy Intake")
     public Command deploy() {
         return Commands.runOnce(() -> RobotUtils.moveToPosition(deployMotor, 10));
     }
-
 
     public void stopDeploy() {
         deployMotor.set(-0.03);
@@ -96,6 +94,11 @@ public class Intake extends DashboardSubsystem {
 
     public Command reverseDeploy() {
         return Commands.run(() -> RobotUtils.moveToPosition(deployMotor, 0));
+    }
+
+    @NamedAuto(value = "Deploy Intake")
+    public Command manualDeployCommand() {
+        return Commands.runOnce(() -> manualDeploy());
     }
 
     @NamedAuto(value = "Reverse Deploy Intake")

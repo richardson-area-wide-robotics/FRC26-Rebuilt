@@ -11,9 +11,6 @@ import frc.robot.common.components.EasyMotor;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import org.littletonrobotics.junction.Logger;
 
-//Will handle getting balls from intake to shooter
-//Motor Count:
-// One (Tower)
 public class Feeder extends DashboardSubsystem {
 
     private SparkMax feederMotor;

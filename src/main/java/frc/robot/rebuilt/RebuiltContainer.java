@@ -144,17 +144,12 @@ public class RebuiltContainer implements IRobotContainer {
 
     //Driver DPad Up - Deploy intake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(),
-    INTAKE.deploy(),
-    Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+      INTAKE.deploy(),
+      Commands.runOnce(INTAKE::stopDeploy, INTAKE));
 
     //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(),
-    //Commands.run(INTAKE::manualDeploy, INTAKE),
-    //Commands.runOnce(INTAKE::stopDeploy, INTAKE));
-
-    //Driver DPad Down - Reverse deploy intake
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(),
-    //INTAKE.reverseDeploy(),
-    // Commands.runOnce(INTAKE::stopDeploy, INTAKE));
+    //  Commands.runOnce(INTAKE::manualDeploy, INTAKE),
+    //  Commands.runOnce(INTAKE::stopDeploy, INTAKE));
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povDown(),
     Commands.runOnce(INTAKE::manualReverseDeploy, INTAKE),
@@ -183,11 +178,6 @@ public class RebuiltContainer implements IRobotContainer {
                     .alongWith(Commands.run(SHOOTER::runShooter, SHOOTER)),
             Commands.runOnce(SHOOTER::idleOrStop));
 
-    // Driver X Button - Stop Shooter
-    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.x(),
-    //        Commands.runOnce(SHOOTER::stopShooter),
-    //        Commands.none());
-
 
     // Driver Right Bumper - Reverse Load
     RobotUtils.bindControl(
@@ -210,6 +200,10 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftTrigger(),
       Commands.runOnce(INTAKE::intake),
       Commands.runOnce(INTAKE::stop));
+
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftBumper(),
+      Commands.runOnce(() -> INTAKE.outtake()),
+      Commands.runOnce(() -> INTAKE.stop()));
 
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povLeft(),
             DRIVE_SUBSYSTEM.aimAtPointCommand(ScoringLocationLookup.findHub().getTranslation(), false, false),
