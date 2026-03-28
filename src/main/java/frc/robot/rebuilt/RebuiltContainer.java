@@ -201,6 +201,7 @@ public class RebuiltContainer implements IRobotContainer {
       Commands.runOnce(INTAKE::intake),
       Commands.runOnce(INTAKE::stop));
 
+    // Driver Left Bumper - Outtake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftBumper(),
       Commands.runOnce(() -> INTAKE.outtake()),
       Commands.runOnce(() -> INTAKE.stop()));
@@ -208,10 +209,6 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povLeft(),
             DRIVE_SUBSYSTEM.aimAtPointCommand(ScoringLocationLookup.findHub().getTranslation(), false, false),
             Commands.runOnce(DRIVE_SUBSYSTEM::stopCommand));
-
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povRight(),
-            Commands.runOnce(INTAKE::outtake),
-            Commands.runOnce(INTAKE::stop));
   }
 
   private static void registerNamedCommands() {
