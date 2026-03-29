@@ -1,8 +1,10 @@
 package frc.robot.rebuilt.subsystems;
 
+import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -13,11 +15,11 @@ import org.littletonrobotics.junction.Logger;
 
 public class Feeder extends DashboardSubsystem {
 
-    private SparkMax feederMotor;
+    private SparkFlex feederMotor;
     private SparkMax spindexerMotor;
 
     public Feeder(int feederID, int spindexerID) {
-        feederMotor = EasyMotor.createEasySparkMax(feederID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+        feederMotor = EasyMotor.createEasySparkFlex(feederID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
         spindexerMotor = EasyMotor.createEasySparkMax(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
     }
 
