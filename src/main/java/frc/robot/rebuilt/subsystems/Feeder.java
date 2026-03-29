@@ -1,10 +1,14 @@
 package frc.robot.rebuilt.subsystems;
 
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -19,7 +23,15 @@ public class Feeder extends DashboardSubsystem {
     private SparkMax spindexerMotor;
 
     public Feeder(int feederID, int spindexerID) {
-        feederMotor = EasyMotor.createEasySparkFlex(feederID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+
+        SparkFlexConfig config = new SparkFlexConfig();
+
+        feederMotor = new SparkFlex(feederID, SparkLowLevel.MotorType.kBrushless);
+        config.idleMode(IdleMode.kBrake);
+        config.smartCurrentLimit(60);
+        feederMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+
         spindexerMotor = EasyMotor.createEasySparkMax(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
     }
 
