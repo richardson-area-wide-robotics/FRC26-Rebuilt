@@ -50,11 +50,25 @@ import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCent
 public class RebuiltContainer implements IRobotContainer {
 
 
-  //TODO: Organize IDs
-  public static final Shooter SHOOTER = new Shooter(10, 11);
-  public static final Feeder FEEDER = new Feeder(18, 14);
-  public static final Intake INTAKE = new Intake(13, 15, 12);
-  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
+  public static Shooter SHOOTER;
+  public static Feeder FEEDER;
+  public static Intake INTAKE;
+  public static SwerveDriveSubsystem DRIVE_SUBSYSTEM;
+
+  public static RobotSectorEvaluator SECTOR_EVALUATOR;
+  public static SmartSequentialCommandSequencer COMMAND_SEQUENCER;
+  public static SequentialCommandGroup sequencedCommand;
+
+  private static SendableChooser<Command> automodeChooser;
+  public static boolean weWonAuton = false;
+  public static boolean hubOn = true;
+  public static boolean hubBlinking = false;
+
+  public static IRobotContainer createContainer(){
+    SHOOTER = new Shooter(RebuiltConstants.HardwareConstants.SHOOTER_LEADER_ID, RebuiltConstants.HardwareConstants.SHOOTER_FOLLOWER_ID);
+    FEEDER = new Feeder(RebuiltConstants.HardwareConstants.FEEDER_MOTOR_ID, RebuiltConstants.HardwareConstants.SPINDEXER_MOTOR_ID);
+    INTAKE = new Intake(RebuiltConstants.HardwareConstants.INTAKE_MOTOR_1_ID, RebuiltConstants.HardwareConstants.INTAKE_MOTOR_2_ID, RebuiltConstants.HardwareConstants.INTAKE_DEPLOY_MOTOR_ID);
+    DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
                 new SwerveHardwareParams(
                         new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),
 
@@ -77,16 +91,9 @@ public class RebuiltContainer implements IRobotContainer {
       Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
       Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
 
-  public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
-  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
-  public static SequentialCommandGroup sequencedCommand;
+    SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
+    COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
 
-  private static SendableChooser<Command> automodeChooser;
-  public static boolean weWonAuton = false;
-  public static boolean hubOn = true;
-  public static boolean hubBlinking = false;
-
-  public static IRobotContainer createContainer(){
         // Set drive command
         // LeftY is the xRequest and LeftX is the yRequest for some reason
         DRIVE_SUBSYSTEM.setDefaultCommand(
@@ -265,10 +272,10 @@ public class RebuiltContainer implements IRobotContainer {
     }
 
     if(DriverStation.getAlliance().get() == DriverStation.Alliance.Red){
-        weWonAuton = DriverStation.getGameSpecificMessage() == "r";
+        weWonAuton = "r".equals(DriverStation.getGameSpecificMessage());
     }
     if(DriverStation.getAlliance().get() == DriverStation.Alliance.Blue){
-      weWonAuton = DriverStation.getGameSpecificMessage() == "b";
+      weWonAuton = "b".equals(DriverStation.getGameSpecificMessage());
     }
 
     Logger.recordOutput("AUTONWINNERS", weWonAuton);

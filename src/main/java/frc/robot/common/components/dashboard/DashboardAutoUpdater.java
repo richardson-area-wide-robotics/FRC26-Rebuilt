@@ -2,13 +2,9 @@ package frc.robot.common.components.dashboard;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.common.annotations.DashboardVariable;
-import org.reflections.Reflections;
-import org.reflections.scanners.Scanners;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Automatically updates SmartDashboard for any field annotated with @DashboardVariable.
@@ -24,35 +20,8 @@ public class DashboardAutoUpdater {
     private static final List<DashboardEntry> entries = new ArrayList<>();
 
     static {
-        // Scan for static fields
-        Reflections reflections = new Reflections("frc.robot", Scanners.FieldsAnnotated);
-        Set<Field> annotatedFields = reflections.getFieldsAnnotatedWith(DashboardVariable.class);
-
-        for (Field field : annotatedFields) {
-            try {
-                if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
-                    System.out.println("Ignoring non-static field during static scan: "
-                            + field.getDeclaringClass().getSimpleName()
-                            + "." + field.getName());
-                    continue;
-                }
-
-                field.setAccessible(true);
-                DashboardVariable annotation = field.getAnnotation(DashboardVariable.class);
-                String key = annotation.name().isEmpty() ? field.getName() : annotation.name();
-
-                System.out.println("Found static DashboardVariable: " + key);
-
-                entries.add(new DashboardEntry(field, annotation, key, null));
-
-                if (annotation.persistent()) {
-                    SmartDashboard.setPersistent(key);
-                }
-
-            } catch (Exception e) {
-                System.err.println("Error registering static method" + field.getName());
-            }
-        }
+        // Static scanning removed to improve boot-up performance. 
+        // Use DashboardAutoUpdater.register(this) in constructors instead.
     }
 
     /**

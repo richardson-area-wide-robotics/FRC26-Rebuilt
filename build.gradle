@@ -69,7 +69,7 @@ def deployArtifact = deploy.targets.roborio.artifacts.frcJava
 wpi.java.debugJni = false
 
 // Set this to true to enable desktop support.
-def includeDesktopSupport = false
+def includeDesktopSupport = true
 
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 5.
@@ -78,12 +78,11 @@ dependencies {
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
 
-    // Lombok
     compileOnly 'org.projectlombok:lombok:1.18.28'
     annotationProcessor 'org.projectlombok:lombok:1.18.28'
 
-    // Reflections (For @Robot Annotation handling)
-    implementation 'org.reflections:reflections:0.10.2'
+    // Annotations
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     // JSON (For loading wpilib_preferences.json during sim)
     implementation 'org.json:json:20240303'
@@ -176,4 +175,9 @@ fileTree("gradle/tasks").matching {
     include("*.gradle")
 }.each { file ->
     apply from: file
+}
+
+// Alias for simulation task to resolve ambiguity
+tasks.register("simulateExternalJava") {
+    dependsOn("simulateJavaRelease")
 }

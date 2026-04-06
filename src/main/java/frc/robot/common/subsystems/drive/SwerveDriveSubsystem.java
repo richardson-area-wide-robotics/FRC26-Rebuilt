@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 import com.pathplanner.lib.util.DriveFeedforwards;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.CommonConstants;
 import frc.robot.common.components.hardware.SwerveHardware;
 import frc.robot.common.components.hardware.SwerveHardwareParams;
@@ -49,6 +48,7 @@ import edu.wpi.first.units.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.common.components.NamedAutoRegistry;
 import frc.robot.common.components.RobotUtils;
 
 /**
@@ -159,6 +159,9 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
       this.AUTO_AIM_PID_CONTROLLER_BACK = new ProfiledPIDController(10.0, 0.0, 0.5, new TrapezoidProfile.Constraints(2160.0, 4320.0), 0.02);
       this.AUTO_AIM_PID_CONTROLLER_BACK.enableContinuousInput(-180.0, +180.0);
       this.AUTO_AIM_PID_CONTROLLER_BACK.setTolerance(1.5);
+
+      // Register @NamedAuto commands manually to improve boot-up speed
+      NamedAutoRegistry.register(this);
 }
 
 
@@ -257,21 +260,6 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
     SmartDashboard.putBoolean("FC", controlCentricity.equals(ControlCentricity.FIELD_CENTRIC));
   }
 
-
-  /**
-   * Start calling this repeatedly when robot is in danger of tipping over
-   */
-  private void antiTip() {
-    // Calculate direction of tip
-    double direction = Math.atan2(DRIVETRAIN_HARDWARE.gyro().getRoll().in(Units.Degrees), DRIVETRAIN_HARDWARE.gyro().getPitch().in(Units.Degrees));
-
-    // Drive to counter tipping motion
-    drive(
-            DRIVE_MAX_LINEAR_SPEED.div(4).times(Math.cos(direction)),
-      DRIVE_MAX_LINEAR_SPEED.div(4).times(Math.sin(direction)),
-      Units.DegreesPerSecond.of(0.0), null
-    );
-  }
 
   /**
    * Aim robot at a desired point on the field

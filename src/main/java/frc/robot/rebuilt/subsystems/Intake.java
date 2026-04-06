@@ -1,7 +1,5 @@
 package frc.robot.rebuilt.subsystems;
 
-import java.util.function.BooleanSupplier;
-
 import frc.robot.common.annotations.NamedAuto;
 import org.littletonrobotics.junction.Logger;
 
@@ -17,6 +15,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.common.components.EasyMotor;
+import frc.robot.common.components.NamedAutoRegistry;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.subsystems.DashboardSubsystem;
 
@@ -27,7 +26,6 @@ public class Intake extends DashboardSubsystem {
     private SparkMax deployMotor;
     private RelativeEncoder deployEncoder;
     private SparkMaxConfig deployConfig;
-    private BooleanSupplier isStalling;
     private boolean intakeRunning = false;
 
     public Intake(int intakeID1, int intakeID2, int deployID) {
@@ -45,6 +43,9 @@ public class Intake extends DashboardSubsystem {
             PersistMode.kPersistParameters);
 
         deployEncoder.setPosition(0);
+
+        // Register @NamedAuto commands manually to improve boot-up speed
+        NamedAutoRegistry.register(this);
     }
 
     public void intake() {

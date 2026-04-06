@@ -1,13 +1,10 @@
 package frc.robot.common.components.hardware;
 
-
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.common.interfaces.IMU;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.robot.common.swerve.RAWRSwerveModule;
-
 
 /**
  * Drive hardware for a full robot with swerve drive
@@ -19,14 +16,9 @@ import frc.robot.common.swerve.RAWRSwerveModule;
  * @since 2025
  */
 public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerveModule rFrontModule,
-                             RAWRSwerveModule lRearModule, RAWRSwerveModule rRearModule) {
+        RAWRSwerveModule lRearModule, RAWRSwerveModule rRearModule) {
 
     public SwerveHardware {
-        while (gyro.isCalibrating()) {
-           if(!RobotBase.isSimulation()){ //Would Crash in Sim
-               stop(); // Stops all modules while gyro calibrates
-           }
-        }
         gyro.reset();
     }
 
@@ -39,6 +31,7 @@ public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerve
 
     /**
      * Set swerve modules
+     * 
      * @param moduleStates Array of calculated module states
      */
     public void setSwerveModules(SwerveModuleState[] moduleStates) {
@@ -50,6 +43,7 @@ public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerve
 
     /**
      * Get current module states
+     * 
      * @return Array of swerve module states
      */
     public SwerveModuleState[] getModuleStates() {
@@ -63,6 +57,7 @@ public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerve
 
     /**
      * Get current module positions
+     * 
      * @return Array of swerve module positions
      */
     public SwerveModulePosition[] getModulePositions() {
@@ -103,7 +98,7 @@ public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerve
     }
 
     public void close() {
-        try { // TODO EVIL
+        try {
             gyro.close();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -115,7 +110,7 @@ public record SwerveHardware(IMU gyro, RAWRSwerveModule lFrontModule, RAWRSwerve
     }
 
     public Translation2d[] getModuleCoordinates() {
-        return new Translation2d[]{
+        return new Translation2d[] {
                 lFrontModule.getModuleCoordinate(),
                 rFrontModule.getModuleCoordinate(),
                 lRearModule.getModuleCoordinate(),

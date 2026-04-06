@@ -57,5 +57,19 @@
     "edu.wpi.first.math.**.proto.*",
     "edu.wpi.first.math.**.struct.*",
   ],
-  "java.compile.nullAnalysis.mode": "automatic"
+  "java.compile.nullAnalysis.mode": "automatic",
+  "java.jdt.ls.java.home": "C:\\Users\\Public\\wpilib\\2026\\jdk",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-17",
+      "path": "C:\\Users\\Public\\wpilib\\2026\\jdk",
+      "default": true
+    }
+  ],
+  "java.import.gradle.java.home": "C:\\Users\\Public\\wpilib\\2026\\jdk",
+  "wpilib.jdkHome": "C:\\Users\\Public\\wpilib\\2026\\jdk",
+  "terminal.integrated.env.windows": {
+    "JAVA_HOME": "C:\\Users\\Public\\wpilib\\2026\\jdk",
+    "PATH": "C:\\Users\\Public\\wpilib\\2026\\jdk\\bin;${env:PATH}"
+  }
 }

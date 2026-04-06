@@ -123,6 +123,12 @@ flowchart TD
     TankDriveSubsystem --> TankHardware
     AssumedPoseSubsystem --> RAWRNavX2
     SmartSequentialCommand --> SmartSequentialCommand
+    RebuiltContainer --> Shooter
+    RebuiltContainer --> Feeder
+    RebuiltContainer --> Intake
+    RebuiltContainer --> SwerveDriveSubsystem
+    RebuiltContainer --> RobotSectorEvaluator
+    RebuiltContainer --> SmartSequentialCommandSequencer
     RobotSectorEvaluator --> SwerveDriveSubsystem
     SmartSequentialCommandSequencer --> SmartSequentialCommand
     SmartSequentialCommandSequencer --> SmartSequentialCommand

@@ -15,6 +15,19 @@ package frc.robot.rebuilt;
  */
 public class RebuiltConstants {
 
+  public static class HardwareConstants {
+    // Shooter
+    public static final int SHOOTER_LEADER_ID = 10;
+    public static final int SHOOTER_FOLLOWER_ID = 11;
 
+    // Feeder
+    public static final int FEEDER_MOTOR_ID = 18;
+    public static final int SPINDEXER_MOTOR_ID = 14;
+
+    // Intake
+    public static final int INTAKE_MOTOR_1_ID = 13;
+    public static final int INTAKE_MOTOR_2_ID = 15;
+    public static final int INTAKE_DEPLOY_MOTOR_ID = 12;
+  }
 
 }

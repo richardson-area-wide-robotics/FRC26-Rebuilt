@@ -7,13 +7,13 @@ import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkFlexConfig;
-import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.common.annotations.NamedAuto;
 import frc.robot.common.components.EasyMotor;
+import frc.robot.common.components.NamedAutoRegistry;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import org.littletonrobotics.junction.Logger;
 
@@ -33,6 +33,9 @@ public class Feeder extends DashboardSubsystem {
 
 
         spindexerMotor = EasyMotor.createEasySparkMax(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+
+        // Register @NamedAuto commands manually to improve boot-up speed
+        NamedAutoRegistry.register(this);
     }
 
     public void cycle() {

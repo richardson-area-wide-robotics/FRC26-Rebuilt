@@ -1,6 +1,7 @@
 package frc.robot.rebuilt.subsystems;
 
 import frc.robot.common.annotations.NamedAuto;
+import frc.robot.common.components.NamedAutoRegistry;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.rebuilt.RebuiltContainer;
 import lombok.Setter;
@@ -93,6 +94,9 @@ public class Shooter extends DashboardSubsystem {
                 ResetMode.kResetSafeParameters,
                 PersistMode.kPersistParameters
         );
+
+        // Register @NamedAuto commands manually to improve boot-up speed
+        NamedAutoRegistry.register(this);
     }
 
     public void runShooter() {
@@ -115,7 +119,7 @@ public class Shooter extends DashboardSubsystem {
     private final boolean gonnaUseIdle = true;
 
     public void idleOrStop(){
-        if(gonnaUseIdle & (RebuiltContainer.hubOn || RebuiltContainer.hubBlinking)){
+        if(gonnaUseIdle && (RebuiltContainer.hubOn || RebuiltContainer.hubBlinking)){
             setCurrentShooterPosition(ShooterPosition.IDLE);
             runShooter();
         }

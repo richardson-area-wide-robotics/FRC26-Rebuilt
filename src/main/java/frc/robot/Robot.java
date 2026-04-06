@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.common.LocalADStarAK;
 import frc.robot.common.components.TeamUtils;
@@ -35,6 +36,7 @@ public class Robot extends LoggedRobot {
   private Command autonomousCommand;
 
   private IRobotContainer robotContainer;
+  private volatile boolean isInitialized = false;
 
   public Robot() {
     super();
@@ -42,39 +44,47 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotInit() {
-    try{
-      PurpleManager.initialize(
-        this,
-        AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField),
-        Path.of("/media/sda1"),
-        BuildConstants.MAVEN_NAME,
-        BuildConstants.GIT_SHA,
-        BuildConstants.BUILD_DATE,
-        false
-      );
-    }
-    catch (Exception e){
-      System.out.println("Error loading PurpleManager" + e.getMessage() + e.getCause());
-    }
+    // Start background initialization to get the RSL light on faster
+    new Thread(() -> {
+      System.out.println("[FastBoot] Starting background initialization...");
+      try {
+        PurpleManager.initialize(
+          this,
+          AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField),
+          Path.of("/media/sda1"),
+          BuildConstants.MAVEN_NAME,
+          BuildConstants.GIT_SHA,
+          BuildConstants.BUILD_DATE,
+          RobotBase.isSimulation()
+        );
+      } catch (Exception e) {
+        System.err.println("[FastBoot] Error loading PurpleManager: " + e.getMessage());
+      }
 
-    DriverStation.silenceJoystickConnectionWarning(CommonConstants.HIDConstants.SILENCE_NO_CONTROLLER_WARNING);
+      DriverStation.silenceJoystickConnectionWarning(CommonConstants.HIDConstants.SILENCE_NO_CONTROLLER_WARNING);
+      Thread.setDefaultUncaughtExceptionHandler(new RobotExceptionHandler());
 
-    Thread.setDefaultUncaughtExceptionHandler(new RobotExceptionHandler());
+      // Set pathfinding algorithm to be AdvantageKit compatible
+      Pathfinding.setPathfinder(new LocalADStarAK());
 
+      System.out.println("[FastBoot] Starting with team: " + TeamUtils.getTeamNumber());
+      RobotUtils.loadRobotConfig();
+      
+      robotContainer = RobotContainerRegistry.createContainerForTeam(TeamUtils.getTeamNumber());
+      if (robotContainer != null) {
+        robotContainer.robotInit();
+      }
 
-    // Set pathfinding algorithm to be AdvantageKit compatible
-    Pathfinding.setPathfinder(new LocalADStarAK());
-
-    System.out.println("Starting with team: " + TeamUtils.getTeamNumber());
-    RobotUtils.loadRobotConfig();
-    robotContainer = RobotContainerRegistry.createContainerForTeam(TeamUtils.getTeamNumber());
-
-    robotContainer.robotInit();
-}
+      isInitialized = true;
+      System.out.println("[FastBoot] Background initialization complete.");
+    }).start();
+  }
 
 
   @Override
   public void robotPeriodic() {
+    if (!isInitialized) return;
+
     logController("HID/Driver", CommonConstants.HIDConstants.DRIVER_CONTROLLER);
     logController("HID/Operator", CommonConstants.HIDConstants.OPERATOR_CONTROLLER);
 
@@ -96,11 +106,13 @@ public class Robot extends LoggedRobot {
   
   @Override
   public void disabledPeriodic() {
+    if (!isInitialized) return;
     robotContainer.disabledPeriodic();
   }
 
   @Override
   public void autonomousInit() {
+    if (!isInitialized) return;
     robotContainer.autonomousInit();
 
     autonomousCommand = robotContainer.getAutonomousCommand();
@@ -114,6 +126,7 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void autonomousPeriodic() {
+    if (!isInitialized) return;
     robotContainer.autonomousPeriodic();
     //PurpleManager.update();
 
@@ -121,6 +134,7 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void teleopInit() {
+    if (!isInitialized) return;
     if (autonomousCommand != null) {
       autonomousCommand.cancel();
     }
@@ -129,6 +143,7 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void teleopPeriodic() {
+    if (!isInitialized) return;
     robotContainer.teleopPeriodic();
     //PurpleManager.update();
 
@@ -136,6 +151,7 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void simulationPeriodic() {
+    if (!isInitialized) return;
     robotContainer.simulationPeriodic();
   }
 

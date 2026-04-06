@@ -1,7 +1,7 @@
 package frc.robot.rebuilt.subsystems;
 
+import frc.robot.common.components.NamedAutoRegistry;
 import frc.robot.common.subsystems.DashboardSubsystem;
-
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.hardware.revrobotics.Spark.ID;
 import org.lasarobotics.hardware.revrobotics.Spark.MotorKind;
@@ -27,7 +27,12 @@ public class Climber extends DashboardSubsystem {
     private final LoggedMechanism2d climberMech;
     private final LoggedMechanismLigament2d climberLigament;
 
-    private static final double METERS_PER_ROTATION = 0.3; // TODO we will need to adjust this when we have the phy climber
+    // Physics Constants - TODO adjust these when physical hardware is available
+    private static final double GEAR_RATIO = 12.0; // 12:1 reduction (Example)
+    private static final double DRUM_DIAMETER_METERS = 0.025; // 1 inch drum (Example)
+    private static final double DRUM_CIRCUMFERENCE = DRUM_DIAMETER_METERS * Math.PI;
+
+    private static final double METERS_PER_ROTATION = DRUM_CIRCUMFERENCE / GEAR_RATIO;
     private static final double MIN_LENGTH_METERS = 0.05;
 
     public Climber(int id1) {
@@ -59,6 +64,9 @@ public class Climber extends DashboardSubsystem {
                         90
                 )
         );
+
+        // Register @NamedAuto commands manually to improve boot-up speed
+        NamedAutoRegistry.register(this);
 
         Logger.recordOutput(getName() + "/Climber", climberMech);
     }

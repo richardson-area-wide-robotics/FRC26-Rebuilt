@@ -9,9 +9,9 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.robot.CommonConstants;
 import frc.robot.common.gyro.RAWRNavX2;
 
 import java.util.List;
@@ -69,16 +69,18 @@ public class AssumedPoseSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
 
-        List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
-        if (!results.isEmpty() && useVisionData) {
-            for (PhotonPipelineResult result : results) {
-                Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(result);
-                if (estimatedPose.isPresent()) {
-                    Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
-                    Logger.recordOutput(getName() + "/PosePhoton", photonPose);
+        if (RobotBase.isReal()) {
+            List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
+            if (!results.isEmpty() && useVisionData) {
+                for (PhotonPipelineResult result : results) {
+                    Optional<EstimatedRobotPose> estimatedPose = photonPoseEstimator.estimateCoprocMultiTagPose(result);
+                    if (estimatedPose.isPresent()) {
+                        Pose2d photonPose = estimatedPose.get().estimatedPose.toPose2d();
+                        Logger.recordOutput(getName() + "/PosePhoton", photonPose);
 
-                    double poseTime = estimatedPose.get().timestampSeconds;
-                    poseEstimator.addVisionMeasurement(photonPose, poseTime);
+                        double poseTime = estimatedPose.get().timestampSeconds;
+                        poseEstimator.addVisionMeasurement(photonPose, poseTime);
+                    }
                 }
             }
         }
