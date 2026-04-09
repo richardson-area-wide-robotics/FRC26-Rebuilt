@@ -12,7 +12,9 @@ import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -24,6 +26,8 @@ public class Intake extends DashboardSubsystem {
 
     private SparkFlex intakeMotor1;
     private SparkFlex intakeMotor2;
+    private SparkFlexConfig intakeConfig1;
+    private SparkFlexConfig intakeConfig2;
     private SparkMax deployMotor;
     private RelativeEncoder deployEncoder;
     private SparkMaxConfig deployConfig;
@@ -31,8 +35,19 @@ public class Intake extends DashboardSubsystem {
     private boolean intakeRunning = false;
 
     public Intake(int intakeID1, int intakeID2, int deployID) {
-        intakeMotor1 = EasyMotor.createEasySparkFlex(intakeID1, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
-        intakeMotor2 = EasyMotor.createEasySparkFlex(intakeID2, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+        intakeMotor1 = new SparkFlex(intakeID1, SparkLowLevel.MotorType.kBrushless);
+        intakeMotor2 = new SparkFlex(intakeID2, SparkLowLevel.MotorType.kBrushless);
+
+        intakeConfig1 = new SparkFlexConfig();
+        intakeConfig1.idleMode(IdleMode.kCoast);
+        intakeConfig1.smartCurrentLimit(60);
+        intakeMotor1.configure(intakeConfig1, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+        intakeConfig2 = new SparkFlexConfig();
+        intakeConfig2.idleMode(IdleMode.kCoast);
+        intakeConfig2.smartCurrentLimit(60);
+        intakeMotor2.configure(intakeConfig2, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
         deployMotor = EasyMotor.createEasySparkMax(deployID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kBrake);
         deployEncoder = deployMotor.getEncoder();
 

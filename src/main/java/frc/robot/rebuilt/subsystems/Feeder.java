@@ -21,18 +21,24 @@ public class Feeder extends DashboardSubsystem {
 
     private SparkFlex feederMotor;
     private SparkMax spindexerMotor;
+    private SparkFlexConfig feederConfig;
+    private SparkMaxConfig spindexerConfig;
 
     public Feeder(int feederID, int spindexerID) {
 
-        SparkFlexConfig config = new SparkFlexConfig();
+        feederConfig = new SparkFlexConfig();
+        spindexerConfig = new SparkMaxConfig();
 
         feederMotor = new SparkFlex(feederID, SparkLowLevel.MotorType.kBrushless);
-        config.idleMode(IdleMode.kBrake);
-        config.smartCurrentLimit(60);
-        feederMotor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        feederConfig.idleMode(IdleMode.kBrake);
+        feederConfig.smartCurrentLimit(60);
+        feederMotor.configure(feederConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
 
-        spindexerMotor = EasyMotor.createEasySparkMax(spindexerID, SparkLowLevel.MotorType.kBrushless, SparkBaseConfig.IdleMode.kCoast);
+        spindexerMotor = new SparkMax(spindexerID, SparkLowLevel.MotorType.kBrushless);
+        spindexerConfig.idleMode(IdleMode.kBrake);
+        spindexerConfig.smartCurrentLimit(60);
+        spindexerMotor.configure(spindexerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 
     public void cycle() {
