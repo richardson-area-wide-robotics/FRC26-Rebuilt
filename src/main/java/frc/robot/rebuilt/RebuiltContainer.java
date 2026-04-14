@@ -9,10 +9,6 @@ import com.pathplanner.lib.auto.NamedCommands;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.Dimensionless;
-import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -24,8 +20,6 @@ import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
-import frc.robot.common.components.hardware.SwerveHardwareParams;
-import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.rebuilt.components.HubStatus;
@@ -40,10 +34,7 @@ import frc.robot.rebuilt.subsystems.smart.SmartSequentialCommandSequencer;
 import frc.robot.rebuilt.components.SmartSequentialCommandContainer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.lasarobotics.utils.PIDConstants;
 import org.littletonrobotics.junction.Logger;
-
-import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity.FIELD_CENTRIC;
 
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

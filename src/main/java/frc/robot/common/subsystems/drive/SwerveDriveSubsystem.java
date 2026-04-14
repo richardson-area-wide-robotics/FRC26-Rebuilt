@@ -13,6 +13,8 @@ import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
@@ -23,6 +25,8 @@ import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.common.components.RobotUtils;
+import frc.robot.common.gyro.RAWRNavX2;
+import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;
 import frc.robot.common.swerve.MAXSwerveModule;
 import frc.robot.CommonConstants.DriveConstants;
 
@@ -61,6 +65,14 @@ public class SwerveDriveSubsystem extends SubsystemBase {
           m_rearLeft.getPosition(),
           m_rearRight.getPosition()
       });
+
+    public final AssumedPoseSubsystem ASSUMED_POSE = new AssumedPoseSubsystem(
+                m_gyro,
+                DriveConstants.kDriveKinematics,
+                DRIVETRAIN_HARDWARE::getModulePositions,
+                new Transform3d(-0.27, 0.12, 0.6223, new Rotation3d(0, 0.087, 0)),
+                "OV9281"
+        );
 
   /** Creates a new DriveSubsystem. */
   public SwerveDriveSubsystem() {
@@ -135,6 +147,14 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     m_rearRight.setDesiredState(swerveModuleStates[3]);
   }
 
+  public void driveRobotRelative(ChassisSpeeds chassisSpeeds){
+    drive(
+      chassisSpeeds.vxMetersPerSecond,
+      chassisSpeeds.vyMetersPerSecond,
+      chassisSpeeds.omegaRadiansPerSecond,
+      false);
+  }
+
   /**
    * Sets the wheels into an X formation to prevent movement.
    */
@@ -190,12 +210,16 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     return m_gyro.getRate(IMUAxis.kZ) * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
   }
 
+  public ChassisSpeeds getChassisSpeeds() {
+    return DriveConstants.kDriveKinematics.toChassisSpeeds();
+  }
+
   public void configureAutoBuilder() {
     AutoBuilder.configure(
             this::getPose, // Robot pose supplier
             this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
-            this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-            (speeds, feedforwards) -> driveRobotRelative(speeds), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
+            this::getChassisSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+            this::driveRobotRelative, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
             new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
                     new PIDConstants(14.0, 0.0, 0.1), // Translation PID constants
                     new PIDConstants(2.1, 0.0, 0.2) // Rotation PID constants
