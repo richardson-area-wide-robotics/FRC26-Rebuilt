@@ -27,10 +27,11 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;
+import frc.robot.common.subsystems.vision.AssumedPoseSubsystem.ModulePositionSupplier;
 import frc.robot.common.swerve.MAXSwerveModule;
 import frc.robot.CommonConstants.DriveConstants;
 
-public class SwerveDriveSubsystem extends SubsystemBase {
+public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositionSupplier {
   // Create MAXSwerveModules
   private final MAXSwerveModule m_frontLeft = new MAXSwerveModule(
       DriveConstants.kFrontLeftDrivingCanId,
@@ -59,17 +60,13 @@ public class SwerveDriveSubsystem extends SubsystemBase {
   SwerveDriveOdometry m_odometry = new SwerveDriveOdometry(
       DriveConstants.kDriveKinematics,
       Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ)),
-      new SwerveModulePosition[] {
-          m_frontLeft.getPosition(),
-          m_frontRight.getPosition(),
-          m_rearLeft.getPosition(),
-          m_rearRight.getPosition()
-      });
+      get()
+    );
 
     public final AssumedPoseSubsystem ASSUMED_POSE = new AssumedPoseSubsystem(
-                m_gyro,
+                (RAWRNavX2) m_gyro,
                 DriveConstants.kDriveKinematics,
-                DRIVETRAIN_HARDWARE::getModulePositions,
+                ,
                 new Transform3d(-0.27, 0.12, 0.6223, new Rotation3d(0, 0.087, 0)),
                 "OV9281"
         );
@@ -238,5 +235,15 @@ public class SwerveDriveSubsystem extends SubsystemBase {
             },
             this // Reference to this subsystem to set requirements
     );
+  }
+
+  @Override
+  public SwerveModulePosition[] get() {
+    return new SwerveModulePosition[] {
+      m_frontLeft.getPosition(),
+      m_frontRight.getPosition(),
+      m_rearLeft.getPosition(),
+      m_rearRight.getPosition()
+    };
   }
 }
