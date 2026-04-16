@@ -16,9 +16,6 @@ import lombok.experimental.UtilityClass;
 
 import java.util.function.BooleanSupplier;
 
-import org.lasarobotics.hardware.revrobotics.Spark;
-import org.lasarobotics.utils.GlobalConstants;
-
 @UtilityClass
 public class RobotUtils  {
 
@@ -83,24 +80,6 @@ public class RobotUtils  {
   public static void moveToPosition(SparkBase motor, double targetPosition) {
       // Set the target position using the built-in PID controller
       motor.getClosedLoopController().setSetpoint(targetPosition, ControlType.kPosition);
-  }
-
-  /**
-   * Get the encoder ticks per rotation for a motor
-   *
-   * @author PurpleLib
-   * @author Hudson Strub
-   * @since 2025 Offseason
-   */
-  public static int getEncoderTicksPerRotation(Spark spark){
-    Spark.MotorKind motorKind = spark.getKind();
-
-    if(motorKind == Spark.MotorKind.NEO_VORTEX){
-      return GlobalConstants.VORTEX_ENCODER_TICKS_PER_ROTATION;
-    }
-    else {
-       return GlobalConstants.NEO_ENCODER_TICKS_PER_ROTATION;
-    }
   }
 
   /**

@@ -12,14 +12,9 @@ import frc.robot.common.components.dashboard.DashboardAutoUpdater;
 import frc.robot.common.components.RobotContainerRegistry;
 import frc.robot.common.components.RobotExceptionHandler;
 import frc.robot.common.components.RobotUtils;
-import java.nio.file.Path;
-
-import org.lasarobotics.hardware.PurpleManager;
 import org.littletonrobotics.junction.LoggedRobot;
 import com.pathplanner.lib.pathfinding.Pathfinding;
 
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.common.interfaces.IRobotContainer;
@@ -42,20 +37,6 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotInit() {
-    try{
-      PurpleManager.initialize(
-        this,
-        AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField),
-        Path.of("/media/sda1"),
-        BuildConstants.MAVEN_NAME,
-        BuildConstants.GIT_SHA,
-        BuildConstants.BUILD_DATE,
-        false
-      );
-    }
-    catch (Exception e){
-      System.out.println("Error loading PurpleManager" + e.getMessage() + e.getCause());
-    }
 
     DriverStation.silenceJoystickConnectionWarning(CommonConstants.HIDConstants.SILENCE_NO_CONTROLLER_WARNING);
 
@@ -78,7 +59,6 @@ public class Robot extends LoggedRobot {
     logController("HID/Driver", CommonConstants.HIDConstants.DRIVER_CONTROLLER);
     logController("HID/Operator", CommonConstants.HIDConstants.OPERATOR_CONTROLLER);
 
-    PurpleManager.update();
     DashboardAutoUpdater.updateAll();
     //CANDiagnostics.getInstance().checkHealth();
     CommandScheduler.getInstance().run();
@@ -115,7 +95,6 @@ public class Robot extends LoggedRobot {
   @Override
   public void autonomousPeriodic() {
     robotContainer.autonomousPeriodic();
-    //PurpleManager.update();
 
   }
 
@@ -130,7 +109,6 @@ public class Robot extends LoggedRobot {
   @Override
   public void teleopPeriodic() {
     robotContainer.teleopPeriodic();
-    //PurpleManager.update();
 
   }
 
@@ -146,7 +124,6 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void testPeriodic() {
-    //PurpleManager.update();
   }
 
 
