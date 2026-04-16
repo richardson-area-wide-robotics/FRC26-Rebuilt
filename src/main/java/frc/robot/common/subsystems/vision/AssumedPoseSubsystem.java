@@ -11,7 +11,6 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.robot.CommonConstants;
 import frc.robot.common.gyro.RAWRNavX2;
 
 import java.util.List;

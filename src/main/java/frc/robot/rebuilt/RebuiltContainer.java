@@ -30,8 +30,7 @@ import frc.robot.rebuilt.subsystems.Shooter;
 import frc.robot.rebuilt.subsystems.Shooter.ShooterPosition;
 import frc.robot.rebuilt.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.rebuilt.subsystems.smart.ScoringLocationLookup;
-import frc.robot.rebuilt.subsystems.smart.SmartSequentialCommandSequencer;
-import frc.robot.rebuilt.components.SmartSequentialCommandContainer;
+
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.littletonrobotics.junction.Logger;
@@ -49,7 +48,6 @@ public class RebuiltContainer implements IRobotContainer {
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem();
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
-  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
   public static SequentialCommandGroup sequencedCommand;
 
   private static SendableChooser<Command> automodeChooser;
@@ -72,7 +70,6 @@ public class RebuiltContainer implements IRobotContainer {
     DRIVE_SUBSYSTEM.configureAutoBuilder();
 
 
-    sequencedCommand = COMMAND_SEQUENCER.finalizeSequence();
 
       // Bind buttons and triggers
       configureBindings();

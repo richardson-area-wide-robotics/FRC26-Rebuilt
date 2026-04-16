@@ -13,8 +13,6 @@ import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
@@ -25,8 +23,6 @@ import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.common.components.RobotUtils;
-import frc.robot.common.gyro.RAWRNavX2;
-import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;
 import frc.robot.common.subsystems.vision.AssumedPoseSubsystem.ModulePositionSupplier;
 import frc.robot.common.swerve.MAXSwerveModule;
 import frc.robot.CommonConstants.DriveConstants;
@@ -62,14 +58,6 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
       Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ)),
       get()
     );
-
-    public final AssumedPoseSubsystem ASSUMED_POSE = new AssumedPoseSubsystem(
-                (RAWRNavX2) m_gyro,
-                DriveConstants.kDriveKinematics,
-                ,
-                new Transform3d(-0.27, 0.12, 0.6223, new Rotation3d(0, 0.087, 0)),
-                "OV9281"
-        );
 
   /** Creates a new DriveSubsystem. */
   public SwerveDriveSubsystem() {
