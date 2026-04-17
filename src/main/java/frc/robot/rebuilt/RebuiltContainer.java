@@ -125,9 +125,9 @@ public class RebuiltContainer implements IRobotContainer {
 
 
   private static void configureBindings() {
-    Profiler bindingProfiler = new Profiler("bindings profiler");
-
+    Profiler bindingProfiler = new Profiler("bindings");
     bindingProfiler.start();
+
     // Operator Start - toggle traction control
     RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.start(), DRIVE_SUBSYSTEM.toggleTractionControlCommand(), Commands.none());
 

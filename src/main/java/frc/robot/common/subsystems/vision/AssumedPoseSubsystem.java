@@ -1,5 +1,6 @@
 package frc.robot.common.subsystems.vision;
 
+import com.strubium.ssjprofiler.Profiler;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -46,6 +47,9 @@ public class AssumedPoseSubsystem extends SubsystemBase {
             Transform3d robotToCamera,
             String cameraName
     ) {
+        Profiler assmumedPoseProfiler = new Profiler("assumed pose");
+        assmumedPoseProfiler.start();
+
         this.imu = imu;
         this.modulePositions = modulePositions;
 
@@ -63,7 +67,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
         AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
         photonPoseEstimator = new PhotonPoseEstimator(fieldLayout, robotToCamera);
-
+        assmumedPoseProfiler.end();
     }
 
     @Override
