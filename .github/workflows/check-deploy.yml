@@ -1,0 +1,48 @@
+name: Check Code Deploy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Ensure deploy log exists
+        run: |
+          if [ ! -f deploy_log.txt ]; then
+            echo "❌ deploy_log.txt not found"
+            exit 1
+          fi
+
+      - name: Get latest deployment
+        id: deploy
+        run: |
+          # Get last non-empty line 
+          LATEST=$(grep -v '^$' deploy_log.txt | tail -n 1)
+
+          echo "Latest deploy line:"
+          echo "$LATEST"
+
+          # Extract values
+          COMMIT=$(echo "$LATEST" | sed -n 's/.*commit: \([a-f0-9]*\).*/\1/p')
+          BRANCH=$(echo "$LATEST" | sed -n 's/.*branch: \([^|]*\).*/\1/p')
+
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Compare with PR commit
+        run: |
+          echo "PR commit: ${{ github.sha }}"
+          echo "Deployed commit: ${{ steps.deploy.outputs.commit }}"
+
+          if [[ "${{ github.sha }}" != "${{ steps.deploy.outputs.commit }}" ]]; then
+            echo "Latest deploy does not match PR commit"
+            exit 1
+          fi
+
+          echo "Latest deploy matches PR commit"
