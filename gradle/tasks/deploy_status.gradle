@@ -1,0 +1,47 @@
+import java.text.SimpleDateFormat
+
+tasks.named("deploy") {
+    finalizedBy("logDeploy")
+}
+
+def runCommand(List<String> command) {
+    def output = new ByteArrayOutputStream()
+    exec {
+        commandLine command
+        standardOutput = output
+        ignoreExitValue = true
+    }
+    return output.toString().trim()
+}
+
+tasks.register("logDeploy") {
+    group = "documentation"
+    description = "Logs who deployed and when using Git config."
+
+    doLast {
+        def logFile = file("deploy-log.txt")
+
+        // Try Git username first
+        def gitUser = runCommand(["git", "config", "user.name"])
+        if (!gitUser) {
+            gitUser = runCommand(["git", "config", "--global", "user.name"])
+        }
+
+        // Fallback if Git not set
+        if (!gitUser) {
+            gitUser = System.getProperty("user.name")
+        }
+
+        def date = new Date()
+        def formattedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date)
+
+        def branch = runCommand(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+        def commit = runCommand(["git", "rev-parse", "--short", "HEAD"])
+
+        def entry = "Deployed by: ${gitUser} | ${formattedDate} | branch: ${branch} | commit: ${commit}\n"
+
+        logFile << entry
+
+        println entry
+    }
+}
