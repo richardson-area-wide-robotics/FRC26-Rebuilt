@@ -1,5 +1,6 @@
 package frc.robot.common.components.dashboard;
 
+import com.strubium.ssjprofiler.Profiler;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.common.annotations.DashboardVariable;
 import org.reflections.Reflections;
@@ -24,6 +25,9 @@ public class DashboardAutoUpdater {
     private static final List<DashboardEntry> entries = new ArrayList<>();
 
     static {
+        Profiler dashboardAutoProfiler = new Profiler("dashboard auto scan");
+        dashboardAutoProfiler.start();
+
         // Scan for static fields
         Reflections reflections = new Reflections("frc.robot", Scanners.FieldsAnnotated);
         Set<Field> annotatedFields = reflections.getFieldsAnnotatedWith(DashboardVariable.class);
@@ -53,6 +57,7 @@ public class DashboardAutoUpdater {
                 System.err.println("Error registering static method" + field.getName());
             }
         }
+        dashboardAutoProfiler.end();
     }
 
     /**

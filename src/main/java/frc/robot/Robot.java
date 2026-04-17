@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import com.strubium.ssjprofiler.Profiler;
+import com.strubium.ssjprofiler.ProfilerGlobal;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.common.LocalADStarAK;
@@ -42,6 +44,9 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotInit() {
+    Profiler profiler = new Profiler("robot init");
+    profiler.start();
+
     try{
       PurpleManager.initialize(
         this,
@@ -70,7 +75,8 @@ public class Robot extends LoggedRobot {
     robotContainer = RobotContainerRegistry.createContainerForTeam(TeamUtils.getTeamNumber());
 
     robotContainer.robotInit();
-}
+    profiler.end();
+  }
 
 
   @Override
@@ -101,6 +107,8 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void autonomousInit() {
+    Profiler profiler = new Profiler("auton init");
+    profiler.start();
     robotContainer.autonomousInit();
 
     autonomousCommand = robotContainer.getAutonomousCommand();
@@ -110,6 +118,7 @@ public class Robot extends LoggedRobot {
 
       CommandScheduler.getInstance().schedule(autonomousCommand);
     }
+    profiler.end();
   }
 
   @Override
@@ -147,6 +156,12 @@ public class Robot extends LoggedRobot {
   @Override
   public void testPeriodic() {
     //PurpleManager.update();
+  }
+
+  @Override
+  public void endCompetition() {
+    System.out.println("Simulation shutting down");
+    ProfilerGlobal.exportToFile("profile_log.txt");
   }
 
 
