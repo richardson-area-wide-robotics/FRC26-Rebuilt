@@ -12,10 +12,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Check deploy_log.txt exists
+      - name: Check deploy-log.txt exists
         run: |
-          if [ ! -f deploy_log.txt ]; then
-            echo "deploy_log.txt not found"
+          if [ ! -f deploy-log.txt ]; then
+            echo "deploy-log.txt not found"
             exit 1
           fi
 
@@ -23,7 +23,7 @@ jobs:
         id: deploy
         run: |
           # Get last non-empty line 
-          LATEST=$(grep -v '^$' deploy_log.txt | tail -n 1)
+          LATEST=$(grep -v '^$' deploy-log.txt | tail -n 1)
 
           echo "Latest deploy line:"
           echo "$LATEST"
