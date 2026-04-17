@@ -12,10 +12,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Ensure deploy log exists
+      - name: Check deploy_log.txt exists
         run: |
           if [ ! -f deploy_log.txt ]; then
-            echo "❌ deploy_log.txt not found"
+            echo "deploy_log.txt not found"
             exit 1
           fi
 
@@ -28,12 +28,34 @@ jobs:
           echo "Latest deploy line:"
           echo "$LATEST"
 
-          # Extract values
-          COMMIT=$(echo "$LATEST" | sed -n 's/.*commit: \([a-f0-9]*\).*/\1/p')
-          BRANCH=$(echo "$LATEST" | sed -n 's/.*branch: \([^|]*\).*/\1/p')
+          TIMESTAMP=$(echo "$LATEST" | cut -d'|' -f2 | xargs)
+          BRANCH=$(echo "$LATEST" | cut -d'|' -f3 | sed 's/branch: //g' | xargs)
+          COMMIT=$(echo "$LATEST" | cut -d'|' -f4 | sed 's/commit: //g' | xargs)
 
-          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Check deployment is recent (<= 4 hours)
+        run: |
+          DEPLOY_TIME="${{ steps.deploy.outputs.timestamp }}"
+
+          echo "Deploy timestamp: $DEPLOY_TIME"
+
+          DEPLOY_EPOCH=$(date -d "$DEPLOY_TIME" +%s)
+          NOW_EPOCH=$(date +%s)
+
+          DIFF=$((NOW_EPOCH - DEPLOY_EPOCH))
+          MAX_AGE=$((4 * 60 * 60))  # 4 hours
+
+          echo "Age (seconds): $DIFF"
+
+          if [ "$DIFF" -gt "$MAX_AGE" ]; then
+            echo "Deployment is too old (>4 hours)"
+            exit 1
+          fi
+
+          echo "Deployment is recent"
 
       - name: Compare with PR commit
         run: |
