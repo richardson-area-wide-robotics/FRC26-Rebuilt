@@ -59,11 +59,11 @@ public class RebuiltContainer implements IRobotContainer {
         // Set drive command
         // LeftY is the xRequest and LeftX is the yRequest for some reason
         DRIVE_SUBSYSTEM.setDefaultCommand(
-          new RunCommand(() -> DRIVE_SUBSYSTEM.drive(
+          DRIVE_SUBSYSTEM.driveCommand(
             HIDConstants.DRIVER_CONTROLLER.getLeftX(),
             HIDConstants.DRIVER_CONTROLLER.getLeftY(),
             HIDConstants.DRIVER_CONTROLLER.getRightX(),
-            true))
+            true)
         );
 
     // Set up the auto builder
