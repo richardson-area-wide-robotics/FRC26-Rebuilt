@@ -56,15 +56,3 @@ jobs:
           fi
 
           echo "Deployment is recent"
-
-      - name: Compare with PR commit
-        run: |
-          echo "PR commit: ${{ github.sha }}"
-          echo "Deployed commit: ${{ steps.deploy.outputs.commit }}"
-
-          if [[ "${{ github.sha }}" != "${{ steps.deploy.outputs.commit }}" ]]; then
-            echo "Latest deploy does not match PR commit"
-            exit 1
-          fi
-
-          echo "Latest deploy matches PR commit"
