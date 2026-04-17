@@ -32,8 +32,10 @@ tasks.register("logDeploy") {
             gitUser = System.getProperty("user.name")
         }
 
-        def date = new Date()
-        def formattedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date)
+        def sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"))
+
+        def formattedDate = sdf.format(new Date())
 
         def branch = runCommand(["git", "rev-parse", "--abbrev-ref", "HEAD"])
         def commit = runCommand(["git", "rev-parse", "--short", "HEAD"])
