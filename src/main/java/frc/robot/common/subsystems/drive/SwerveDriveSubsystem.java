@@ -8,6 +8,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import com.pathplanner.lib.util.DriveFeedforwards;
+import com.strubium.ssjprofiler.Profiler;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -101,7 +102,11 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
   public SwerveDriveSubsystem(SwerveHardwareParams drivetrainHardwareParams, PIDConstants pidf, ControlCentricity controlCentricity,
                               PolynomialSplineFunction throttleInputCurve, PolynomialSplineFunction turnInputCurve,
                               Angle turnScalar, Dimensionless deadband, Time lookAhead) {
-     // Initialize subsystem name
+
+        Profiler driveSubsystemProfiler = new Profiler("drive subsystem");
+        driveSubsystemProfiler.start();
+
+        // Initialize subsystem name
         setSubsystem(this.getClass().getSimpleName());
 
         this.DRIVETRAIN_HARDWARE = drivetrainHardwareParams.initializeHardware();
@@ -159,7 +164,10 @@ public class SwerveDriveSubsystem extends DashboardSubsystem implements AutoClos
       this.AUTO_AIM_PID_CONTROLLER_BACK = new ProfiledPIDController(10.0, 0.0, 0.5, new TrapezoidProfile.Constraints(2160.0, 4320.0), 0.02);
       this.AUTO_AIM_PID_CONTROLLER_BACK.enableContinuousInput(-180.0, +180.0);
       this.AUTO_AIM_PID_CONTROLLER_BACK.setTolerance(1.5);
-}
+
+    driveSubsystemProfiler.end();
+
+  }
 
 
   /**
