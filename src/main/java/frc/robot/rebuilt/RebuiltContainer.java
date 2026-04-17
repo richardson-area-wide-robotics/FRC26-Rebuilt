@@ -7,6 +7,7 @@ package frc.robot.rebuilt;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
+import com.strubium.ssjprofiler.Profiler;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.Units;
@@ -124,6 +125,9 @@ public class RebuiltContainer implements IRobotContainer {
 
 
   private static void configureBindings() {
+    Profiler bindingProfiler = new Profiler("bindings profiler");
+
+    bindingProfiler.start();
     // Operator Start - toggle traction control
     RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.start(), DRIVE_SUBSYSTEM.toggleTractionControlCommand(), Commands.none());
 
@@ -209,6 +213,8 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povLeft(),
             DRIVE_SUBSYSTEM.aimAtPointCommand(ScoringLocationLookup.findHub().getTranslation(), false, false),
             Commands.runOnce(DRIVE_SUBSYSTEM::stopCommand));
+
+    bindingProfiler.end();
   }
 
   private static void registerNamedCommands() {

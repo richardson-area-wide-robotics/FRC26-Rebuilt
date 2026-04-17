@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import com.strubium.ssjprofiler.ProfilerGlobal;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.common.LocalADStarAK;
@@ -147,6 +148,12 @@ public class Robot extends LoggedRobot {
   @Override
   public void testPeriodic() {
     //PurpleManager.update();
+  }
+
+  @Override
+  public void endCompetition() {
+    System.out.println("Simulation shutting down");
+    ProfilerGlobal.exportToFile("profile_log.txt");
   }
 
 

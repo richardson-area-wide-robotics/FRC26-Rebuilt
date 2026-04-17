@@ -94,6 +94,9 @@ dependencies {
     // PurpleLib
     implementation files('libs/PeePeePooPooLib.jar')
 
+    // Stupid Simple Java Profiler
+    implementation 'com.github.strubium:SSJavaProfiler:1.0.0'
+
     roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
     roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)
 
