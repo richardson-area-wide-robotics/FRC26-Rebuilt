@@ -1,0 +1,58 @@
+name: Check Code Deploy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Check deploy-log.txt exists
+        run: |
+          if [ ! -f deploy-log.txt ]; then
+            echo "deploy-log.txt not found"
+            exit 1
+          fi
+
+      - name: Get latest deployment
+        id: deploy
+        run: |
+          # Get last non-empty line 
+          LATEST=$(grep -v '^$' deploy-log.txt | tail -n 1)
+
+          echo "Latest deploy line:"
+          echo "$LATEST"
+
+          TIMESTAMP=$(echo "$LATEST" | cut -d'|' -f2 | xargs)
+          BRANCH=$(echo "$LATEST" | cut -d'|' -f3 | sed 's/branch: //g' | xargs)
+          COMMIT=$(echo "$LATEST" | cut -d'|' -f4 | sed 's/commit: //g' | xargs)
+
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Check deployment is recent (<= 4 hours)
+        run: |
+          DEPLOY_TIME="${{ steps.deploy.outputs.timestamp }}"
+
+          echo "Deploy timestamp: $DEPLOY_TIME"
+
+          DEPLOY_EPOCH=$(date -d "$DEPLOY_TIME" +%s)
+          NOW_EPOCH=$(date +%s)
+
+          DIFF=$((NOW_EPOCH - DEPLOY_EPOCH))
+          MAX_AGE=$((4 * 60 * 60))  # 4 hours
+
+          echo "Age (seconds): $DIFF"
+
+          if [ "$DIFF" -gt "$MAX_AGE" ]; then
+            echo "Deployment is too old (>4 hours)"
+            exit 1
+          fi
+
+          echo "Deployment is recent"

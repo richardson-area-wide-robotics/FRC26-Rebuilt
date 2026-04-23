@@ -1,6 +1,7 @@
 package frc.robot.common.components;
 
 import com.pathplanner.lib.auto.NamedCommands;
+import com.strubium.ssjprofiler.Profiler;
 import frc.robot.common.annotations.NamedAuto;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
@@ -20,6 +21,8 @@ import java.util.Set;
 public class NamedAutoRegistry {
 
     static {
+        Profiler namedAutoScan = new Profiler("named auto scan");
+        namedAutoScan.start();
         // Scan for static @NamedAuto methods
         Reflections reflections = new Reflections("frc.robot", Scanners.MethodsAnnotated);
         Set<Method> annotatedMethods = reflections.getMethodsAnnotatedWith(NamedAuto.class);
@@ -50,6 +53,7 @@ public class NamedAutoRegistry {
                 System.err.println("Error registering static method" + method.getName());
             }
         }
+        namedAutoScan.end();
     }
 
     /**

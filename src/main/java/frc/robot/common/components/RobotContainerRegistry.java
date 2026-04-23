@@ -1,5 +1,6 @@
 package frc.robot.common.components;
 
+import com.strubium.ssjprofiler.Profiler;
 import frc.robot.common.DefaultContainer;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.interfaces.IRobotContainer;
@@ -17,6 +18,9 @@ public class RobotContainerRegistry {
     private static final Map<Integer, Class<?>> TEAM_CONTAINERS = new HashMap<>();
 
     static {
+        Profiler teamContainerScan = new Profiler("team container scan");
+        teamContainerScan.start();
+
         // Scan for classes annotated with @Robot in the frc.robot package
         Reflections reflections = new Reflections("frc.robot");
         Set<Class<?>> annotatedClasses = reflections.getTypesAnnotatedWith(Robot.class);
@@ -34,6 +38,7 @@ public class RobotContainerRegistry {
             Robot annotation = clazz.getAnnotation(Robot.class);
             TEAM_CONTAINERS.put(annotation.team(), clazz);
         }
+        teamContainerScan.end();
     }
 
     public static IRobotContainer createContainerForTeam(int teamNumber) {

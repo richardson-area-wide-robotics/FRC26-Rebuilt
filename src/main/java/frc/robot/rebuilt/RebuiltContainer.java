@@ -7,6 +7,7 @@ package frc.robot.rebuilt;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
+import com.strubium.ssjprofiler.Profiler;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -94,7 +95,9 @@ public class RebuiltContainer implements IRobotContainer {
 
 
   private static void configureBindings() {
-
+    Profiler bindingProfiler = new Profiler("bindings");
+    bindingProfiler.start();
+    
     // Operator POV Up - Lower Shooter RPM by 10
     RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.povDown(), Commands.runOnce(()-> SHOOTER.lowerOperatorModifer(10)) , Commands.none());
 
@@ -167,6 +170,8 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftBumper(),
       Commands.runOnce(() -> INTAKE.outtake()),
       Commands.runOnce(() -> INTAKE.stop()));
+     
+    bindingProfiler.end();
   }
 
   private static void registerNamedCommands() {
