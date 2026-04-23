@@ -52,6 +52,8 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
           DriveConstants.kBackRightChassisAngularOffset
   );
 
+  // TODO: Use our IMU class and gyro, move pose system out out of this 
+
   // The gyro sensor
   private final AHRS m_gyro = new AHRS(NavXComType.kMXP_SPI);
 
