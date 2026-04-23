@@ -17,6 +17,7 @@ import frc.robot.common.components.hardware.gyro.RAWRNavX2;
 import java.util.List;
 import java.util.Optional;
 
+import frc.robot.common.interfaces.IMU;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -27,7 +28,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
 
     public boolean useVisionData = true;
 
-    private final RAWRNavX2 imu;
+    private final IMU imu;
     private final SwerveDrivePoseEstimator poseEstimator;
     private final ModulePositionSupplier modulePositions;
     private final PhotonCamera photonCamera;
@@ -40,7 +41,7 @@ public class AssumedPoseSubsystem extends SubsystemBase {
     }
 
     public AssumedPoseSubsystem(
-            RAWRNavX2 imu,
+            IMU imu,
             SwerveDriveKinematics kinematics,
             ModulePositionSupplier modulePositions,
             Transform3d robotToCamera,
