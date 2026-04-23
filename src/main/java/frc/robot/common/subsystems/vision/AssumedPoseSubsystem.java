@@ -12,7 +12,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.robot.common.gyro.RAWRNavX2;
+import frc.robot.common.components.hardware.gyro.RAWRNavX2;
 
 import java.util.List;
 import java.util.Optional;

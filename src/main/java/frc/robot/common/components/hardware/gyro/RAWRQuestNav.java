@@ -1,4 +1,4 @@
-package frc.robot.common.gyro;
+package frc.robot.common.components.hardware.gyro;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
