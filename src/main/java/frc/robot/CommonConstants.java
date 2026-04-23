@@ -4,17 +4,10 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.AngularAcceleration;
-import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
-import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.lasarobotics.drive.swerve.child.MAXSwerveModule;
 import org.lasarobotics.hardware.revrobotics.Spark;
 
@@ -93,52 +86,58 @@ public final class CommonConstants {
     public static final Spark.ID RIGHT_REAR_ROTATE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/RightRear/Rotate", 2);
   }
 
-  public static class DriveConstants {
-    // Drive specs
+  public static final class ModuleConstants {
+    // The MAXSwerve module can be configured with one of three pinion gears: 12T,
+    // 13T, or 14T. This changes the drive speed of the module (a pinion gear with
+    // more teeth will result in a robot that drives faster).
+    public static final int kDrivingMotorPinionTeeth = 14;
 
-    /**The efficiency of the drivetrain (Ex: maximum linear speed - friction/heat) , as a percent*/
-    public static final double DRIVETRAIN_EFFICIENCY = 0.90;
+    // Calculations required for driving motor conversion factors and feed forward
+    public static final double kDrivingMotorFreeSpeedRps = 5676 / 60;
+    public static final double kWheelDiameterMeters = 0.0762;
+    public static final double kWheelCircumferenceMeters = kWheelDiameterMeters * Math.PI;
+    // 45 teeth on the wheel's bevel gear, 22 teeth on the first-stage spur gear, 15
+    // teeth on the bevel pinion
+    public static final double kDrivingMotorReduction = (45.0 * 22) / (kDrivingMotorPinionTeeth * 15);
+    public static final double kDriveWheelFreeSpeedRps = (kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters)
+        / kDrivingMotorReduction;
+  }
 
-    /**Difference between a wheel’s rotational speed and the actual speed of the robot across the floor*/
-    public static final double DRIVE_SLIP_RATIO = 0.05;
+  public static final class DriveConstants {
+    // Driving Parameters - Note that these are not the maximum capable speeds of
+    // the robot, rather the allowed maximum speeds
+    public static final double kMaxSpeedMetersPerSecond = 4.8;
+    public static final double kMaxAngularSpeed = 2 * Math.PI; // radians per second
 
-    /**Turning, in degrees*/
-    public static final double DRIVE_TURN_SCALAR = 60.0;
+    // Chassis configuration
+    public static final double kTrackWidth = edu.wpi.first.math.util.Units.inchesToMeters(26.5);
+    // Distance between centers of right and left wheels on robot
+    public static final double kWheelBase = Units.inchesToMeters(26.5);
+    // Distance between front and back wheels on robot
+    public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
+        new Translation2d(kWheelBase / 2, kTrackWidth / 2),
+        new Translation2d(kWheelBase / 2, -kTrackWidth / 2),
+        new Translation2d(-kWheelBase / 2, kTrackWidth / 2),
+        new Translation2d(-kWheelBase / 2, -kTrackWidth / 2));
 
-    /**Swerve lookahead, in seconds*/
-    public static final double DRIVE_LOOKAHEAD = 0.0;
+    // Angular offsets of the modules relative to the chassis in radians
+    public static final double kFrontLeftChassisAngularOffset = -Math.PI / 2;
+    public static final double kFrontRightChassisAngularOffset = 0;
+    public static final double kBackLeftChassisAngularOffset = Math.PI;
+    public static final double kBackRightChassisAngularOffset = Math.PI / 2;
 
-    /**The time for the motors to lock, in seconds*/
-    public static final double AUTO_LOCK_TIME = 0.5;
+    // SPARK MAX CAN IDs
+    public static final int kFrontLeftDrivingCanId = 5;
+    public static final int kRearLeftDrivingCanId = 7;
+    public static final int kFrontRightDrivingCanId = 3;
+    public static final int kRearRightDrivingCanId = 1;
 
-    public static final AngularVelocity DRIVE_ROTATE_VELOCITY = Units.RadiansPerSecond.of(12.0 * Math.PI);
-    public static final AngularVelocity AIM_VELOCITY_THRESHOLD = Units.DegreesPerSecond.of(5.0);
-    public static final AngularAcceleration DRIVE_ROTATE_ACCELERATION = Units.RadiansPerSecond.of(4.0 * Math.PI).per(Units.Second);
-    public static final Translation2d AIM_OFFSET = new Translation2d(0.0, -0.5);
+    public static final int kFrontLeftTurningCanId = 6;
+    public static final int kRearLeftTurningCanId = 8;
+    public static final int kFrontRightTurningCanId = 4;
+    public static final int kRearRightTurningCanId = 2;
 
-    // Other settings
-    /**The pitch/roll the robot needs to be to consider itself tipped/tipping, as a degree*/
-    public static final double TIP_THRESHOLD = 35.0;
-
-    /**Angle tolerance that defines when the robot is considered "flat enough", as a degree*/
-    public static final double BALANCED_THRESHOLD = 10.0;
-    public static final double AIM_VELOCITY_COMPENSATION_FUDGE_FACTOR = 0.1;
-    public static final Matrix<N3, N1> ODOMETRY_STDDEV = VecBuilder.fill(0.03, 0.03, Math.toRadians(1.0));
-    public static final Matrix<N3, N1> VISION_STDDEV = VecBuilder.fill(1.0, 1.0, Math.toRadians(3.0));
-
-    // Input Curves
-    private static final double[] driveThrottleInputCurveX = { 0.0, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800, 0.900, 1.000 };
-    private static final double[] driveThrottleInputCurveY = { 0.0, 0.052, 0.207, 0.465, 0.827, 1.293, 1.862, 2.534, 3.310, 4.189, 5.172 };
-    private static final double[] driveTurnInputCurveX = { 0.0, 0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800, 0.900, 1.0 };
-    private static final double[] driveTurnInputCurveY = { 0.0, 0.010, 0.050, 0.100, 0.150, 0.200, 0.250, 0.300, 0.400, 0.600, 1.0 };
-
-    private static final SplineInterpolator SPLINE_INTERPOLATOR = new SplineInterpolator();
-
-
-    public static final PolynomialSplineFunction BASIC_DRIVE_THROTTLE_INPUT_CURVE = SPLINE_INTERPOLATOR
-            .interpolate(driveThrottleInputCurveX, driveThrottleInputCurveY);
-    public static final PolynomialSplineFunction BASIC_DRIVE_TURN_INPUT_CURVE = SPLINE_INTERPOLATOR
-            .interpolate(driveTurnInputCurveX, driveTurnInputCurveY);
+    public static final boolean kGyroReversed = false;
   }
 
   public static class SmartDashboardConstants {

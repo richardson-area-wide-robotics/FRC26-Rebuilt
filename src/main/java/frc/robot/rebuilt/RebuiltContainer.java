@@ -10,22 +10,17 @@ import com.pathplanner.lib.auto.NamedCommands;
 import com.strubium.ssjprofiler.Profiler;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.Dimensionless;
-import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
-import frc.robot.common.components.hardware.SwerveHardwareParams;
-import frc.robot.common.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.rebuilt.components.HubStatus;
@@ -36,14 +31,10 @@ import frc.robot.rebuilt.subsystems.Shooter;
 import frc.robot.rebuilt.subsystems.Shooter.ShooterPosition;
 import frc.robot.rebuilt.subsystems.smart.RobotSectorEvaluator;
 import frc.robot.rebuilt.subsystems.smart.ScoringLocationLookup;
-import frc.robot.rebuilt.subsystems.smart.SmartSequentialCommandSequencer;
-import frc.robot.rebuilt.components.SmartSequentialCommandContainer;
+
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.lasarobotics.utils.PIDConstants;
 import org.littletonrobotics.junction.Logger;
-
-import static org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity.FIELD_CENTRIC;
 
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -55,31 +46,9 @@ public class RebuiltContainer implements IRobotContainer {
   public static final Shooter SHOOTER = new Shooter(10, 11);
   public static final Feeder FEEDER = new Feeder(18, 14);
   public static final Intake INTAKE = new Intake(13, 15, 12);
-  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(
-                new SwerveHardwareParams(
-                        new RAWRNavX2(CommonConstants.DriveHardwareConstants.NAVX_NAME),
-
-                        CommonConstants.DriveHardwareConstants.LEFT_FRONT_DRIVE_MOTOR_ID,
-                        CommonConstants.DriveHardwareConstants.LEFT_FRONT_ROTATE_MOTOR_ID,
-
-                        CommonConstants.DriveHardwareConstants.RIGHT_FRONT_DRIVE_MOTOR_ID,
-                        CommonConstants.DriveHardwareConstants.RIGHT_FRONT_ROTATE_MOTOR_ID,
-                        CommonConstants.DriveHardwareConstants.LEFT_REAR_DRIVE_MOTOR_ID,
-                        CommonConstants.DriveHardwareConstants.LEFT_REAR_ROTATE_MOTOR_ID,
-
-                        CommonConstants.DriveHardwareConstants.RIGHT_REAR_DRIVE_MOTOR_ID,
-                        CommonConstants.DriveHardwareConstants.RIGHT_REAR_ROTATE_MOTOR_ID
-                ),
-          PIDConstants.of(14.0, 0.0, 0.1, 0.0, 0.0),
-          FIELD_CENTRIC,
-      CommonConstants.DriveConstants.BASIC_DRIVE_THROTTLE_INPUT_CURVE,
-      CommonConstants.DriveConstants.BASIC_DRIVE_TURN_INPUT_CURVE,
-      Angle.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_TURN_SCALAR, Units.Degree),
-      Dimensionless.ofRelativeUnits(CommonConstants.HIDConstants.CONTROLLER_DEADBAND, Units.Value),
-      Time.ofRelativeUnits(CommonConstants.DriveConstants.DRIVE_LOOKAHEAD, Units.Second));
+  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem();
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
-  public static final SmartSequentialCommandSequencer COMMAND_SEQUENCER = new SmartSequentialCommandSequencer(SmartSequentialCommandContainer.goToRedHub);
   public static SequentialCommandGroup sequencedCommand;
 
   private static SendableChooser<Command> automodeChooser;
@@ -91,16 +60,17 @@ public class RebuiltContainer implements IRobotContainer {
         // Set drive command
         // LeftY is the xRequest and LeftX is the yRequest for some reason
         DRIVE_SUBSYSTEM.setDefaultCommand(
-        DRIVE_SUBSYSTEM.driveCommand(
-            HIDConstants.DRIVER_CONTROLLER::getLeftY,
-            HIDConstants.DRIVER_CONTROLLER::getLeftX,
-            HIDConstants.DRIVER_CONTROLLER::getRightX));
+          DRIVE_SUBSYSTEM.driveCommand(
+            HIDConstants.DRIVER_CONTROLLER.getLeftX(),
+            HIDConstants.DRIVER_CONTROLLER.getLeftY(),
+            HIDConstants.DRIVER_CONTROLLER.getRightX(),
+            true)
+        );
 
     // Set up the auto builder
     DRIVE_SUBSYSTEM.configureAutoBuilder();
 
 
-    sequencedCommand = COMMAND_SEQUENCER.finalizeSequence();
 
       // Bind buttons and triggers
       configureBindings();
@@ -127,16 +97,7 @@ public class RebuiltContainer implements IRobotContainer {
   private static void configureBindings() {
     Profiler bindingProfiler = new Profiler("bindings");
     bindingProfiler.start();
-
-    // Operator Start - toggle traction control
-    RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.start(), DRIVE_SUBSYSTEM.toggleTractionControlCommand(), Commands.none());
-
-    // Operator Left Stick Button - Reset pose
-    RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.leftStick(), DRIVE_SUBSYSTEM.resetPoseCommand(Pose2d::new), Commands.none());
-
-    // Operator A Button - Lock Wheels
-    RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.a(), DRIVE_SUBSYSTEM.lockCommand(), Commands.none());
-
+    
     // Operator POV Up - Lower Shooter RPM by 10
     RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.povDown(), Commands.runOnce(()-> SHOOTER.lowerOperatorModifer(10)) , Commands.none());
 
@@ -144,7 +105,7 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.povUp(), Commands.runOnce(()-> SHOOTER.raiseOperatorModifer(10)) , Commands.none());
 
     // Driver Right Stick Button - Reset heading
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.gyro()::reset, DRIVE_SUBSYSTEM), Commands.none());
+    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM::zeroHeading, DRIVE_SUBSYSTEM), Commands.none());
 
     //Driver DPad Up - Deploy intake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(),
@@ -209,11 +170,7 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftBumper(),
       Commands.runOnce(() -> INTAKE.outtake()),
       Commands.runOnce(() -> INTAKE.stop()));
-
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povLeft(),
-            DRIVE_SUBSYSTEM.aimAtPointCommand(ScoringLocationLookup.findHub().getTranslation(), false, false),
-            Commands.runOnce(DRIVE_SUBSYSTEM::stopCommand));
-
+     
     bindingProfiler.end();
   }
 

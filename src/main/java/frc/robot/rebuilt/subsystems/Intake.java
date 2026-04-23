@@ -1,7 +1,5 @@
 package frc.robot.rebuilt.subsystems;
 
-import java.util.function.BooleanSupplier;
-
 import frc.robot.common.annotations.NamedAuto;
 import org.littletonrobotics.junction.Logger;
 
@@ -31,7 +29,7 @@ public class Intake extends DashboardSubsystem {
     private SparkMax deployMotor;
     private RelativeEncoder deployEncoder;
     private SparkMaxConfig deployConfig;
-    private BooleanSupplier isStalling;
+    //private BooleanSupplier isStalling;
     private boolean intakeRunning = false;
 
     public Intake(int intakeID1, int intakeID2, int deployID) {
