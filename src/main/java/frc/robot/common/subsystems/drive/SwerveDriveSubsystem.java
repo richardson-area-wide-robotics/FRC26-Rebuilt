@@ -20,37 +20,37 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.subsystems.vision.AssumedPoseSubsystem.ModulePositionSupplier;
-import frc.robot.common.swerve.MAXSwerveModule;
+import frc.robot.common.swerve.MAXSwerveDrivetrain;
 import frc.robot.CommonConstants.DriveConstants;
 
 public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositionSupplier {
-  // Create MAXSwerveModules
-  private final MAXSwerveModule m_frontLeft = new MAXSwerveModule(
-      DriveConstants.kFrontLeftDrivingCanId,
-      DriveConstants.kFrontLeftTurningCanId,
-      DriveConstants.kFrontLeftChassisAngularOffset);
 
-  private final MAXSwerveModule m_frontRight = new MAXSwerveModule(
-      DriveConstants.kFrontRightDrivingCanId,
-      DriveConstants.kFrontRightTurningCanId,
-      DriveConstants.kFrontRightChassisAngularOffset);
+  private final MAXSwerveDrivetrain SWERVE_DRIVETRAIN = new MAXSwerveDrivetrain(
+          // Front Left
+          DriveConstants.kFrontLeftDrivingCanId,
+          DriveConstants.kFrontLeftTurningCanId,
+          DriveConstants.kFrontLeftChassisAngularOffset,
 
-  private final MAXSwerveModule m_rearLeft = new MAXSwerveModule(
-      DriveConstants.kRearLeftDrivingCanId,
-      DriveConstants.kRearLeftTurningCanId,
-      DriveConstants.kBackLeftChassisAngularOffset);
+          // Front Right
+          DriveConstants.kFrontRightDrivingCanId,
+          DriveConstants.kFrontRightTurningCanId,
+          DriveConstants.kFrontRightChassisAngularOffset,
 
-  private final MAXSwerveModule m_rearRight = new MAXSwerveModule(
-      DriveConstants.kRearRightDrivingCanId,
-      DriveConstants.kRearRightTurningCanId,
-      DriveConstants.kBackRightChassisAngularOffset);
+          // Back Left
+          DriveConstants.kRearLeftDrivingCanId,
+          DriveConstants.kRearLeftDrivingCanId,
+          DriveConstants.kBackLeftChassisAngularOffset,
+
+          // Back Right
+          DriveConstants.kRearLeftDrivingCanId,
+          DriveConstants.kRearLeftDrivingCanId,
+          DriveConstants.kBackRightChassisAngularOffset
+  );
 
   // The gyro sensor
   private final AHRS m_gyro = new AHRS(NavXComType.kMXP_SPI);
@@ -73,12 +73,8 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     // Update the odometry in the periodic block
     m_odometry.update(
         Rotation2d.fromDegrees(m_gyro.getAngle()),
-        new SwerveModulePosition[] {
-            m_frontLeft.getPosition(),
-            m_frontRight.getPosition(),
-            m_rearLeft.getPosition(),
-            m_rearRight.getPosition()
-        });
+        SWERVE_DRIVETRAIN.getPositions()
+    );
   }
 
   /**
@@ -98,13 +94,9 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
   public void resetOdometry(Pose2d pose) {
     m_odometry.resetPosition(
         Rotation2d.fromDegrees(m_gyro.getAngle()),
-        new SwerveModulePosition[] {
-            m_frontLeft.getPosition(),
-            m_frontRight.getPosition(),
-            m_rearLeft.getPosition(),
-            m_rearRight.getPosition()
-        },
-        pose);
+            SWERVE_DRIVETRAIN.getPositions(),
+            pose
+    );
   }
 
   /**
@@ -129,10 +121,7 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
             : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
     SwerveDriveKinematics.desaturateWheelSpeeds(
         swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
-    m_frontLeft.setDesiredState(swerveModuleStates[0]);
-    m_frontRight.setDesiredState(swerveModuleStates[1]);
-    m_rearLeft.setDesiredState(swerveModuleStates[2]);
-    m_rearRight.setDesiredState(swerveModuleStates[3]);
+     SWERVE_DRIVETRAIN.setStates(swerveModuleStates);
   }
 
   public void driveRobotRelative(ChassisSpeeds chassisSpeeds){
@@ -148,16 +137,6 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
   }
 
   /**
-   * Sets the wheels into an X formation to prevent movement.
-   */
-  public void setX() {
-    m_frontLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
-    m_frontRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
-    m_rearLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
-    m_rearRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
-  }
-
-  /**
    * Sets the swerve ModuleStates.
    *
    * @param desiredStates The desired SwerveModule states.
@@ -165,18 +144,7 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
   public void setModuleStates(SwerveModuleState[] desiredStates) {
     SwerveDriveKinematics.desaturateWheelSpeeds(
         desiredStates, DriveConstants.kMaxSpeedMetersPerSecond);
-    m_frontLeft.setDesiredState(desiredStates[0]);
-    m_frontRight.setDesiredState(desiredStates[1]);
-    m_rearLeft.setDesiredState(desiredStates[2]);
-    m_rearRight.setDesiredState(desiredStates[3]);
-  }
-
-  /** Resets the drive encoders to currently read a position of 0. */
-  public void resetEncoders() {
-    m_frontLeft.resetEncoders();
-    m_rearLeft.resetEncoders();
-    m_frontRight.resetEncoders();
-    m_rearRight.resetEncoders();
+    SWERVE_DRIVETRAIN.setStates(desiredStates);
   }
 
   /** Zeroes the heading of the robot. */
@@ -234,11 +202,6 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
 
   @Override
   public SwerveModulePosition[] get() {
-    return new SwerveModulePosition[] {
-      m_frontLeft.getPosition(),
-      m_frontRight.getPosition(),
-      m_rearLeft.getPosition(),
-      m_rearRight.getPosition()
-    };
+    return SWERVE_DRIVETRAIN.getPositions();
   }
 }

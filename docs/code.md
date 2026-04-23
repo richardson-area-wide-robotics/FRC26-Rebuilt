@@ -22,7 +22,6 @@ flowchart TD
     subgraph frc_robot_common_components_hardware[frc.robot.common.components.hardware]
         SwerveModuleHardware[SwerveModuleHardware]
         TankHardware[TankHardware]
-        SwerveModule[SwerveModule]
     end
     subgraph frc_robot_common_components_dashboard_diagnostics[frc.robot.common.components.dashboard.diagnostics]
         CANDiagnostics[CANDiagnostics]
@@ -33,6 +32,7 @@ flowchart TD
     subgraph frc_robot_common_swerve[frc.robot.common.swerve]
         MAXSwerveModule[MAXSwerveModule]
         PIDValue[PIDValue]
+        MAXSwerveDrivetrain[MAXSwerveDrivetrain]
     end
     subgraph frc_robot_common_interfaces[frc.robot.common.interfaces]
         IRobotContainer[IRobotContainer]
@@ -114,6 +114,10 @@ flowchart TD
     ModulePositionSupplier[ModulePositionSupplier]
     SwerveDriveSubsystem -.implements.-> ModulePositionSupplier
     RebuiltContainer -.implements.-> IRobotContainer
+    MAXSwerveDrivetrain --> MAXSwerveModule
+    MAXSwerveDrivetrain --> MAXSwerveModule
+    MAXSwerveDrivetrain --> MAXSwerveModule
+    MAXSwerveDrivetrain --> MAXSwerveModule
     AssumedPoseSubsystem --> RAWRNavX2
     TankDriveSubsystem --> TankHardware
     RobotSectorEvaluator --> SwerveDriveSubsystem
@@ -125,7 +129,6 @@ flowchart TD
     style TeamUtils fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SwerveModuleHardware fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
     style TankHardware fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
-    style SwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style EasyMotor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style EasyBreakBeam fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
     style NamedAutoRegistry fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -136,6 +139,7 @@ flowchart TD
     style DefaultContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style MAXSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style PIDValue fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style MAXSwerveDrivetrain fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style IRobotContainer fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style IDiagnostic fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style IMU fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
