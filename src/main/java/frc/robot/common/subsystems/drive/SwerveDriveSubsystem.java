@@ -39,12 +39,12 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
 
           // Back Left
           DriveConstants.kRearLeftDrivingCanId,
-          DriveConstants.kRearLeftDrivingCanId,
+          DriveConstants.kRearLeftTurningCanId,
           DriveConstants.kBackLeftChassisAngularOffset,
 
           // Back Right
-          DriveConstants.kRearLeftDrivingCanId,
-          DriveConstants.kRearLeftDrivingCanId,
+          DriveConstants.kRearRightDrivingCanId,
+          DriveConstants.kRearRightTurningCanId,
           DriveConstants.kBackRightChassisAngularOffset
   );
 

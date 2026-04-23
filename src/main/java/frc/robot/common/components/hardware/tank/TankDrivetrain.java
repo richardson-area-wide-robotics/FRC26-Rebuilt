@@ -13,7 +13,7 @@ import java.util.List;
  * @author Hudson Strub
  * @since 2025 Offseason
  */
-public record TankDrivetrain(IMU gyro, List<SparkBase> lMotors, List<SparkBase> rMotors) {
+public record TankDrivetrain(IMU gyro, List<SparkBase> lMotors, List<SparkBase> rMotors) implements AutoCloseable  {
 
 
     public void set(double leftSpeed, double rightSpeed) {
@@ -26,6 +26,7 @@ public record TankDrivetrain(IMU gyro, List<SparkBase> lMotors, List<SparkBase> 
         rMotors.forEach(m -> m.set(0.0));
     }
 
+    @Override
     public void close() {
         try {
             gyro.close();

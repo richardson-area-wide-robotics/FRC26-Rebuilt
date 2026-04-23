@@ -6,10 +6,6 @@ flowchart TD
         LocalADStarAK[LocalADStarAK]
         DefaultContainer[DefaultContainer]
     end
-    subgraph frc_robot_common_gyro[frc.robot.common.gyro]
-        RAWRNavX2[RAWRNavX2]
-        RAWRQuestNav[RAWRQuestNav]
-    end
     subgraph frc_robot_common_components[frc.robot.common.components]
         RobotContainerRegistry[RobotContainerRegistry]
         TeamUtils[TeamUtils]
@@ -19,20 +15,23 @@ flowchart TD
         RobotExceptionHandler[RobotExceptionHandler]
         RobotUtils[RobotUtils]
     end
-    subgraph frc_robot_common_components_hardware[frc.robot.common.components.hardware]
-        SwerveModuleHardware[SwerveModuleHardware]
-        TankHardware[TankHardware]
+    subgraph frc_robot_common_components_hardware_gyro[frc.robot.common.components.hardware.gyro]
+        RAWRNavX2[RAWRNavX2]
+        RAWRQuestNav[RAWRQuestNav]
+    end
+    subgraph frc_robot_common_components_hardware_swerve[frc.robot.common.components.hardware.swerve]
+        MAXSwerveModule[MAXSwerveModule]
+        PIDValue[PIDValue]
+        MAXSwerveDrivetrain[MAXSwerveDrivetrain]
+    end
+    subgraph frc_robot_common_components_hardware_tank[frc.robot.common.components.hardware.tank]
+        TankDrivetrain[TankDrivetrain]
     end
     subgraph frc_robot_common_components_dashboard_diagnostics[frc.robot.common.components.dashboard.diagnostics]
         CANDiagnostics[CANDiagnostics]
     end
     subgraph frc_robot_common_components_dashboard[frc.robot.common.components.dashboard]
         DashboardAutoUpdater[DashboardAutoUpdater]
-    end
-    subgraph frc_robot_common_swerve[frc.robot.common.swerve]
-        MAXSwerveModule[MAXSwerveModule]
-        PIDValue[PIDValue]
-        MAXSwerveDrivetrain[MAXSwerveDrivetrain]
     end
     subgraph frc_robot_common_interfaces[frc.robot.common.interfaces]
         IRobotContainer[IRobotContainer]
@@ -106,6 +105,7 @@ flowchart TD
     org_lasarobotics_hardware_IMU[org.lasarobotics.hardware.IMU]
     RAWRNavX2 -.implements.-> org_lasarobotics_hardware_IMU
     RAWRQuestNav -.implements.-> IMU
+    TankDrivetrain -.implements.-> AutoCloseable
     Thread_UncaughtExceptionHandler[Thread.UncaughtExceptionHandler]
     RobotExceptionHandler -.implements.-> Thread_UncaughtExceptionHandler
     CANDiagnostics -.implements.-> IDiagnostic
@@ -118,17 +118,19 @@ flowchart TD
     MAXSwerveDrivetrain --> MAXSwerveModule
     MAXSwerveDrivetrain --> MAXSwerveModule
     MAXSwerveDrivetrain --> MAXSwerveModule
-    AssumedPoseSubsystem --> RAWRNavX2
-    TankDriveSubsystem --> TankHardware
+    AssumedPoseSubsystem --> IMU
+    TankDriveSubsystem --> TankDrivetrain
     RobotSectorEvaluator --> SwerveDriveSubsystem
     Robot --> IRobotContainer
     style LocalADStarAK fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style RAWRNavX2 fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style RAWRQuestNav fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RobotContainerRegistry fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style TeamUtils fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style SwerveModuleHardware fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
-    style TankHardware fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
+    style RAWRNavX2 fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RAWRQuestNav fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style MAXSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style PIDValue fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style MAXSwerveDrivetrain fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style TankDrivetrain fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
     style EasyMotor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style EasyBreakBeam fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
     style NamedAutoRegistry fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -137,9 +139,6 @@ flowchart TD
     style DashboardAutoUpdater fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RobotUtils fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DefaultContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style MAXSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style PIDValue fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style MAXSwerveDrivetrain fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style IRobotContainer fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style IDiagnostic fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style IMU fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
