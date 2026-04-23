@@ -8,6 +8,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.common.swerve.PIDValue;
 import org.lasarobotics.drive.swerve.child.MAXSwerveModule;
 import org.lasarobotics.hardware.revrobotics.Spark;
 
@@ -126,7 +127,7 @@ public final class CommonConstants {
     public static final double kBackLeftChassisAngularOffset = Math.PI;
     public static final double kBackRightChassisAngularOffset = Math.PI / 2;
 
-    // SPARK MAX CAN IDs
+    // SWERVE CAN IDs
     public static final int kFrontLeftDrivingCanId = 5;
     public static final int kRearLeftDrivingCanId = 7;
     public static final int kFrontRightDrivingCanId = 3;
@@ -136,6 +137,10 @@ public final class CommonConstants {
     public static final int kRearLeftTurningCanId = 8;
     public static final int kFrontRightTurningCanId = 4;
     public static final int kRearRightTurningCanId = 2;
+
+    // SWERVE PID
+    public static final PIDValue turnPID = new PIDValue(2.1, 0, 0.2);
+    public static final PIDValue drivePID = new PIDValue(0.18, 0, 0.174);
 
     public static final boolean kGyroReversed = false;
   }
