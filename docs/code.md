@@ -21,7 +21,6 @@ flowchart TD
     end
     subgraph frc_robot_common_components_hardware[frc.robot.common.components.hardware]
         SwerveModuleHardware[SwerveModuleHardware]
-        SwerveHardware[SwerveHardware]
         TankHardware[TankHardware]
     end
     subgraph frc_robot_common_components_dashboard_diagnostics[frc.robot.common.components.dashboard.diagnostics]
@@ -31,7 +30,8 @@ flowchart TD
         DashboardAutoUpdater[DashboardAutoUpdater]
     end
     subgraph frc_robot_common_swerve[frc.robot.common.swerve]
-        RAWRSwerveModule[RAWRSwerveModule]
+        MAXSwerveModule[MAXSwerveModule]
+        Configs[Configs]
     end
     subgraph frc_robot_common_interfaces[frc.robot.common.interfaces]
         IRobotContainer[IRobotContainer]
@@ -60,12 +60,13 @@ flowchart TD
         Main[Main]
         Robot[Robot]
     end
-    subgraph frc_robot_common_swerve[frc.robot.common.swerve]
-        Configs[Configs]
-        MAXSwerveModule[MAXSwerveModule]
+    subgraph frc_robot_rebuilt[frc.robot.rebuilt]
+        RebuiltConstants[RebuiltConstants]
+        RebuiltContainer[RebuiltContainer]
     end
     subgraph frc_robot_rebuilt_components[frc.robot.rebuilt.components]
         RobotSector[RobotSector]
+        HubStatus[HubStatus]
     end
     subgraph frc_robot_rebuilt_subsystems[frc.robot.rebuilt.subsystems]
         Climber[Climber]
@@ -75,23 +76,22 @@ flowchart TD
     end
     subgraph frc_robot_rebuilt_subsystems_smart[frc.robot.rebuilt.subsystems.smart]
         MathShoot[MathShoot]
-        RobotSectorEvaluator[RobotSectorEvaluator]
         ScoringLocationLookup[ScoringLocationLookup]
+        DynamicPather[DynamicPather]
+        RobotSectorEvaluator[RobotSectorEvaluator]
     end
     LoggableHardware[LoggableHardware]
     RAWRNavX2 -->|extends| LoggableHardware
     BaseInstanceable_CANDiagnostics[BaseInstanceable<CANDiagnostics]
     CANDiagnostics -->|extends| BaseInstanceable_CANDiagnostics
-    REVSwerveModule[REVSwerveModule]
-    RAWRSwerveModule -->|extends| REVSwerveModule
     AutoCloseable[AutoCloseable]
     IMU -->|extends| AutoCloseable
     SubsystemBase[SubsystemBase]
     DashboardSubsystem -->|extends| SubsystemBase
-    SwerveDriveSubsystem -->|extends| SubsystemBase
-    TankDriveSubsystem -->|extends| SubsystemBase
     SingleMotorSubsystem -->|extends| DashboardSubsystem
     AssumedPoseSubsystem -->|extends| SubsystemBase
+    TankDriveSubsystem -->|extends| SubsystemBase
+    SwerveDriveSubsystem -->|extends| SubsystemBase
     Climber -->|extends| DashboardSubsystem
     Intake -->|extends| DashboardSubsystem
     Feeder -->|extends| DashboardSubsystem
@@ -105,27 +105,24 @@ flowchart TD
     org_lasarobotics_hardware_IMU[org.lasarobotics.hardware.IMU]
     RAWRNavX2 -.implements.-> org_lasarobotics_hardware_IMU
     RAWRQuestNav -.implements.-> IMU
-    Pathfinder[Pathfinder]
-    LocalADStarAK -.implements.-> Pathfinder
+    Thread_UncaughtExceptionHandler[Thread.UncaughtExceptionHandler]
+    RobotExceptionHandler -.implements.-> Thread_UncaughtExceptionHandler
+    CANDiagnostics -.implements.-> IDiagnostic
+    DefaultContainer -.implements.-> IRobotContainer
+    TankDriveSubsystem -.implements.-> AutoCloseable
     ModulePositionSupplier[ModulePositionSupplier]
     SwerveDriveSubsystem -.implements.-> ModulePositionSupplier
-    TankDriveSubsystem -.implements.-> AutoCloseable
-    SwerveDriveSubsystem -.implements.-> AutoCloseable
     RebuiltContainer -.implements.-> IRobotContainer
-    TankDriveSubsystem --> TankHardware
     AssumedPoseSubsystem --> RAWRNavX2
+    TankDriveSubsystem --> TankHardware
     RobotSectorEvaluator --> SwerveDriveSubsystem
     Robot --> IRobotContainer
-    style BuildConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style DashboardVariable fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
-    style NamedAuto fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
-    style Robot fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
-    style DashboardAutoUpdater fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style CANDiagnostics fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style EasyBreakBeam fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
-    style EasyMotor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style LocalADStarAK fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RAWRNavX2 fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RAWRQuestNav fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RobotContainerRegistry fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style TeamUtils fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SwerveModuleHardware fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
-    style SwerveHardware fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
     style TankHardware fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
     style EasyMotor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style EasyBreakBeam fill:#ba68c8,stroke:#333,stroke-width:2px,color:#fff
@@ -135,7 +132,8 @@ flowchart TD
     style DashboardAutoUpdater fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RobotUtils fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DefaultContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style RAWRSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style MAXSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style Configs fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style IRobotContainer fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style IDiagnostic fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style IMU fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
@@ -145,27 +143,31 @@ flowchart TD
     style DashboardSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SingleMotorSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style AssumedPoseSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style Configs fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style MAXSwerveModule fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style TankDriveSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style SwerveDriveSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CommonConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RebuiltConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RobotSector fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style RebuiltConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style HubStatus fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RebuiltContainer fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Climber fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Intake fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Feeder fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Shooter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style MathShoot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
-    style RobotSectorEvaluator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ScoringLocationLookup fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style DynamicPather fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RobotSectorEvaluator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style BuildConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style Main fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Robot fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style LoggableHardware fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style BaseInstanceable_CANDiagnostics fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
-    style REVSwerveModule fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style AutoCloseable fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style SubsystemBase fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style LoggedRobot fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style Pathfinder fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
+    style org_lasarobotics_hardware_IMU fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
+    style Thread_UncaughtExceptionHandler fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style ModulePositionSupplier fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
 ```

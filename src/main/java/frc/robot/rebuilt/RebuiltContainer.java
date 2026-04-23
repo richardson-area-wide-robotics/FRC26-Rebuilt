@@ -36,6 +36,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.Objects;
+
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Robot(team = 1745)
@@ -228,10 +230,10 @@ public class RebuiltContainer implements IRobotContainer {
     }
 
     if(DriverStation.getAlliance().get() == DriverStation.Alliance.Red){
-        weWonAuton = DriverStation.getGameSpecificMessage() == "r";
+        weWonAuton = Objects.equals(DriverStation.getGameSpecificMessage(), "r");
     }
     if(DriverStation.getAlliance().get() == DriverStation.Alliance.Blue){
-      weWonAuton = DriverStation.getGameSpecificMessage() == "b";
+      weWonAuton = Objects.equals(DriverStation.getGameSpecificMessage(), "b");
     }
 
     Logger.recordOutput("AUTONWINNERS", weWonAuton);
