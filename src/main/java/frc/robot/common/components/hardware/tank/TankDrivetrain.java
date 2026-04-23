@@ -1,4 +1,4 @@
-package frc.robot.common.components.hardware;
+package frc.robot.common.components.hardware.tank;
 
 import com.revrobotics.spark.SparkBase;
 import frc.robot.common.interfaces.IMU;
@@ -6,14 +6,14 @@ import frc.robot.common.interfaces.IMU;
 import java.util.List;
 
 /**
- * Drive hardware for a robot with tank drive
+ * Drivetrain for a robot with tank drive
  *
  * Supports multiple left and right motors
  *
  * @author Hudson Strub
  * @since 2025 Offseason
  */
-public record TankHardware(IMU gyro, List<SparkBase> lMotors, List<SparkBase> rMotors) {
+public record TankDrivetrain(IMU gyro, List<SparkBase> lMotors, List<SparkBase> rMotors) {
 
 
     public void set(double leftSpeed, double rightSpeed) {

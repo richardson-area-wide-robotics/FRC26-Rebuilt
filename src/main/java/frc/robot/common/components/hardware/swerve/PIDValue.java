@@ -1,4 +1,4 @@
-package frc.robot.common.swerve;
+package frc.robot.common.components.hardware.swerve;
 
 import lombok.Getter;
 

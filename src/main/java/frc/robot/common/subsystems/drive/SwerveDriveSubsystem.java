@@ -25,7 +25,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.subsystems.vision.AssumedPoseSubsystem.ModulePositionSupplier;
-import frc.robot.common.swerve.MAXSwerveDrivetrain;
+import frc.robot.common.components.hardware.swerve.MAXSwerveDrivetrain;
 import frc.robot.CommonConstants.DriveConstants;
 
 public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositionSupplier {

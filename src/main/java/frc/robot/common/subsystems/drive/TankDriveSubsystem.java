@@ -3,7 +3,7 @@ package frc.robot.common.subsystems.drive;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.common.components.hardware.TankHardware;
+import frc.robot.common.components.hardware.tank.TankDrivetrain;
 import lombok.Getter;
 
 import java.util.function.DoubleSupplier;
@@ -17,9 +17,9 @@ import java.util.function.DoubleSupplier;
  */
 @Getter
 public class TankDriveSubsystem extends SubsystemBase implements AutoCloseable {
-    private final TankHardware TANK_HARDWARE;
+    private final TankDrivetrain TANK_HARDWARE;
 
-    public TankDriveSubsystem(TankHardware hardware) {
+    public TankDriveSubsystem(TankDrivetrain hardware) {
         this.TANK_HARDWARE = hardware;
     }
 

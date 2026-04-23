@@ -8,7 +8,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.common.swerve.PIDValue;
+import frc.robot.common.components.hardware.swerve.PIDValue;
 import org.lasarobotics.drive.swerve.child.MAXSwerveModule;
 import org.lasarobotics.hardware.revrobotics.Spark;
 

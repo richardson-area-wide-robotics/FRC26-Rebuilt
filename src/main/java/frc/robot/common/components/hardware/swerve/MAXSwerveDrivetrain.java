@@ -1,10 +1,16 @@
-package frc.robot.common.swerve;
+package frc.robot.common.components.hardware.swerve;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import lombok.Getter;
 
+/**
+ * Drivetrain for a robot with swerve drive
+ *
+ * @author Hudson Strub
+ * @since 2026 Offseason
+ */
 public class MAXSwerveDrivetrain {
 
     @Getter private final MAXSwerveModule frontLeft;
