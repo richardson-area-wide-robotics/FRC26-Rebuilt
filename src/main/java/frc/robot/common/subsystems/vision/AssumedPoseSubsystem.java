@@ -26,7 +26,7 @@ import org.photonvision.targeting.PhotonPipelineResult;
 
 public class AssumedPoseSubsystem extends SubsystemBase implements Pose2dSupplier {
 
-    public boolean useVisionData = true;
+    public boolean useVisionData = false;
 
     @Getter private final IMU imu;
     private final SwerveDrivePoseEstimator poseEstimator;

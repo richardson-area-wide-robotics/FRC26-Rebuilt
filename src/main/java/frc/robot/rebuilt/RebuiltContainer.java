@@ -67,10 +67,10 @@ public class RebuiltContainer implements IRobotContainer {
         // LeftY is the xRequest and LeftX is the yRequest for some reason
         DRIVE_SUBSYSTEM.setDefaultCommand(
           DRIVE_SUBSYSTEM.driveCommand(
-            HIDConstants.DRIVER_CONTROLLER.getLeftX(),
-            HIDConstants.DRIVER_CONTROLLER.getLeftY(),
-            HIDConstants.DRIVER_CONTROLLER.getRightX(),
-            true)
+            () -> HIDConstants.DRIVER_CONTROLLER.getLeftX(),
+            () -> HIDConstants.DRIVER_CONTROLLER.getLeftY(),
+            () -> HIDConstants.DRIVER_CONTROLLER.getRightX(),
+            false)
         );
 
     // Set up the auto builder
@@ -185,6 +185,12 @@ public class RebuiltContainer implements IRobotContainer {
     NamedCommands.registerCommand("Set Shooter Trench", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.TRENCH)));
     NamedCommands.registerCommand("Set Shooter Corner", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(Shooter.ShooterPosition.CORNER)));
     NamedCommands.registerCommand("Set Shooter Tower", Commands.runOnce(() -> SHOOTER.setCurrentShooterPosition(ShooterPosition.TOWER)));
+  }
+
+
+  @Override
+  public void robotPeriodic() {
+    ASSUMED_POSE.periodic();
   }
 
   @Override

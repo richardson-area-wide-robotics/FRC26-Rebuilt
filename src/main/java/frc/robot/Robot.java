@@ -7,6 +7,8 @@ package frc.robot;
 import com.strubium.ssjprofiler.Profiler;
 import com.strubium.ssjprofiler.ProfilerGlobal;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.common.LocalADStarAK;
 import frc.robot.common.components.TeamUtils;
@@ -31,6 +33,7 @@ import org.littletonrobotics.junction.Logger;
  */
 public class Robot extends LoggedRobot {
   private Command autonomousCommand;
+  private Field2d field = new Field2d();
 
   @Getter static private IRobotContainer robotContainer;
 
@@ -56,14 +59,21 @@ public class Robot extends LoggedRobot {
     robotContainer = RobotContainerRegistry.createContainerForTeam(TeamUtils.getTeamNumber());
 
     robotContainer.robotInit();
+
+    SmartDashboard.putData("Field", field);
     profiler.end();
   }
 
 
   @Override
   public void robotPeriodic() {
-    if (robotContainer.getPose2dSupplier() != null){
-      Logger.recordOutput("RobotPose", robotContainer.getPose2dSupplier().getPose());
+    if (robotContainer.getPose2dSupplier() != null &&
+            robotContainer.getPose2dSupplier().getPose() != null) {
+
+      var pose = robotContainer.getPose2dSupplier().getPose();
+
+      Logger.recordOutput("RobotPose", pose);
+      field.setRobotPose(pose);
     }
 
     logController("HID/Driver", CommonConstants.HIDConstants.DRIVER_CONTROLLER);
@@ -72,6 +82,8 @@ public class Robot extends LoggedRobot {
     DashboardAutoUpdater.updateAll();
     //CANDiagnostics.getInstance().checkHealth();
     CommandScheduler.getInstance().run();
+
+    robotContainer.robotPeriodic();
   }
 
 

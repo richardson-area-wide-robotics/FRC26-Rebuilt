@@ -8,7 +8,6 @@ import edu.wpi.first.units.measure.*;
 import frc.robot.common.interfaces.IMU;
 import org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity;
 import org.lasarobotics.hardware.LoggableHardware;
-import org.lasarobotics.hardware.PurpleManager;
 import org.lasarobotics.hardware.kauailabs.NavX2InputsAutoLogged;
 import org.littletonrobotics.junction.AutoLog;
 import org.littletonrobotics.junction.Logger;
@@ -81,7 +80,6 @@ public class RAWRNavX2 extends LoggableHardware implements IMU, org.lasarobotics
     this.lastUpdateTime = Instant.now();
 
     updateInputs();
-    PurpleManager.add(this);
   }
 
   @Override
@@ -183,7 +181,6 @@ public class RAWRNavX2 extends LoggableHardware implements IMU, org.lasarobotics
 
   @Override
   public void close() {
-    PurpleManager.remove(this);
     navx.close();
   }
 }

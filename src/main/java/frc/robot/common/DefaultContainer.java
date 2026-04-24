@@ -29,6 +29,11 @@ public class DefaultContainer implements IRobotContainer {
     }
 
     @Override
+    public void robotPeriodic(){
+
+    }
+
+    @Override
     public void robotInit() {
     }
 

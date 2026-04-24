@@ -28,6 +28,8 @@ public interface IRobotContainer {
     /**Ran periodically during auto */
     void autonomousPeriodic();
 
+    void robotPeriodic();
+
     /**Ran periodically during teleop */
     void teleopPeriodic();
 

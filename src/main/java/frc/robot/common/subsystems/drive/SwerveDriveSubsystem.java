@@ -21,6 +21,8 @@ import frc.robot.common.components.hardware.swerve.MAXSwerveDrivetrain;
 import frc.robot.CommonConstants.DriveConstants;
 import frc.robot.common.interfaces.IRobotContainer;
 
+import java.util.function.DoubleSupplier;
+
 public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositionSupplier {
 
   private final MAXSwerveDrivetrain SWERVE_DRIVETRAIN = new MAXSwerveDrivetrain(
@@ -45,20 +47,16 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
           DriveConstants.kBackRightChassisAngularOffset
   );
 
-  private final IRobotContainer robotContainer;
 
   /**
    * Create the DriveSubsystem.
    * */
   public SwerveDriveSubsystem() {
-    this.robotContainer = Robot.getRobotContainer();
-
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_MaxSwerve);
   }
 
   @Override
   public void periodic() {
-    //assumedPose.periodic();
   }
 
   /**
@@ -81,7 +79,7 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
                     xSpeedDelivered,
                     ySpeedDelivered,
                     rotDelivered,
-                    robotContainer.getPose2dSupplier().getPose().getRotation()
+                    Robot.getRobotContainer().getPose2dSupplier().getPose().getRotation()
             )
                     : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered)
     );
@@ -102,8 +100,20 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
       false);
   }
 
-  public Command driveCommand(double xSpeed, double ySpeed, double rot, boolean fieldRelative) {
-    return Commands.defer(run(() -> drive(xSpeed, ySpeed, rot, fieldRelative)), this); 
+  public Command driveCommand(
+          DoubleSupplier xSpeed,
+          DoubleSupplier ySpeed,
+          DoubleSupplier rot,
+          boolean fieldRelative
+  ) {
+    return run(() ->
+            drive(
+                    xSpeed.getAsDouble(),
+                    ySpeed.getAsDouble(),
+                    rot.getAsDouble(),
+                    fieldRelative
+            )
+    );
   }
 
   /**
@@ -126,8 +136,8 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
 
   public void configureAutoBuilder() {
     AutoBuilder.configure(
-            ()-> robotContainer.getPose2dSupplier().getPose(), // Robot pose supplier
-            (pose) -> robotContainer.getPose2dSupplier().resetPose(pose), // Method to reset odometry (will be called if your auto has a starting pose)
+            ()-> Robot.getRobotContainer().getPose2dSupplier().getPose(), // Robot pose supplier
+            (pose) -> Robot.getRobotContainer().getPose2dSupplier().resetPose(pose), // Method to reset odometry (will be called if your auto has a starting pose)
             this::getChassisSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
             this::driveRobotRelative, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
             new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
