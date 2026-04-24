@@ -21,8 +21,10 @@ import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
+import frc.robot.common.components.hardware.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
+import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;
 import frc.robot.rebuilt.components.HubStatus;
 import frc.robot.rebuilt.components.RobotSector;
 import frc.robot.rebuilt.subsystems.Feeder;
@@ -48,7 +50,7 @@ public class RebuiltContainer implements IRobotContainer {
   public static final Shooter SHOOTER = new Shooter(10, 11);
   public static final Feeder FEEDER = new Feeder(18, 14);
   public static final Intake INTAKE = new Intake(13, 15, 12);
-  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem();
+  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(new AssumedPoseSubsystem());
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
   public static SequentialCommandGroup sequencedCommand;

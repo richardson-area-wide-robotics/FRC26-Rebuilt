@@ -8,16 +8,15 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
-import frc.robot.common.components.hardware.gyro.RAWRNavX2;
 
 import java.util.List;
 import java.util.Optional;
 
 import frc.robot.common.interfaces.IMU;
+import frc.robot.common.subsystems.drive.ModulePositionSupplier;
+import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -28,17 +27,11 @@ public class AssumedPoseSubsystem extends SubsystemBase {
 
     public boolean useVisionData = true;
 
-    private final IMU imu;
+    @Getter private final IMU imu;
     private final SwerveDrivePoseEstimator poseEstimator;
     private final ModulePositionSupplier modulePositions;
     private final PhotonCamera photonCamera;
     private final PhotonPoseEstimator photonPoseEstimator;
-
-    /** Functional interface so this subsystem does not depend directly on your swerve subsystem implementation. */
-    @FunctionalInterface
-    public interface ModulePositionSupplier {
-        SwerveModulePosition[] get();
-    }
 
     public AssumedPoseSubsystem(
             IMU imu,
