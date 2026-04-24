@@ -13,6 +13,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
 import frc.robot.common.components.RobotUtils;
@@ -102,7 +103,7 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
   }
 
   public Command driveCommand(double xSpeed, double ySpeed, double rot, boolean fieldRelative) {
-    return run(() -> drive(xSpeed, ySpeed, rot, fieldRelative));
+    return Commands.defer(run(() -> drive(xSpeed, ySpeed, rot, fieldRelative)), this); 
   }
 
   /**

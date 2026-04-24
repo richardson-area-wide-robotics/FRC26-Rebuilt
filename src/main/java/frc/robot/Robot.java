@@ -62,7 +62,7 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotPeriodic() {
-    if ( robotContainer.getPose2dSupplier() != null){
+    if (robotContainer.getPose2dSupplier() != null){
       Logger.recordOutput("RobotPose", robotContainer.getPose2dSupplier().getPose());
     }
 
