@@ -4,5 +4,5 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 
 @FunctionalInterface
 public interface ModulePositionSupplier {
-    SwerveModulePosition[] get();
+    SwerveModulePosition[] getSwerveModulePositions();
 }

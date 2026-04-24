@@ -192,7 +192,7 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
   }
 
   @Override
-  public SwerveModulePosition[] get() {
+  public SwerveModulePosition[] getSwerveModulePositions() {
     return SWERVE_DRIVETRAIN.getPositions();
   }
 }

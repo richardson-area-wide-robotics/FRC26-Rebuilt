@@ -53,7 +53,7 @@ public class AssumedPoseSubsystem extends SubsystemBase implements Pose2dSupplie
         poseEstimator = new SwerveDrivePoseEstimator(
                 kinematics,
                 imu.getRotation2d(),
-                modulePositions.get(),
+                modulePositions.getSwerveModulePositions(),
                 new Pose2d(13, 4, new Rotation2d(Math.PI))
         );
 
@@ -84,7 +84,7 @@ public class AssumedPoseSubsystem extends SubsystemBase implements Pose2dSupplie
         poseEstimator.updateWithTime(
                 Timer.getFPGATimestamp(),
                 imu.getRotation2d(),
-                modulePositions.get()
+                modulePositions.getSwerveModulePositions()
         );
 
         Logger.recordOutput(getName() + "/PoseAfterCompute", getPose());
@@ -98,7 +98,7 @@ public class AssumedPoseSubsystem extends SubsystemBase implements Pose2dSupplie
     public void resetPose(Pose2d pose) {
         poseEstimator.resetPosition(
                 imu.getRotation2d(),
-                modulePositions.get(),
+                modulePositions.getSwerveModulePositions(),
                 pose
         );
     }
