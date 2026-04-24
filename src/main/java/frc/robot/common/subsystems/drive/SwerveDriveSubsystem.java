@@ -7,7 +7,6 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -15,12 +14,11 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Robot;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.components.hardware.swerve.MAXSwerveDrivetrain;
 import frc.robot.CommonConstants.DriveConstants;
-import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;
-
-import static edu.wpi.first.units.Units.DegreesPerSecond;
+import frc.robot.common.interfaces.IRobotContainer;
 
 public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositionSupplier {
 
@@ -46,14 +44,13 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
           DriveConstants.kBackRightChassisAngularOffset
   );
 
-  // TODO: Use our IMU class and gyro, move pose system out out of this
-  // TODO: Remove getHeading and stuff like that
+  private final IRobotContainer robotContainer;
 
-  private final AssumedPoseSubsystem assumedPose;
-
-  /** Creates a new DriveSubsystem. */
-  public SwerveDriveSubsystem(AssumedPoseSubsystem assumedPose) {
-    this.assumedPose = assumedPose;
+  /**
+   * Create the DriveSubsystem.
+   * */
+  public SwerveDriveSubsystem() {
+    this.robotContainer = Robot.getRobotContainer();
 
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_MaxSwerve);
   }
@@ -61,24 +58,6 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
   @Override
   public void periodic() {
     //assumedPose.periodic();
-  }
-
-  /**
-   * Returns the currently-estimated pose of the robot.
-   *
-   * @return The pose.
-   */
-  public Pose2d getPose() {
-    return assumedPose.getPose();
-  }
-
-  /**
-   * Resets the odometry to the specified pose.
-   *
-   * @param pose The pose to which to set the odometry.
-   */
-  public void resetOdometry(Pose2d pose) {
-      assumedPose.resetPose(pose);
   }
 
   /**
@@ -101,7 +80,7 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
                     xSpeedDelivered,
                     ySpeedDelivered,
                     rotDelivered,
-                    assumedPose.getPose().getRotation()
+                    robotContainer.getPose2dSupplier().getPose().getRotation()
             )
                     : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered)
     );
@@ -137,29 +116,8 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     SWERVE_DRIVETRAIN.setStates(desiredStates);
   }
 
-  /** Zeroes the heading of the robot. */
-  public void zeroHeading() {
-    assumedPose.resetPose(new Pose2d());
-  }
 
-  /**
-   * Returns the heading of the robot.
-   *
-   * @return the robot's heading in degrees, from -180 to 180
-   */
-  public double getHeading() {
-    return assumedPose.getPose().getRotation().getDegrees();
-  }
 
-  /**
-   * Returns the turn rate of the robot.
-   *
-   * @return The turn rate of the robot, in degrees per second
-   */
-  public double getTurnRate() {
-    return assumedPose.getImu().getYawRate().in(DegreesPerSecond)
-            * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
-  }
 
   public ChassisSpeeds getChassisSpeeds() {
     return DriveConstants.kDriveKinematics.toChassisSpeeds();
@@ -167,8 +125,8 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
 
   public void configureAutoBuilder() {
     AutoBuilder.configure(
-            this::getPose, // Robot pose supplier
-            this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
+            ()-> robotContainer.getPose2dSupplier().getPose(), // Robot pose supplier
+            (pose) -> robotContainer.getPose2dSupplier().resetPose(pose), // Method to reset odometry (will be called if your auto has a starting pose)
             this::getChassisSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
             this::driveRobotRelative, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
             new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains

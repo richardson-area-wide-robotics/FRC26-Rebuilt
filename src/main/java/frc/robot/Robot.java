@@ -32,7 +32,7 @@ import org.littletonrobotics.junction.Logger;
 public class Robot extends LoggedRobot {
   private Command autonomousCommand;
 
-  @Getter private IRobotContainer robotContainer;
+  @Getter static private IRobotContainer robotContainer;
 
   public Robot() {
     super();

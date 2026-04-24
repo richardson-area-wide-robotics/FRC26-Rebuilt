@@ -8,8 +8,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
 import com.strubium.ssjprofiler.Profiler;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -20,6 +19,7 @@ import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
+import frc.robot.common.components.hardware.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.Pose2dSupplier;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
@@ -44,13 +44,15 @@ import java.util.Objects;
 @Robot(team = 1745)
 public class RebuiltContainer implements IRobotContainer {
 
-  public static final AssumedPoseSubsystem ASSUMED_POSE = new AssumedPoseSubsystem()
+
+  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem();
+
+  public static final AssumedPoseSubsystem ASSUMED_POSE = new AssumedPoseSubsystem(new RAWRNavX2("navx"), CommonConstants.DriveConstants.kDriveKinematics, DRIVE_SUBSYSTEM, new Transform3d(new Translation3d(), new Rotation3d()),"camera");
 
   //TODO: Organize IDs
   public static final Shooter SHOOTER = new Shooter(10, 11);
   public static final Feeder FEEDER = new Feeder(18, 14);
   public static final Intake INTAKE = new Intake(13, 15, 12);
-  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(ASSUMED_POSE);
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(ASSUMED_POSE);
   public static SequentialCommandGroup sequencedCommand;
@@ -109,7 +111,7 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.OPERATOR_CONTROLLER.povUp(), Commands.runOnce(()-> SHOOTER.raiseOperatorModifer(10)) , Commands.none());
 
     // Driver Right Stick Button - Reset heading
-    RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM::zeroHeading, DRIVE_SUBSYSTEM), Commands.none());
+    //RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.rightStick(), Commands.runOnce(DRIVE_SUBSYSTEM::zeroHeading, DRIVE_SUBSYSTEM), Commands.none());
 
     //Driver DPad Up - Deploy intake
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.povUp(),
@@ -212,7 +214,7 @@ public class RebuiltContainer implements IRobotContainer {
     if(ScoringLocationLookup.team == null){
         ScoringLocationLookup.team = DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
     }
-    Logger.recordOutput("Assist/ShooterPosition",ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
+    Logger.recordOutput("Assist/ShooterPosition",ScoringLocationLookup.findClosest(getPose2dSupplier().getPose()));
     Logger.recordOutput("Assist/HubPose", ScoringLocationLookup.findHub());
 
     Logger.recordOutput("Status/Red", statuses[0]);

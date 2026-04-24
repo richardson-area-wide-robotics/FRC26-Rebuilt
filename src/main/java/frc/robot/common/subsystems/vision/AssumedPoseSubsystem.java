@@ -90,11 +90,13 @@ public class AssumedPoseSubsystem extends SubsystemBase implements Pose2dSupplie
         Logger.recordOutput(getName() + "/PoseAfterCompute", getPose());
     }
     /** Best assumed robot pose on the field */
+    @Override
     public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
     }
 
     /** Force pose reset (auto start, etc.) */
+    @Override
     public void resetPose(Pose2d pose) {
         poseEstimator.resetPosition(
                 imu.getRotation2d(),

@@ -51,8 +51,10 @@ flowchart TD
         AssumedPoseSubsystem[AssumedPoseSubsystem]
     end
     subgraph frc_robot_common_subsystems_drive[frc.robot.common.subsystems.drive]
+        Pose2dSupplier[Pose2dSupplier]
         TankDriveSubsystem[TankDriveSubsystem]
         SwerveDriveSubsystem[SwerveDriveSubsystem]
+        ModulePositionSupplier[ModulePositionSupplier]
     end
     subgraph frc_robot[frc.robot]
         CommonConstants[CommonConstants]
@@ -110,8 +112,8 @@ flowchart TD
     RobotExceptionHandler -.implements.-> Thread_UncaughtExceptionHandler
     CANDiagnostics -.implements.-> IDiagnostic
     DefaultContainer -.implements.-> IRobotContainer
+    AssumedPoseSubsystem -.implements.-> Pose2dSupplier
     TankDriveSubsystem -.implements.-> AutoCloseable
-    ModulePositionSupplier[ModulePositionSupplier]
     SwerveDriveSubsystem -.implements.-> ModulePositionSupplier
     RebuiltContainer -.implements.-> IRobotContainer
     MAXSwerveDrivetrain --> MAXSwerveModule
@@ -119,8 +121,10 @@ flowchart TD
     MAXSwerveDrivetrain --> MAXSwerveModule
     MAXSwerveDrivetrain --> MAXSwerveModule
     AssumedPoseSubsystem --> IMU
+    AssumedPoseSubsystem --> ModulePositionSupplier
     TankDriveSubsystem --> TankDrivetrain
-    RobotSectorEvaluator --> SwerveDriveSubsystem
+    SwerveDriveSubsystem --> IRobotContainer
+    RobotSectorEvaluator --> Pose2dSupplier
     Robot --> IRobotContainer
     style LocalADStarAK fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RobotContainerRegistry fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -148,8 +152,10 @@ flowchart TD
     style DashboardSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SingleMotorSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style AssumedPoseSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style Pose2dSupplier fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style TankDriveSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SwerveDriveSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style ModulePositionSupplier fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style CommonConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RebuiltConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RobotSector fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -174,5 +180,4 @@ flowchart TD
     style Pathfinder fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style org_lasarobotics_hardware_IMU fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
     style Thread_UncaughtExceptionHandler fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
-    style ModulePositionSupplier fill:#eeeeee,stroke:#999,color:#333,stroke-dasharray: 5 5
 ```
