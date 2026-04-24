@@ -4,20 +4,21 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import frc.robot.common.subsystems.DashboardSubsystem;
-import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
+import frc.robot.common.subsystems.drive.Pose2dSupplier;
 import frc.robot.rebuilt.components.RobotSector;
 import org.littletonrobotics.junction.Logger;
 
 public class RobotSectorEvaluator extends DashboardSubsystem {
     private final RobotSector[] sectorArr = new RobotSector[999];
     private int sectorArrPtr = 0;
-    SwerveDriveSubsystem drive;
+    Pose2dSupplier pose2dSupplier;
 
-    public RobotSectorEvaluator(SwerveDriveSubsystem drive) {
-    this.drive = drive;
+    public RobotSectorEvaluator(Pose2dSupplier pose2dSupplier) {
+        this.pose2dSupplier = pose2dSupplier;
     }
+
     public RobotSector getSector(){ //
-        Pose2d pose = drive.getPose();
+        Pose2d pose = pose2dSupplier.getPose();
         for (RobotSector robotSector : sectorArr) {
             if(robotSector == null) break;
             if ((Math.abs(robotSector.center.getX() - pose.getX()) < robotSector.width) &&

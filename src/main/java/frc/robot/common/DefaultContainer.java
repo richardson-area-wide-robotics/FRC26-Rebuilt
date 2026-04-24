@@ -1,5 +1,6 @@
 package frc.robot.common;
 
+import frc.robot.common.subsystems.drive.Pose2dSupplier;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import frc.robot.common.interfaces.IRobotContainer;
@@ -11,7 +12,6 @@ import frc.robot.common.annotations.Robot;
 public class DefaultContainer implements IRobotContainer {
 
     public static IRobotContainer createContainer(){
-
         return new DefaultContainer();
     }
 
@@ -42,6 +42,11 @@ public class DefaultContainer implements IRobotContainer {
 
     @Override
     public void teleopPeriodic() {
+    }
+
+    @Override
+    public Pose2dSupplier getPose2dSupplier() {
+        return null;
     }
 
 }

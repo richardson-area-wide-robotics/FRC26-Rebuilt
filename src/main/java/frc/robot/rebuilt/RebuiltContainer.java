@@ -15,14 +15,13 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
-import frc.robot.common.components.hardware.gyro.RAWRNavX2;
 import frc.robot.common.interfaces.IRobotContainer;
+import frc.robot.common.subsystems.drive.Pose2dSupplier;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;
 import frc.robot.rebuilt.components.HubStatus;
@@ -45,14 +44,15 @@ import java.util.Objects;
 @Robot(team = 1745)
 public class RebuiltContainer implements IRobotContainer {
 
+  public static final AssumedPoseSubsystem ASSUMED_POSE = new AssumedPoseSubsystem()
 
   //TODO: Organize IDs
   public static final Shooter SHOOTER = new Shooter(10, 11);
   public static final Feeder FEEDER = new Feeder(18, 14);
   public static final Intake INTAKE = new Intake(13, 15, 12);
-  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(new AssumedPoseSubsystem());
+  public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem(ASSUMED_POSE);
 
-  public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
+  public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(ASSUMED_POSE);
   public static SequentialCommandGroup sequencedCommand;
 
   private static SendableChooser<Command> automodeChooser;
@@ -252,5 +252,10 @@ public class RebuiltContainer implements IRobotContainer {
   @Override
   public Command getAutonomousCommand() {
     return automodeChooser.getSelected();
+  }
+
+  @Override
+  public Pose2dSupplier getPose2dSupplier() {
+    return ASSUMED_POSE;
   }
 }

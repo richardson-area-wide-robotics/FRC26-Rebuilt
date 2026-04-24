@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import frc.robot.common.interfaces.IMU;
 import frc.robot.common.subsystems.drive.ModulePositionSupplier;
+import frc.robot.common.subsystems.drive.Pose2dSupplier;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
@@ -23,7 +24,7 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
-public class AssumedPoseSubsystem extends SubsystemBase {
+public class AssumedPoseSubsystem extends SubsystemBase implements Pose2dSupplier {
 
     public boolean useVisionData = true;
 

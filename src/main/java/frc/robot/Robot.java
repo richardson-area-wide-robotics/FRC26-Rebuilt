@@ -14,6 +14,7 @@ import frc.robot.common.components.dashboard.DashboardAutoUpdater;
 import frc.robot.common.components.RobotContainerRegistry;
 import frc.robot.common.components.RobotExceptionHandler;
 import frc.robot.common.components.RobotUtils;
+import lombok.Getter;
 import org.littletonrobotics.junction.LoggedRobot;
 import com.pathplanner.lib.pathfinding.Pathfinding;
 
@@ -31,7 +32,7 @@ import org.littletonrobotics.junction.Logger;
 public class Robot extends LoggedRobot {
   private Command autonomousCommand;
 
-  private IRobotContainer robotContainer;
+  @Getter private IRobotContainer robotContainer;
 
   public Robot() {
     super();
@@ -61,6 +62,10 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotPeriodic() {
+    if ( robotContainer.getPose2dSupplier() != null){
+      Logger.recordOutput("RobotPose", robotContainer.getPose2dSupplier().getPose());
+    }
+
     logController("HID/Driver", CommonConstants.HIDConstants.DRIVER_CONTROLLER);
     logController("HID/Operator", CommonConstants.HIDConstants.OPERATOR_CONTROLLER);
 
