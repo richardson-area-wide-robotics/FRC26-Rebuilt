@@ -10,7 +10,6 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Frequency;
 import edu.wpi.first.units.measure.LinearVelocity;
-import frc.robot.common.interfaces.IMU;
 import org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity;
 
 import java.time.Duration;

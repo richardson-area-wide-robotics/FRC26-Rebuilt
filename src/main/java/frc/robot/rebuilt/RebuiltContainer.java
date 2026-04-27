@@ -20,7 +20,7 @@ import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.components.hardware.gyro.RAWRNavX2;
-import frc.robot.common.interfaces.IRobotContainer;
+import frc.robot.common.container.IRobotContainer;
 import frc.robot.common.subsystems.drive.Pose2dSupplier;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.common.subsystems.vision.AssumedPoseSubsystem;

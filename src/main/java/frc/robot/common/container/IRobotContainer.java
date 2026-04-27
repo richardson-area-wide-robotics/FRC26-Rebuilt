@@ -1,4 +1,4 @@
-package frc.robot.common.interfaces;
+package frc.robot.common.container;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.common.subsystems.drive.Pose2dSupplier;

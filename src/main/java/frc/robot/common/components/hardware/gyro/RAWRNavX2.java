@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.concurrent.ThreadLocalRandom;
 
 import edu.wpi.first.units.measure.*;
-import frc.robot.common.interfaces.IMU;
 import org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity;
 import org.lasarobotics.hardware.LoggableHardware;
 import org.lasarobotics.hardware.kauailabs.NavX2InputsAutoLogged;

@@ -39,6 +39,24 @@ public class MAXSwerveDrivetrain {
         };
     }
 
+    public SwerveModuleState[] getStates() {
+        return new SwerveModuleState[] {
+                frontLeft.getState(),
+                frontRight.getState(),
+                rearLeft.getState(),
+                rearRight.getState()
+        };
+    }
+
+    public SwerveModuleState[] getDesiredStates() {
+        return new SwerveModuleState[] {
+                frontLeft.getDesiredState(),
+                frontRight.getDesiredState(),
+                rearLeft.getDesiredState(),
+                rearRight.getDesiredState()
+        };
+    }
+
     public void setStates(SwerveModuleState[] states) {
         frontLeft.setDesiredState(states[0]);
         frontRight.setDesiredState(states[1]);

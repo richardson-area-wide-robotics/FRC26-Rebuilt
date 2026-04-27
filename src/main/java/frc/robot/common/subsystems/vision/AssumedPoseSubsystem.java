@@ -9,12 +9,12 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import java.util.List;
 import java.util.Optional;
 
-import frc.robot.common.interfaces.IMU;
+import frc.robot.common.components.hardware.gyro.IMU;
+import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.common.subsystems.drive.ModulePositionSupplier;
 import frc.robot.common.subsystems.drive.Pose2dSupplier;
 import lombok.Getter;
@@ -24,7 +24,7 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
-public class AssumedPoseSubsystem extends SubsystemBase implements Pose2dSupplier {
+public class AssumedPoseSubsystem extends DashboardSubsystem implements Pose2dSupplier {
 
     public boolean useVisionData = false;
 

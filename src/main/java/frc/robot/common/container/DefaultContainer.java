@@ -1,9 +1,8 @@
-package frc.robot.common;
+package frc.robot.common.container;
 
 import frc.robot.common.subsystems.drive.Pose2dSupplier;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import frc.robot.common.interfaces.IRobotContainer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.common.annotations.Robot;
 
@@ -30,7 +29,6 @@ public class DefaultContainer implements IRobotContainer {
 
     @Override
     public void robotPeriodic(){
-
     }
 
     @Override

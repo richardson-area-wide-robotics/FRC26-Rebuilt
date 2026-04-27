@@ -3,7 +3,6 @@ package frc.robot.common.components.dashboard.diagnostics;
 import edu.wpi.first.hal.can.CANStatus;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.common.interfaces.IDiagnostic;
 import com.toxicrain.instanceable.BaseInstanceable;
 
 /**

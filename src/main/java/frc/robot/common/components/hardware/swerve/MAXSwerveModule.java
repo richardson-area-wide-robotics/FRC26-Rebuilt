@@ -36,7 +36,7 @@ public class MAXSwerveModule {
     private final SparkClosedLoopController turningClosedLoopController;
 
     private final double chassisAngularOffset;
-    private SwerveModuleState desiredState = new SwerveModuleState(0.0, new Rotation2d());
+    @Getter private SwerveModuleState desiredState = new SwerveModuleState(0.0, new Rotation2d());
 
     public MAXSwerveModule(int drivingCANId, int turningCANId, double chassisAngularOffset) {
 

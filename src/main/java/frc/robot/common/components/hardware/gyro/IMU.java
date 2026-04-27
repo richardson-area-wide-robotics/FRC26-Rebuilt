@@ -1,4 +1,4 @@
-package frc.robot.common.interfaces;
+package frc.robot.common.components.hardware.gyro;
 
 import org.lasarobotics.drive.swerve.AdvancedSwerveKinematics.ControlCentricity;
 import edu.wpi.first.math.geometry.Rotation2d;

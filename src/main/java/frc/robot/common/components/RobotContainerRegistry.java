@@ -1,9 +1,9 @@
 package frc.robot.common.components;
 
 import com.strubium.ssjprofiler.Profiler;
-import frc.robot.common.DefaultContainer;
+import frc.robot.common.container.DefaultContainer;
+import frc.robot.common.container.IRobotContainer;
 import frc.robot.common.annotations.Robot;
-import frc.robot.common.interfaces.IRobotContainer;
 import lombok.experimental.UtilityClass;
 import org.reflections.Reflections;
 

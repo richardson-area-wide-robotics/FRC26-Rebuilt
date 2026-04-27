@@ -22,7 +22,7 @@ import com.pathplanner.lib.pathfinding.Pathfinding;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.common.interfaces.IRobotContainer;
+import frc.robot.common.container.IRobotContainer;
 import org.littletonrobotics.junction.Logger;
 
 
@@ -54,9 +54,11 @@ public class Robot extends LoggedRobot {
     // Set pathfinding algorithm to be AdvantageKit compatible
     Pathfinding.setPathfinder(new LocalADStarAK());
 
-    System.out.println("Starting with team: " + TeamUtils.getTeamNumber());
+    int teamNumber = TeamUtils.getTeamNumber();
+
+    System.out.println("Starting with team: " + teamNumber);
     RobotUtils.loadRobotConfig();
-    robotContainer = RobotContainerRegistry.createContainerForTeam(TeamUtils.getTeamNumber());
+    robotContainer = RobotContainerRegistry.createContainerForTeam(teamNumber);
 
     robotContainer.robotInit();
 

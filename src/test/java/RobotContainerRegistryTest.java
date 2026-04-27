@@ -1,6 +1,6 @@
-import frc.robot.common.DefaultContainer;
+import frc.robot.common.container.DefaultContainer;
 import frc.robot.common.components.RobotContainerRegistry;
-import frc.robot.common.interfaces.IRobotContainer;
+import frc.robot.common.container.IRobotContainer;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -11,15 +11,28 @@ import static org.junit.jupiter.api.Assertions.*;
 class RobotContainerRegistryTest {
 
     @Test
-    void testUnknownTeamReturnsDefault() {
-        IRobotContainer container = RobotContainerRegistry.createContainerForTeam(9999);
+    void testUnknownTeamsReturnDefault() {
+        int[] unknownTeams = {0, 1, 123, 9999, -5, 100000};
 
-        assertNotNull(container, "Unknown team should still return a container");
-        assertEquals(
-                DefaultContainer.class,
-                container.getClass(),
-                "Unknown team should return DefaultContainer"
-        );
+        for (int team : unknownTeams) {
+            IRobotContainer container = RobotContainerRegistry.createContainerForTeam(team);
+
+            assertEquals(DefaultContainer.class, container.getClass(),
+                    "Team " + team + " should return DefaultContainer");
+        }
+    }
+
+    @Test
+    void testAllContainersImplementInterface() throws Exception {
+        Field field = RobotContainerRegistry.class.getDeclaredField("TEAM_CONTAINERS");
+        field.setAccessible(true);
+
+        Map<Integer, Class<?>> map =
+                (Map<Integer, Class<?>>) field.get(null);
+
+        for (Class<?> clazz : map.values()) {
+            assertTrue(IRobotContainer.class.isAssignableFrom(clazz));
+        }
     }
 
     @Test

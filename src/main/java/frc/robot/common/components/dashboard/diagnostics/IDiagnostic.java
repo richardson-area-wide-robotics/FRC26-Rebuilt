@@ -1,4 +1,4 @@
-package frc.robot.common.interfaces;
+package frc.robot.common.components.dashboard.diagnostics;
 
 /** Interface for a diagnostic class
  *
