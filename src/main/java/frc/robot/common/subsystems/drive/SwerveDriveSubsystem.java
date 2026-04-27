@@ -4,6 +4,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
+import com.strubium.ssjprofiler.Profiler;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
@@ -132,6 +133,9 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
   }
 
   public void configureAutoBuilder() {
+    Profiler profiler = new Profiler("config auto builder");
+    profiler.start();
+
     AutoBuilder.configure(
             ()-> Robot.getRobotContainer().getPose2dSupplier().getPose(), // Robot pose supplier
             (pose) -> Robot.getRobotContainer().getPose2dSupplier().resetPose(pose), // Method to reset odometry (will be called if your auto has a starting pose)
@@ -155,6 +159,8 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
             },
             this // Reference to this subsystem to set requirements
     );
+
+    profiler.end();
   }
 
   @Override

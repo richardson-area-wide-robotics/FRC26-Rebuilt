@@ -73,9 +73,8 @@ public class RebuiltContainer implements IRobotContainer {
             false)
         );
 
-    // Set up the auto builder
-    DRIVE_SUBSYSTEM.configureAutoBuilder();
-
+      // Set up the auto builder
+      DRIVE_SUBSYSTEM.configureAutoBuilder();
 
 
       // Bind buttons and triggers
@@ -86,7 +85,7 @@ public class RebuiltContainer implements IRobotContainer {
 
       // Set up the auto chooser
       automodeChooser = AutoBuilder.buildAutoChooser();
-      SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
+      SmartDashboard.putData("Auto Mode", automodeChooser);
 
       SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(1.,1.,new Rotation2d()),1,1);
       SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER,new Pose2d(3.,1.,new Rotation2d()),1,1);

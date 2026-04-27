@@ -1,0 +1,7 @@
+Time for robot init to run was 532ms
+Time for team container scan to run was 100ms
+Time for assumed pose to run was 155ms
+Time for named auto scan to run was 16ms
+Time for dashboard auto scan to run was 8ms
+Time for config auto builder to run was 5ms
+Time for bindings to run was 9ms

@@ -33,7 +33,7 @@ import org.littletonrobotics.junction.Logger;
  */
 public class Robot extends LoggedRobot {
   private Command autonomousCommand;
-  private Field2d field = new Field2d();
+  private final Field2d field = new Field2d();
 
   @Getter static private IRobotContainer robotContainer;
 
