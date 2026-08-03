@@ -34,8 +34,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.CommonConstants.DriveConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.CommonConstants.LogConstants;
+import frc.robot.CommonConstants.PathFollowingConstants;
 import frc.robot.common.components.RobotUtils;
-import frc.robot.common.subsystems.vision.AssumedPoseSubsystem.ModulePositionSupplier;
+import frc.robot.common.interfaces.ModulePositionSupplier;
 import frc.robot.common.swerve.MAXSwerveModule;
 
 import org.littletonrobotics.junction.Logger;
@@ -403,8 +404,14 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
             this::getChassisSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
             this::driveRobotRelative, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
             new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
-                    new PIDConstants(14.0, 0.0, 0.1), // Translation PID constants
-                    new PIDConstants(2.1, 0.0, 0.2) // Rotation PID constants
+                    new PIDConstants(
+                            PathFollowingConstants.TRANSLATION_P,
+                            PathFollowingConstants.TRANSLATION_I,
+                            PathFollowingConstants.TRANSLATION_D),
+                    new PIDConstants(
+                            PathFollowingConstants.ROTATION_P,
+                            PathFollowingConstants.ROTATION_I,
+                            PathFollowingConstants.ROTATION_D)
             ),
             RobotUtils.getRobotConfig(), // The robot configuration
             () -> {

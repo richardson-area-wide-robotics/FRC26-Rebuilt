@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Random;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.common.components.diagnostics.VisionCalibration.RunningStats;
@@ -148,6 +150,50 @@ class VisionCalibrationTest {
       }
       assertEquals(0.0, calibration.getCalibrationDistanceMeters(), 1e-9);
       assertEquals(1.0, calibration.getWheelScaleEstimate(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("Noise inflates the raw ratio, and the correction removes most of it")
+    void noiseCorrectionRemovesInflation() {
+      // Odometry and vision agree perfectly on truth, so the honest answer is 1.0. But the
+      // vision samples carry positional noise, and noise only ever ADDS length to a measured
+      // path — a random walk is never shorter than the straight line between its endpoints.
+      // Without correction the ratio therefore reads high.
+      //
+      // A fixed seed keeps this deterministic; nextGaussian gives genuinely independent
+      // normal samples, which a hand-rolled bit-sliced LCG does not.
+      final double sigma = 0.04;
+      Random random = new Random(20260803L);
+
+      // Stationary phase first, so the analyser measures the noise it must correct for.
+      for (int i = 0; i < 200; i++) {
+        calibration.addSample(
+            pose(2.0 + random.nextGaussian() * sigma, 2.0 + random.nextGaussian() * sigma),
+            pose(2.0, 2.0), pose(2.0, 2.0), 0.0, 2.0, 0.02, 0.0);
+      }
+
+      double measuredSigma = calibration.getMeasuredXyStdDevMeters();
+      assertEquals(sigma, measuredSigma, sigma * 0.25,
+          "The analyser must recover the injected noise level before it can correct for it");
+
+      // Now drive 50 m in a straight line with the same noise on every vision sample.
+      for (int i = 0; i <= 100; i++) {
+        double truth = i * 0.5;
+        calibration.addSample(
+            pose(truth + random.nextGaussian() * sigma, random.nextGaussian() * sigma),
+            pose(truth, 0), pose(truth, 0), 0.0, 2.5, 0.03, 1.5);
+      }
+
+      double raw = calibration.getRawWheelScaleEstimate();
+      double corrected = calibration.getWheelScaleEstimate();
+
+      assertTrue(raw > 1.0,
+          "Raw ratio should be inflated above the true 1.0 by noise, was " + raw);
+      assertTrue(Math.abs(corrected - 1.0) < Math.abs(raw - 1.0),
+          "The correction must move the estimate closer to truth. raw=" + raw
+              + " corrected=" + corrected);
+      assertEquals(1.0, corrected, 0.01,
+          "Corrected estimate should land near the true scale of 1.0, was " + corrected);
     }
 
     /**

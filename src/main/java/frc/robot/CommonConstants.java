@@ -83,10 +83,34 @@ public final class CommonConstants {
     // more teeth will result in a robot that drives faster).
     public static final int kDrivingMotorPinionTeeth = 14;
 
-    // Calculations required for driving motor conversion factors and feed forward.
-    // NOTE: the divisor must stay a double literal. As `5676 / 60` this was integer
-    // division, yielding 94.0 instead of 94.6 and biasing the drive feedforward.
-    public static final double kDrivingMotorFreeSpeedRps = 5676 / 60.0;
+    /**
+     * Free speed of the drive motor, in revolutions per second.
+     *
+     * <p><b>This robot drives on NEO Vortex motors with SPARK Flex controllers</b>, whose
+     * free speed is <b>6784 RPM</b> per REV's datasheet.
+     *
+     * <p>It previously read {@code 5676 / 60}, which is the free speed of the <b>NEO
+     * v1.1</b> — the default in WPILib's MAXSwerve template. That is a different motor, and
+     * the 19.5% error propagated straight into the velocity feedforward:
+     * {@code kV = 12 V / kDriveWheelFreeSpeedRps} was 2.50 instead of 2.09, so the
+     * feedforward over-commanded voltage on every drive request and the closed loop had to
+     * fight it continuously.
+     *
+     * <p>The divisor must also stay a double literal: as {@code 5676 / 60} this was integer
+     * division, discarding the fraction on top of using the wrong motor.
+     */
+    public static final double kDrivingMotorFreeSpeedRps = 6784 / 60.0;
+    /**
+     * REV MAXSwerve 3 inch wheel, nominal diameter.
+     *
+     * <p>0.0762 m is exactly 3.00 in, so this is the correct nominal figure. The
+     * <em>effective</em> rolling diameter is normally slightly smaller once tread
+     * compression and wear are accounted for, which is what makes odometry over-report
+     * distance.
+     *
+     * <p>{@code Calibration/WheelScale/Estimate} measures that difference against AprilTag
+     * ground truth — expect a value a little under 1.0. Multiply this constant by it.
+     */
     public static final double kWheelDiameterMeters = 0.0762;
     public static final double kWheelCircumferenceMeters = kWheelDiameterMeters * Math.PI;
     // 45 teeth on the wheel's bevel gear, 22 teeth on the first-stage spur gear, 15
@@ -131,6 +155,37 @@ public final class CommonConstants {
     public static final int kRearRightTurningCanId = 2;
 
     public static final boolean kGyroReversed = false;
+  }
+
+  /**
+   * Gains for PathPlanner's holonomic path-following controller.
+   *
+   * <p><strong>These have never been evaluated against correct robot behaviour.</strong>
+   * Until this branch, {@code driveRobotRelative} multiplied every PathPlanner request by
+   * the maximum speed before desaturation clamped it, so every path ran flat out regardless
+   * of its velocity profile. Any apparent tuning was therefore compensating for that bug.
+   *
+   * <p>Two specific reasons to distrust the values below:
+   * <ul>
+   *   <li>{@code ROTATION_*} is byte-identical to the module <em>steering</em> PID in
+   *       {@link frc.robot.common.swerve.Configs} — a different plant with different units.
+   *       That is a copy-paste signature, not a tuned result.</li>
+   *   <li>A translation P of 14.0 is aggressive for a holonomic controller, where low single
+   *       digits are more usual.</li>
+   * </ul>
+   *
+   * <p>They are preserved rather than guessed at, because changing control gains without
+   * evidence is not an improvement. Re-tune both on the robot now that path velocities are
+   * honoured, and use the {@code TunableNumber} wiring to do it without a redeploy.
+   */
+  public static class PathFollowingConstants {
+    public static final double TRANSLATION_P = 14.0;
+    public static final double TRANSLATION_I = 0.0;
+    public static final double TRANSLATION_D = 0.1;
+
+    public static final double ROTATION_P = 2.1;
+    public static final double ROTATION_I = 0.0;
+    public static final double ROTATION_D = 0.2;
   }
 
   public static class SmartDashboardConstants {

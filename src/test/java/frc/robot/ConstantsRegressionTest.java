@@ -30,12 +30,27 @@ import org.junit.jupiter.api.Test;
 class ConstantsRegressionTest {
 
   @Test
-  @DisplayName("Free speed is not truncated by integer division")
-  void freeSpeedIsNotIntegerDivided() {
-    // Was `5676 / 60`, which is integer division and yields 94.0. The real value is 94.6,
-    // and this feeds the drive velocity feedforward.
-    assertEquals(94.6, ModuleConstants.kDrivingMotorFreeSpeedRps, 1e-9);
-    assertNotEquals(94.0, ModuleConstants.kDrivingMotorFreeSpeedRps);
+  @DisplayName("Free speed is the NEO Vortex's, not the NEO v1.1's, and not integer divided")
+  void freeSpeedMatchesTheActualDriveMotor() {
+    // The drivetrain runs NEO Vortex on SPARK Flex: 6784 RPM per REV's datasheet.
+    // This previously read `5676 / 60` — the NEO v1.1 free speed from WPILib's MAXSwerve
+    // template, integer-divided. Two separate errors in one expression, and the 19.5% motor
+    // mismatch fed straight into the velocity feedforward.
+    assertEquals(6784 / 60.0, ModuleConstants.kDrivingMotorFreeSpeedRps, 1e-9);
+    assertNotEquals(94.0, ModuleConstants.kDrivingMotorFreeSpeedRps, "integer division");
+    assertNotEquals(94.6, ModuleConstants.kDrivingMotorFreeSpeedRps, "NEO v1.1 free speed");
+  }
+
+  @Test
+  @DisplayName("Drive feedforward kV reflects the Vortex, so the max speed cap is conservative")
+  void maxSpeedIsBelowPhysicalCapability() {
+    // With the corrected free speed the drivetrain's physical top speed is ~5.7 m/s, so the
+    // 4.8 m/s cap now genuinely is a chosen limit rather than an accidental one that
+    // happened to match the wrong motor's free speed.
+    assertTrue(ModuleConstants.kDriveWheelFreeSpeedRps > DriveConstants.kMaxSpeedMetersPerSecond,
+        "Configured max speed should sit at or below the physical free speed; physical="
+            + ModuleConstants.kDriveWheelFreeSpeedRps
+            + " configured=" + DriveConstants.kMaxSpeedMetersPerSecond);
   }
 
   @Test

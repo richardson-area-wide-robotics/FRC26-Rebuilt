@@ -145,6 +145,10 @@ if (errorProneEnabled) {
             // Only ever fires inside AdvantageKit's @AutoLog generated sources.
             disable("MissingOverride")
 
+            // Catches fields and locals that are written but never read — the class of
+            // oversight that leaves half-finished wiring looking finished.
+            check("UnusedVariable", net.ltgt.gradle.errorprone.CheckSeverity.WARN)
+
             // These three checks each caught a real, shipped bug in this codebase
             // (string identity on the FMS message, integer division in the drive
             // feedforward, bitwise & in the shooter interlock). Promote them to

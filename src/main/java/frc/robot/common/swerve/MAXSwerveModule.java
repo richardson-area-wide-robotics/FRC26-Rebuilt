@@ -13,6 +13,8 @@ import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.PersistMode;
@@ -116,6 +118,36 @@ public class MAXSwerveModule {
    */
   public SwerveModuleState getDesiredState() {
     return m_desiredState;
+  }
+
+  /**
+   * Re-applies the drive closed-loop gains without touching any other configuration.
+   *
+   * <p>For live tuning only. Uses no-reset, no-persist so it is a cheap in-memory tweak
+   * rather than a full reconfiguration and a flash write — the latter would wear the
+   * controller and stall the CAN bus if done repeatedly.
+   *
+   * @param p proportional gain.
+   * @param d derivative gain.
+   */
+  public void applyDriveGains(double p, double d) {
+    SparkFlexConfig config = new SparkFlexConfig();
+    config.closedLoop.p(p).d(d);
+    m_drivingSpark.configure(
+        config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+  }
+
+  /**
+   * Re-applies the steering closed-loop gains without touching any other configuration.
+   *
+   * @param p proportional gain.
+   * @param d derivative gain.
+   */
+  public void applyTurnGains(double p, double d) {
+    SparkMaxConfig config = new SparkMaxConfig();
+    config.closedLoop.p(p).d(d);
+    m_turningSpark.configure(
+        config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
   }
 
   /** Zeroes all the SwerveModule encoders. */

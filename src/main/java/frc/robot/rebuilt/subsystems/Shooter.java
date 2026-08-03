@@ -4,6 +4,7 @@ import java.util.function.BooleanSupplier;
 
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.NamedAuto;
+import frc.robot.common.components.diagnostics.TunableNumber;
 import frc.robot.common.subsystems.DashboardSubsystem;
 import frc.robot.rebuilt.RebuiltConstants.ShooterConstants;
 import lombok.Setter;
@@ -34,6 +35,14 @@ import org.littletonrobotics.junction.Logger;
 public class Shooter extends DashboardSubsystem {
 
     private final Spark motor1;
+
+    /**
+     * The follower.
+     *
+     * <p>Deliberately retained but never read after construction: it mirrors the leader in
+     * hardware, so nothing commands it directly. Keeping the reference means the object is
+     * not garbage collected and stays available for diagnostics.
+     */
     private final Spark motor2;
 
     /** True while this alliance's hub is scoring. Injected so it works in every mode. */
@@ -46,6 +55,21 @@ public class Shooter extends DashboardSubsystem {
     private double operatorRPMModifer;
 
     private boolean shooterRunning;
+
+    /**
+     * Live-tunable closed-loop gains.
+     *
+     * <p>Inert unless {@code TunableNumber.TUNING_ENABLED} is true, in which case these
+     * appear on the dashboard and the SPARK is reconfigured only when a value actually
+     * changes — reconfiguring every loop would flood the CAN bus.
+     *
+     * <p>The flywheel is the best candidate for live tuning on this robot: spin-up time and
+     * recovery between shots dominate cycle time, and the effect of a gain change is visible
+     * within a second on {@code Shooter/Activity/RPMError}.
+     */
+    private final TunableNumber tunableP = new TunableNumber("Shooter/kP", ShooterConstants.kP);
+    private final TunableNumber tunableI = new TunableNumber("Shooter/kI", ShooterConstants.kI);
+    private final TunableNumber tunableD = new TunableNumber("Shooter/kD", ShooterConstants.kD);
 
     public enum ShooterPosition {
         IDLE(1700),
@@ -220,8 +244,29 @@ public class Shooter extends DashboardSubsystem {
         }
     }
 
+    /**
+     * Re-applies the closed-loop gains, used when a tunable value changes.
+     *
+     * @param p proportional gain.
+     * @param i integral gain.
+     * @param d derivative gain.
+     */
+    private void applyGains(double p, double i, double d) {
+        SparkFlexConfig config = new SparkFlexConfig();
+        config.closedLoop.p(p).i(i).d(d);
+        // kNoResetSafeParameters and kNoPersistParameters: this is a live tuning tweak, not
+        // a full reconfiguration, so leave everything else alone and do not burn flash.
+        motor1.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+        System.out.println("Shooter gains updated: p=" + p + " i=" + i + " d=" + d);
+    }
+
     @Override
     public void periodic() {
+        // No-ops entirely when tuning is disabled.
+        tunableP.ifChanged(p -> applyGains(p, tunableI.get(), tunableD.get()));
+        tunableI.ifChanged(i -> applyGains(tunableP.get(), i, tunableD.get()));
+        tunableD.ifChanged(d -> applyGains(tunableP.get(), tunableI.get(), d));
+
         Logger.recordOutput(getName() + "/Activity/Shooter", shooterRunning);
         Logger.recordOutput(getName() + "/Activity/DesiredRPM", getTargetRPM());
         Logger.recordOutput(getName() + "/Activity/CurrentRPM", getMeasuredRPM());

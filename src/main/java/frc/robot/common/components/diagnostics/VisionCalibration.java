@@ -1,5 +1,8 @@
 package frc.robot.common.components.diagnostics;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import org.littletonrobotics.junction.Logger;
@@ -97,6 +100,15 @@ public class VisionCalibration {
   private double visionPathMeters;
   private Pose2d lastOdometrySample;
   private Pose2d lastVisionSample;
+
+  /**
+   * Individual measured vision segment lengths, retained so they can be noise-corrected once
+   * the noise level is known.
+   *
+   * <p>A calibration run produces one entry per ~30 cm travelled, so a few hundred for a
+   * long run — small enough to keep.
+   */
+  private final List<Double> visionSegments = new ArrayList<>();
 
   // Statistics.
   private final RunningStats gyroYawErrorDeg = new RunningStats();
@@ -196,9 +208,39 @@ public class VisionCalibration {
 
     odometryPathMeters += odometrySegment;
     visionPathMeters += visionSegment;
+    visionSegments.add(visionSegment);
 
     lastOdometrySample = odometryOnlyPose;
     lastVisionSample = visionPose;
+  }
+
+  /**
+   * Removes the length that measurement noise adds to a path.
+   *
+   * <p>Summing distances between noisy positions systematically over-reports: a random walk
+   * is never shorter than the straight line between its endpoints, so noise only ever adds
+   * length. Left uncorrected, the wheel-scale ratio reads high — and the unit tests miss it,
+   * because synthetic noise-free samples have nothing to correct.
+   *
+   * <p>Each measured segment is the true displacement plus the difference of two independent
+   * position errors. With per-axis standard deviation sigma over two axes, that gives
+   * {@code E[measured^2] = true^2 + 4 * sigma^2}, so the true length is recovered as
+   * {@code sqrt(measured^2 - 4 * sigma^2)}.
+   *
+   * @return noise-corrected total vision path length in metres.
+   */
+  private double correctedVisionPathMeters() {
+    double sigma = getMeasuredXyStdDevMeters();
+    if (sigma <= 0 || visionSegments.isEmpty()) {
+      return visionPathMeters; // Noise not measured yet; nothing defensible to subtract.
+    }
+
+    double noiseVariance = 4.0 * sigma * sigma;
+    double total = 0;
+    for (double measured : visionSegments) {
+      total += Math.sqrt(Math.max(0.0, measured * measured - noiseVariance));
+    }
+    return total;
   }
 
   /**
@@ -211,6 +253,22 @@ public class VisionCalibration {
    * @return the wheel-scale correction factor.
    */
   public double getWheelScaleEstimate() {
+    if (odometryPathMeters < 1.0) {
+      return 1.0;
+    }
+    return correctedVisionPathMeters() / odometryPathMeters;
+  }
+
+  /**
+   * The same ratio without the noise correction.
+   *
+   * <p>Exposed for comparison: the gap between this and {@link #getWheelScaleEstimate()} is
+   * how much measurement noise was inflating the answer. If the two differ substantially,
+   * the camera is noisy enough that the calibration deserves a longer run.
+   *
+   * @return the uncorrected wheel-scale ratio.
+   */
+  public double getRawWheelScaleEstimate() {
     if (odometryPathMeters < 1.0) {
       return 1.0;
     }
@@ -279,8 +337,12 @@ public class VisionCalibration {
     Logger.recordOutput(logRoot + "/Rejected", rejectedCount);
 
     Logger.recordOutput(logRoot + "/WheelScale/Estimate", getWheelScaleEstimate());
+    Logger.recordOutput(logRoot + "/WheelScale/EstimateRaw", getRawWheelScaleEstimate());
     Logger.recordOutput(logRoot + "/WheelScale/OdometryPathMeters", odometryPathMeters);
     Logger.recordOutput(logRoot + "/WheelScale/VisionPathMeters", visionPathMeters);
+    Logger.recordOutput(logRoot + "/WheelScale/VisionPathCorrectedMeters",
+        correctedVisionPathMeters());
+    Logger.recordOutput(logRoot + "/WheelScale/Segments", visionSegments.size());
     Logger.recordOutput(logRoot + "/WheelScale/Trustworthy", isWheelScaleTrustworthy());
 
     Logger.recordOutput(logRoot + "/GyroYawError/MeanDeg", gyroYawErrorDeg.getMean());
@@ -309,6 +371,7 @@ public class VisionCalibration {
   public void reset() {
     odometryPathMeters = 0;
     visionPathMeters = 0;
+    visionSegments.clear();
     lastOdometrySample = null;
     lastVisionSample = null;
     sampleCount = 0;

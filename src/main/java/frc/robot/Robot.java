@@ -105,11 +105,17 @@ public class Robot extends LoggedRobot {
     logController("HID/Operator", CommonConstants.HIDConstants.OPERATOR_CONTROLLER);
 
     DashboardAutoUpdater.updateAll();
+
+    // Field state must be refreshed BEFORE the scheduler runs. Commands scheduled below
+    // consult it — most importantly the shooter's hub interlock — so updating it afterwards
+    // would leave every decision acting on the previous loop's answer, up to 20 ms stale.
+    // Around a hub transition that is precisely when the answer changes.
+    robotContainer.robotPeriodic();
+
     CommandScheduler.getInstance().run();
 
-    // Runs in every mode, so field state and health checks stay live during autonomous
-    // too — previously this work only happened in teleop.
-    robotContainer.robotPeriodic();
+    // Expectations run last, so they observe what the commands actually did this loop
+    // rather than what they did last loop.
     ExpectationMonitor.getInstance().update();
   }
 
