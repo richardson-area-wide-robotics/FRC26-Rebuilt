@@ -400,6 +400,31 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     m_rearRight.setDriveOpenLoop(dutyCycle, straight);
   }
 
+  /**
+   * @return applied drive voltage per module, in FL, FR, RL, RR order.
+   *     Needed to characterise each module separately: published motor specs are typical
+   *     figures, and individual motors vary enough that a single averaged kV hides a weak
+   *     corner.
+   */
+  public double[] getModuleDriveVoltages() {
+    return new double[] {
+      m_frontLeft.getDriveVoltage(),
+      m_frontRight.getDriveVoltage(),
+      m_rearLeft.getDriveVoltage(),
+      m_rearRight.getDriveVoltage()
+    };
+  }
+
+  /** @return measured drive velocity per module in m/s, in FL, FR, RL, RR order. */
+  public double[] getModuleDriveVelocities() {
+    return new double[] {
+      m_frontLeft.getDriveVelocity(),
+      m_frontRight.getDriveVelocity(),
+      m_rearLeft.getDriveVelocity(),
+      m_rearRight.getDriveVelocity()
+    };
+  }
+
   /** @return mean applied drive voltage across the four modules. */
   public double getAverageDriveVoltage() {
     return (m_frontLeft.getDriveVoltage() + m_frontRight.getDriveVoltage()

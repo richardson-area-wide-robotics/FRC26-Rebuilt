@@ -106,7 +106,7 @@ Runs in dependency order:
 |---|---|---|
 | Straight run, open loop | **Wheel scale**, **steering misalignment** | Open loop deliberately — closed loop would correct the error being measured |
 | Spin in place | **Gyro scale**, **effective drive radius** | Several turns, so scale error beats tag noise |
-| Stepped duty-cycle sweep | **kS**, **kV** | Watch `R²`; a poor fit means wheel slip or not enough run-up |
+| Stepped duty-cycle sweep | **kS**, **kV** — *per module* | Watch `R²`; a poor fit means wheel slip or not enough run-up |
 | 10 ft, open loop | Dead-reckoning accuracy | The honest odometry number |
 | 10 ft, closed loop | Corrected accuracy | Should be substantially better |
 
@@ -128,6 +128,23 @@ From the datasheets, the budget is 0.833%, and two terms dominate:
 calibrator measures it.
 
 Encoder quantization and gyro drift are nowhere near mattering. Do not spend time there.
+
+### Per-module motor variance
+
+Published motor specs are *typical* values — REV's own 5676 RPM is an empirical average — and
+individual motors vary. So the sweep fits **each module separately** rather than averaging
+first, which would produce one tidy number and hide the useful one.
+
+Read `Calibration/Auto/ModuleKvSpreadPercent`:
+
+- **Under ~8%** — normal manufacturing variation, absorbed by the velocity loop. One robot-wide
+  kV is fine.
+- **Over ~8%** — one corner is materially weaker. The report names it. Check gearing, wheel
+  wear, and whether that module has a different motor than you think before accepting an
+  averaged kV.
+
+This matters for the 1″ spec directly: a weak corner pulls the robot off a straight line, which
+shows up as cross-track error rather than distance error.
 
 **Closed loop changes the game.** Terminating on the tag-corrected pose removes wheel scale
 from the endpoint entirely — it then only shapes the velocity profile. Expect closed loop to

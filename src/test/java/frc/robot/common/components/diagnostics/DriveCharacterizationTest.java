@@ -102,6 +102,98 @@ class DriveCharacterizationTest {
   }
 
   @Nested
+  @DisplayName("Module-to-module variance")
+  class ModuleVarianceTests {
+
+    /** Builds a trustworthy fit with a given kV. */
+    private Feedforward fitWithKv(double kv) {
+      FeedforwardFit fit = new FeedforwardFit();
+      for (double v = 0.5; v <= 3.0; v += 0.5) {
+        fit.add(0.25 + kv * v, v);
+      }
+      return fit.fit();
+    }
+
+    @Test
+    @DisplayName("Four matched motors report a small spread and count as uniform")
+    void matchedMotorsAreUniform() {
+      // 2% spread, which is normal manufacturing variation.
+      DriveCharacterization.ModuleVariance variance =
+          DriveCharacterization.summariseModuleVariance(new Feedforward[] {
+              fitWithKv(2.09), fitWithKv(2.11), fitWithKv(2.10), fitWithKv(2.12)});
+
+      assertEquals(4, variance.usableFits());
+      assertTrue(variance.spreadPercent() < 3.0);
+      assertTrue(variance.isUniform(),
+          "A couple of percent of variation is expected and absorbed by the velocity loop");
+      assertEquals(2.105, variance.meanKv(), 0.01);
+    }
+
+    @Test
+    @DisplayName("A materially weaker corner is flagged and identified")
+    void weakCornerIsIdentified() {
+      // Rear-left 20% off the others: a wrong gear ratio, a worn wheel, or a tired motor.
+      DriveCharacterization.ModuleVariance variance =
+          DriveCharacterization.summariseModuleVariance(new Feedforward[] {
+              fitWithKv(2.09), fitWithKv(2.10), fitWithKv(2.55), fitWithKv(2.11)});
+
+      assertFalse(variance.isUniform(),
+          "20% spread means one corner pulls the robot off a straight line");
+      assertEquals(2, variance.worstModule(), "Rear-left is index 2 in FL, FR, RL, RR order");
+      assertTrue(variance.spreadPercent() > 15);
+    }
+
+    @Test
+    @DisplayName("Min and max bracket every usable fit")
+    void minMaxBracketTheFits() {
+      DriveCharacterization.ModuleVariance variance =
+          DriveCharacterization.summariseModuleVariance(new Feedforward[] {
+              fitWithKv(2.00), fitWithKv(2.20), fitWithKv(2.10), fitWithKv(2.15)});
+
+      assertEquals(2.00, variance.minKv(), 0.01);
+      assertEquals(2.20, variance.maxKv(), 0.01);
+      assertTrue(variance.meanKv() > variance.minKv());
+      assertTrue(variance.meanKv() < variance.maxKv());
+    }
+
+    @Test
+    @DisplayName("Untrustworthy fits are excluded rather than dragging the mean")
+    void poorFitsAreExcluded() {
+      Feedforward poor = new Feedforward(0, 0, 0, 0);
+      DriveCharacterization.ModuleVariance variance =
+          DriveCharacterization.summariseModuleVariance(new Feedforward[] {
+              fitWithKv(2.10), poor, fitWithKv(2.12), fitWithKv(2.11)});
+
+      assertEquals(3, variance.usableFits());
+      assertEquals(2.11, variance.meanKv(), 0.02,
+          "A zero-kV failed fit must not pull the mean down");
+    }
+
+    @Test
+    @DisplayName("Nulls are tolerated, for a sweep that never ran")
+    void nullsAreTolerated() {
+      DriveCharacterization.ModuleVariance variance =
+          DriveCharacterization.summariseModuleVariance(new Feedforward[] {null, null, null, null});
+
+      assertEquals(0, variance.usableFits());
+      assertEquals(-1, variance.worstModule());
+      assertFalse(variance.isUniform());
+    }
+
+    @Test
+    @DisplayName("Too few usable fits is never called uniform")
+    void tooFewFitsIsNotUniform() {
+      DriveCharacterization.ModuleVariance variance =
+          DriveCharacterization.summariseModuleVariance(new Feedforward[] {
+              fitWithKv(2.10), null, null, null});
+
+      assertEquals(1, variance.usableFits());
+      assertFalse(variance.isUniform(),
+          "One module tells you nothing about whether the four agree");
+    }
+  }
+
+  @Nested
   @DisplayName("Scale factors")
   class ScaleTests {
 

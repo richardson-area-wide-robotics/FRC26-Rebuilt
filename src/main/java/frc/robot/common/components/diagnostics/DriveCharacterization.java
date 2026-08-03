@@ -120,6 +120,86 @@ public final class DriveCharacterization {
     }
   }
 
+  /**
+   * How much four modules disagree about their own feedforward.
+   *
+   * @param meanKv          Mean kV across the modules that produced a usable fit.
+   * @param minKv           Lowest kV seen.
+   * @param maxKv           Highest kV seen.
+   * @param spreadPercent   Peak-to-peak spread as a percentage of the mean.
+   * @param worstModule     Index of the module furthest from the mean, or −1 if none.
+   * @param usableFits      How many modules produced a trustworthy fit.
+   */
+  public record ModuleVariance(
+      double meanKv, double minKv, double maxKv, double spreadPercent,
+      int worstModule, int usableFits) {
+
+    /**
+     * Whether the spread is small enough to treat the drivetrain as four identical motors.
+     *
+     * <p>Published free speed is a typical figure, not a guarantee: individual motors vary, and
+     * REV's own 5676 RPM is an empirical average. A few percent of spread is normal and can be
+     * absorbed by the velocity loop. Much more than that and one corner is materially weaker
+     * than the others, which pulls the robot off a straight line — the same cross-track error
+     * the 1 inch budget is fighting.
+     *
+     * @return true when the modules are close enough to share one kV.
+     */
+    public boolean isUniform() {
+      return usableFits >= 3 && spreadPercent < 8.0;
+    }
+  }
+
+  /**
+   * Summarises per-module feedforward fits so motor-to-motor variance is visible.
+   *
+   * <p>Averaging voltage and velocity across all four modules before fitting produces one tidy
+   * kV and hides the thing worth knowing. Fitting each module separately and comparing is what
+   * reveals a weak or mis-geared corner.
+   *
+   * @param fits One fit per module, in FL, FR, RL, RR order. Entries may be untrustworthy.
+   * @return the variance summary.
+   */
+  public static ModuleVariance summariseModuleVariance(Feedforward[] fits) {
+    double sum = 0;
+    double min = Double.POSITIVE_INFINITY;
+    double max = Double.NEGATIVE_INFINITY;
+    int usable = 0;
+
+    for (Feedforward fit : fits) {
+      if (fit == null || !fit.isTrustworthy()) {
+        continue;
+      }
+      usable++;
+      sum += fit.kV();
+      min = Math.min(min, fit.kV());
+      max = Math.max(max, fit.kV());
+    }
+
+    if (usable == 0) {
+      return new ModuleVariance(0, 0, 0, 0, -1, 0);
+    }
+
+    double mean = sum / usable;
+    double spreadPercent = mean > 0 ? (max - min) / mean * 100.0 : 0;
+
+    // Which module sits furthest from the mean — the one to look at first.
+    int worst = -1;
+    double worstDeviation = -1;
+    for (int i = 0; i < fits.length; i++) {
+      if (fits[i] == null || !fits[i].isTrustworthy()) {
+        continue;
+      }
+      double deviation = Math.abs(fits[i].kV() - mean);
+      if (deviation > worstDeviation) {
+        worstDeviation = deviation;
+        worst = i;
+      }
+    }
+
+    return new ModuleVariance(mean, min, max, spreadPercent, worst, usable);
+  }
+
   // ---------------------------------------------------------------------------------------
   // Scale factors
   // ---------------------------------------------------------------------------------------

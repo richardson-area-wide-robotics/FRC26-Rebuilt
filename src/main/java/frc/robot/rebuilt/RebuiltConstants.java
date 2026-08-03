@@ -18,7 +18,30 @@ public final class RebuiltConstants {
   private RebuiltConstants() {
   }
 
-  /** CAN IDs for the 2026 superstructure. Swerve IDs live in {@code CommonConstants}. */
+  /**
+   * CAN IDs for the 2026 superstructure. Swerve IDs live in {@code CommonConstants}.
+   *
+   * <p><b>Motor inventory.</b> Recorded here because not knowing which motor sits where is
+   * exactly what let a wrong free-speed constant survive review: 5676 RPM is a real figure for
+   * a motor that <em>is</em> on this robot, just not on the drive shaft.
+   *
+   * <pre>
+   *   CAN 1,3,5,7   swerve drive      NEO Vortex   + SPARK Flex   6784 RPM free
+   *   CAN 2,4,6,8   swerve steering   NEO 550      + SPARK MAX    + Through Bore V2 absolute
+   *   CAN 10,11     shooter           NEO Vortex   + SPARK Flex   (MotorKind.NEO_VORTEX in code)
+   *   CAN 13,15     intake rollers    SPARK Flex                  CONFIRM motor
+   *   CAN 18        feeder            SPARK Flex                  CONFIRM motor
+   *   CAN 12        intake deploy     SPARK MAX                   CONFIRM motor
+   *   CAN 14        spindexer         SPARK MAX                   CONFIRM motor
+   * </pre>
+   *
+   * <p>The controller types above are read straight from the code and are certain. The
+   * superstructure <em>motors</em> are a mix of NEO Vortex, NEO 2.0 and NEO 550 — fill in the
+   * four marked CONFIRM rather than assuming, since only free speed and current limits depend
+   * on it and both matter.
+   *
+   * <p>Free speeds for reference: NEO Vortex 6784 RPM, NEO 2.0 and NEO 1.1 both 5676 RPM.
+   */
   public static final class CanIds {
     public static final int SHOOTER_LEADER = 10;
     public static final int SHOOTER_FOLLOWER = 11;

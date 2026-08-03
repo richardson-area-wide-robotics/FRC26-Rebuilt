@@ -59,8 +59,23 @@ public class DriveAutoCalibrator {
     private final SwerveDriveSubsystem drive;
     private final VisionSubsystem vision;
 
-    private final DriveCharacterization.FeedforwardFit feedforwardFit =
-            new DriveCharacterization.FeedforwardFit();
+    /** Module names in the order every per-module array uses. */
+    private static final String[] MODULE_NAMES = {"FL", "FR", "RL", "RR"};
+
+    /**
+     * One fit per module rather than one for the whole drivetrain.
+     *
+     * <p>Averaging the four modules before fitting yields a single tidy kV and conceals the
+     * thing worth knowing: published motor specifications are typical values, individual motors
+     * vary, and a corner that is materially weaker than its neighbours pulls the robot off a
+     * straight line — the same cross-track error the 1 inch budget is fighting.
+     */
+    private final DriveCharacterization.FeedforwardFit[] moduleFits = {
+            new DriveCharacterization.FeedforwardFit(),
+            new DriveCharacterization.FeedforwardFit(),
+            new DriveCharacterization.FeedforwardFit(),
+            new DriveCharacterization.FeedforwardFit()
+    };
 
     // Results.
     private double measuredWheelScale = 1.0;
@@ -68,6 +83,9 @@ public class DriveAutoCalibrator {
     private double measuredDriveRadius;
     private double measuredSteerOffsetDegrees;
     private Feedforward measuredFeedforward = new Feedforward(0, 0, 0, 0);
+    private final Feedforward[] measuredModuleFeedforwards = new Feedforward[4];
+    private DriveCharacterization.ModuleVariance moduleVariance =
+            new DriveCharacterization.ModuleVariance(0, 0, 0, 0, -1, 0);
     private StraightRunResult openLoopAcceptance;
     private StraightRunResult closedLoopAcceptance;
 
@@ -263,8 +281,11 @@ public class DriveAutoCalibrator {
      */
     public Command measureFeedforward() {
         Command sequence = Commands.runOnce(() -> {
-            feedforwardFit.reset();
-            System.out.println("[calib] feedforward sweep: " + FEEDFORWARD_STEPS.length + " steps");
+            for (DriveCharacterization.FeedforwardFit fit : moduleFits) {
+                fit.reset();
+            }
+            System.out.println("[calib] feedforward sweep: " + FEEDFORWARD_STEPS.length
+                    + " steps, fitting each module separately");
         });
 
         for (double step : FEEDFORWARD_STEPS) {
@@ -272,11 +293,14 @@ public class DriveAutoCalibrator {
                     .andThen(Commands.run(() -> drive.driveOpenLoop(step), drive)
                             .withTimeout(STEP_SETTLE_SECONDS))
                     .andThen(Commands.runOnce(() -> {
-                        double volts = drive.getAverageDriveVoltage();
-                        double velocity = drive.getAverageDriveVelocity();
-                        feedforwardFit.add(volts, velocity);
-                        System.out.printf("[calib]   %.2f duty -> %.2f V, %.3f m/s%n",
-                                step, volts, velocity);
+                        double[] volts = drive.getModuleDriveVoltages();
+                        double[] velocities = drive.getModuleDriveVelocities();
+                        for (int i = 0; i < moduleFits.length; i++) {
+                            moduleFits[i].add(volts[i], velocities[i]);
+                        }
+                        System.out.printf(
+                                "[calib]   %.2f duty -> FL %.3f  FR %.3f  RL %.3f  RR %.3f m/s%n",
+                                step, velocities[0], velocities[1], velocities[2], velocities[3]);
                     }))
                     // Coast back to rest between steps so each one starts from the same place.
                     .andThen(Commands.runOnce(() -> drive.driveOpenLoop(0), drive))
@@ -284,24 +308,63 @@ public class DriveAutoCalibrator {
         }
 
         return sequence
-                .andThen(Commands.runOnce(() -> {
-                    measuredFeedforward = feedforwardFit.fit();
-                    System.out.printf("[calib] kS %.4f V, kV %.4f V/(m/s), R2 %.4f (%d samples)%n",
-                            measuredFeedforward.kS(), measuredFeedforward.kV(),
-                            measuredFeedforward.rSquared(), measuredFeedforward.samples());
-                    if (!measuredFeedforward.isTrustworthy()) {
-                        System.out.println("[calib] WARNING feedforward fit is poor — "
-                                + "check for wheel slip or insufficient run-up distance");
-                    }
-
-                    Logger.recordOutput("Calibration/Auto/kS", measuredFeedforward.kS());
-                    Logger.recordOutput("Calibration/Auto/kV", measuredFeedforward.kV());
-                    Logger.recordOutput("Calibration/Auto/FeedforwardR2",
-                            measuredFeedforward.rSquared());
-                    Logger.recordOutput("Calibration/Auto/FeedforwardTrustworthy",
-                            measuredFeedforward.isTrustworthy());
-                }))
+                .andThen(Commands.runOnce(this::fitFeedforward))
                 .withName("MeasureFeedforward");
+    }
+
+    /** Fits each module, then summarises how much the four disagree. */
+    private void fitFeedforward() {
+        for (int i = 0; i < moduleFits.length; i++) {
+            measuredModuleFeedforwards[i] = moduleFits[i].fit();
+
+            Feedforward fit = measuredModuleFeedforwards[i];
+            System.out.printf("[calib]   %s: kS %.4f V, kV %.4f V/(m/s), R2 %.4f%s%n",
+                    MODULE_NAMES[i], fit.kS(), fit.kV(), fit.rSquared(),
+                    fit.isTrustworthy() ? "" : "  POOR FIT");
+
+            String root = "Calibration/Auto/Module/" + MODULE_NAMES[i];
+            Logger.recordOutput(root + "/kS", fit.kS());
+            Logger.recordOutput(root + "/kV", fit.kV());
+            Logger.recordOutput(root + "/R2", fit.rSquared());
+            Logger.recordOutput(root + "/Trustworthy", fit.isTrustworthy());
+        }
+
+        moduleVariance = DriveCharacterization.summariseModuleVariance(measuredModuleFeedforwards);
+
+        // The robot-wide figure is the mean of the usable module fits, so it stays meaningful
+        // while the per-module numbers remain available.
+        double meanKs = 0;
+        int usable = 0;
+        for (Feedforward fit : measuredModuleFeedforwards) {
+            if (fit != null && fit.isTrustworthy()) {
+                meanKs += fit.kS();
+                usable++;
+            }
+        }
+        measuredFeedforward = usable == 0
+                ? new Feedforward(0, 0, 0, 0)
+                : new Feedforward(meanKs / usable, moduleVariance.meanKv(), 1.0, usable);
+
+        System.out.printf("[calib] module kV spread %.1f%% (%.4f to %.4f), worst %s%n",
+                moduleVariance.spreadPercent(), moduleVariance.minKv(), moduleVariance.maxKv(),
+                moduleVariance.worstModule() >= 0
+                        ? MODULE_NAMES[moduleVariance.worstModule()] : "n/a");
+
+        if (!moduleVariance.isUniform() && moduleVariance.usableFits() >= 3) {
+            System.out.println("[calib] NOTE modules differ by more than 8% — published motor "
+                    + "specs are typical values and individual motors vary, but this much spread "
+                    + "means one corner is materially weaker. Check gearing and wheel wear on "
+                    + (moduleVariance.worstModule() >= 0
+                            ? MODULE_NAMES[moduleVariance.worstModule()] : "the outlier")
+                    + " before accepting a single robot-wide kV.");
+        }
+
+        Logger.recordOutput("Calibration/Auto/kS", measuredFeedforward.kS());
+        Logger.recordOutput("Calibration/Auto/kV", measuredFeedforward.kV());
+        Logger.recordOutput("Calibration/Auto/ModuleKvSpreadPercent",
+                moduleVariance.spreadPercent());
+        Logger.recordOutput("Calibration/Auto/ModuleKvUniform", moduleVariance.isUniform());
+        Logger.recordOutput("Calibration/Auto/ModuleKvUsableFits", moduleVariance.usableFits());
     }
 
     // -----------------------------------------------------------------------------------
@@ -461,10 +524,23 @@ public class DriveAutoCalibrator {
                 DriveCharacterization.geometricDriveRadius(
                         DriveConstants.kTrackWidth, DriveConstants.kWheelBase));
         System.out.printf("   common-mode steer offset = %.3f deg%n", measuredSteerOffsetDegrees);
-        System.out.printf("   kS = %.4f V, kV = %.4f V/(m/s)  [R2 %.4f, %s]%n",
+        System.out.printf("   kS = %.4f V, kV = %.4f V/(m/s)  [mean of %d module fits]%n",
                 measuredFeedforward.kS(), measuredFeedforward.kV(),
-                measuredFeedforward.rSquared(),
-                measuredFeedforward.isTrustworthy() ? "trustworthy" : "POOR FIT");
+                moduleVariance.usableFits());
+        System.out.println("   per-module kV — published specs are typical, motors vary:");
+        for (int i = 0; i < measuredModuleFeedforwards.length; i++) {
+            Feedforward fit = measuredModuleFeedforwards[i];
+            if (fit == null) {
+                continue;
+            }
+            System.out.printf("     %s  kV %.4f  kS %.4f  R2 %.4f%s%n",
+                    MODULE_NAMES[i], fit.kV(), fit.kS(), fit.rSquared(),
+                    fit.isTrustworthy() ? "" : "  POOR FIT");
+        }
+        System.out.printf("   spread %.1f%% -> %s%n", moduleVariance.spreadPercent(),
+                moduleVariance.isUniform()
+                        ? "close enough to share one kV"
+                        : "one corner is materially weaker; investigate before averaging");
         System.out.println("-----------------------------------------------------");
         System.out.println(" ACCEPTANCE — 10 ft, 1 inch budget");
         if (openLoopAcceptance != null) {
@@ -497,9 +573,19 @@ public class DriveAutoCalibrator {
         return measuredSteerOffsetDegrees;
     }
 
-    /** @return the measured feedforward fit. */
+    /** @return the robot-wide feedforward, being the mean of the usable module fits. */
     public Feedforward getFeedforward() {
         return measuredFeedforward;
+    }
+
+    /** @return per-module feedforward fits in FL, FR, RL, RR order. Entries may be null. */
+    public Feedforward[] getModuleFeedforwards() {
+        return measuredModuleFeedforwards.clone();
+    }
+
+    /** @return how much the four modules disagree about their own feedforward. */
+    public DriveCharacterization.ModuleVariance getModuleVariance() {
+        return moduleVariance;
     }
 
     /** @return the open-loop acceptance result, or null if it has not run. */
