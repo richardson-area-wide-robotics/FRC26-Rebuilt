@@ -1,9 +1,11 @@
 package frc.robot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -152,12 +154,13 @@ class ConstantsRegressionTest {
   }
 
   @Test
-  @DisplayName("Climber has no CAN ID, documenting that it is not on the robot")
-  void climberIsUnassigned() {
-    // If someone wires the climber up, this test should be updated deliberately — it is
-    // here so the absence of a climb capability is explicit rather than accidental.
-    assertEquals(-1, CanIds.CLIMBER_UNASSIGNED,
-        "Climber has been given a CAN ID; instantiate it in RebuiltContainer and update "
-            + "this test");
+  @DisplayName("No climber CAN ID exists, because the mechanism was never built")
+  void noClimberOnTheBus() {
+    // The climber never made it onto the robot, so its subsystem and constants were removed
+    // rather than left as dead code. If the mechanism is ever built, add its ID to CanIds
+    // and extend canIdsAreUnique() to cover it.
+    assertFalse(
+        Arrays.stream(CanIds.class.getFields()).anyMatch(f -> f.getName().contains("CLIMBER")),
+        "A climber CAN ID has appeared; add it to canIdsAreUnique() and update this test");
   }
 }

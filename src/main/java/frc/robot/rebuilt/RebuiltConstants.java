@@ -28,15 +28,12 @@ public final class RebuiltConstants {
     public static final int INTAKE_ROLLER_2 = 15;
     public static final int FEEDER = 18;
 
-    /**
-     * The climber has no CAN ID assigned yet.
-     *
-     * <p>{@link frc.robot.rebuilt.subsystems.Climber} is fully written but is not
-     * instantiated anywhere, so the robot has no climb capability. Set this to the real ID
-     * and construct the subsystem in {@link RebuiltContainer} to enable it. IDs 9, 16 and 17
-     * are currently free.
-     */
-    public static final int CLIMBER_UNASSIGNED = -1;
+    // IDs 9, 16 and 17 are free.
+    //
+    // There is deliberately no climber entry: the climber mechanism never made it onto the
+    // robot. The Climber subsystem that used to sit in rebuilt/subsystems has been removed
+    // rather than left as finished-looking dead code. It is recoverable from git history if
+    // the mechanism is ever built.
 
     private CanIds() {
     }
@@ -132,17 +129,4 @@ public final class RebuiltConstants {
     }
   }
 
-  public static final class ClimberConstants {
-    /** Open-loop climb speed. */
-    public static final double CLIMB_SPEED = 0.3;
-
-    /** Metres of extension per motor rotation. Needs measuring on the real mechanism. */
-    public static final double METERS_PER_ROTATION = 0.3;
-
-    /** Shortest length the visualisation should draw, in metres. */
-    public static final double MIN_LENGTH_METERS = 0.05;
-
-    private ClimberConstants() {
-    }
-  }
 }

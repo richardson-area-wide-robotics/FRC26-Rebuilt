@@ -16,14 +16,18 @@ import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -71,6 +75,15 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
    */
   private final SwerveDrivePoseEstimator m_poseEstimator;
 
+  /**
+   * A parallel, vision-free odometry track.
+   *
+   * <p>Exists solely as the baseline for calibration: comparing it against AprilTag ground
+   * truth is what measures wheel-scale error and gyro drift. Fusing vision into the pose you
+   * then use to measure odometry error would hide the very thing you are looking for.
+   */
+  private final SwerveDriveOdometry m_odometryOnly;
+
   /** Last chassis speeds we were asked to achieve, kept for logging and diagnostics. */
   private ChassisSpeeds m_commandedSpeeds = new ChassisSpeeds();
 
@@ -86,14 +99,21 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
         new Pose2d(),
         // State standard deviations: trust the wheels/gyro fairly well.
         VecBuilder.fill(0.05, 0.05, Math.toRadians(2.0)),
-        // Vision standard deviations: trust a tag measurement less than the wheels.
+        // Default vision standard deviations. VisionSubsystem overrides these per
+        // measurement, so these only apply to the two-argument addVisionMeasurement.
         VecBuilder.fill(0.5, 0.5, Math.toRadians(15.0)));
+
+    m_odometryOnly = new SwerveDriveOdometry(
+        DriveConstants.kDriveKinematics, getGyroRotation(), get(), new Pose2d());
   }
 
   @Override
   public void periodic() {
     // Update the pose estimate in the periodic block
     m_poseEstimator.update(getGyroRotation(), get());
+
+    // Keep the vision-free baseline moving in lockstep, for calibration comparison.
+    m_odometryOnly.update(getGyroRotation(), get());
 
     logTelemetry();
   }
@@ -107,6 +127,10 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     SwerveModuleState[] desired = getDesiredModuleStates();
 
     Logger.recordOutput(getName() + LogConstants.POSE_LOG_ENTRY, getPose());
+    // Logged side by side so the divergence is visible directly in AdvantageScope.
+    Logger.recordOutput(getName() + "/OdometryOnlyPose", getOdometryOnlyPose());
+    Logger.recordOutput(getName() + "/VisionCorrectionMeters",
+        getPose().getTranslation().getDistance(getOdometryOnlyPose().getTranslation()));
     Logger.recordOutput(getName() + LogConstants.ACTUAL_SWERVE_STATE_LOG_ENTRY, actual);
     Logger.recordOutput(getName() + LogConstants.DESIRED_SWERVE_STATE_LOG_ENTRY, desired);
     Logger.recordOutput(getName() + LogConstants.MAX_LINEAR_VELOCITY_LOG_ENTRY,
@@ -156,19 +180,57 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
    */
   public void resetOdometry(Pose2d pose) {
     m_poseEstimator.resetPosition(getGyroRotation(), get(), pose);
+    m_odometryOnly.resetPosition(getGyroRotation(), get(), pose);
   }
 
   /**
    * Fuses an externally-measured field-relative pose into the estimate.
    *
-   * <p>Call this from a vision subsystem (PhotonVision, QuestNav) once a camera is
-   * attached. Until then the estimator runs on wheels and gyro alone.
+   * <p>Uses the estimator's default trust level. Prefer
+   * {@link #addVisionMeasurement(Pose2d, double, Matrix)} where the measurement's quality is
+   * known, which is normally the case with AprilTags.
    *
    * @param visionPose        Field-relative pose reported by the vision system.
    * @param timestampSeconds  FPGA timestamp the measurement corresponds to.
    */
   public void addVisionMeasurement(Pose2d visionPose, double timestampSeconds) {
     m_poseEstimator.addVisionMeasurement(visionPose, timestampSeconds);
+  }
+
+  /**
+   * Fuses a vision pose with an explicit per-measurement trust level.
+   *
+   * <p>A tag two metres away deserves far more weight than the same tag at six metres, and a
+   * multi-tag solve more than a single ambiguous one. Passing the standard deviations per
+   * measurement is what turns vision from a source of jitter into a source of accuracy.
+   *
+   * @param visionPose       Field-relative pose reported by the vision system.
+   * @param timestampSeconds FPGA timestamp the measurement corresponds to.
+   * @param stdDevs          Trust: x metres, y metres, theta radians. Larger means less trust.
+   */
+  public void addVisionMeasurement(
+      Pose2d visionPose, double timestampSeconds, Matrix<N3, N1> stdDevs) {
+    m_poseEstimator.addVisionMeasurement(visionPose, timestampSeconds, stdDevs);
+  }
+
+  /**
+   * The pose from wheels and gyro alone, with no vision ever fused in.
+   *
+   * <p>Maintained purely so it can be compared against tag-derived ground truth. The gap
+   * between this and the AprilTag pose over a run is what {@code VisionCalibration} turns
+   * into a wheel-diameter correction and a gyro error figure — you cannot measure odometry
+   * drift using an estimate that has already been corrected by vision.
+   *
+   * @return the vision-free pose estimate.
+   */
+  public Pose2d getOdometryOnlyPose() {
+    return m_odometryOnly.getPoseMeters();
+  }
+
+  /** @return the current translational speed of the robot, in m/s. */
+  public double getChassisSpeedMetersPerSecond() {
+    ChassisSpeeds speeds = getChassisSpeeds();
+    return Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
   }
 
   /**

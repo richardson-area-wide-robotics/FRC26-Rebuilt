@@ -5,6 +5,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.common.components.diagnostics.ValidationSuite;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
+import frc.robot.common.subsystems.vision.VisionConstants;
+import frc.robot.common.subsystems.vision.VisionSubsystem;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
 import frc.robot.rebuilt.subsystems.Feeder;
 import frc.robot.rebuilt.subsystems.Intake;
@@ -232,6 +234,80 @@ public final class RebuiltValidation {
             }, feeder)
             .andThen(Commands.waitSeconds(0.3)),
         () -> !feeder.isLoading() && !feeder.isCycling());
+
+    return suite.build();
+  }
+
+  /**
+   * Builds the AprilTag checks, to run with the robot in view of at least one tag.
+   *
+   * <p>Kept separate from {@link #build} because it needs the robot pointed at the field
+   * rather than sitting on blocks in the pit. Run this one on the practice field.
+   *
+   * @param vision Vision subsystem to check.
+   * @param drive  Drivetrain, for the pose comparison.
+   * @return a command to schedule from test mode.
+   */
+  public static Command buildVisionChecks(VisionSubsystem vision, SwerveDriveSubsystem drive) {
+    ValidationSuite suite = new ValidationSuite("RebuiltVision");
+
+    suite.addStep(
+        "CameraConnected",
+        "PhotonVision is reachable under the configured camera name",
+        Commands.waitSeconds(0.5),
+        () -> {
+          if (!vision.isConnected()) {
+            System.out.println("  camera '" + VisionConstants.CAMERA_NAME
+                + "' not found — check the name in the PhotonVision web UI");
+            return false;
+          }
+          return true;
+        });
+
+    suite.addStep(
+        "FieldLayoutLoaded",
+        "The 2026 AprilTag layout loaded and contains tags",
+        Commands.waitSeconds(0.1),
+        () -> !vision.getFieldLayout().getTags().isEmpty());
+
+    suite.addStep(
+        "SeesATag",
+        "At least one tag sighting is accepted within five seconds",
+        Commands.waitUntil(vision::hasRecentMeasurement).withTimeout(5.0),
+        () -> {
+          if (!vision.hasRecentMeasurement()) {
+            System.out.println("  accepted=" + vision.getAcceptedCount()
+                + " rejected=" + vision.getRejectedCount()
+                + " — if rejected is high, suspect ROBOT_TO_CAMERA or the field layout");
+            return false;
+          }
+          return true;
+        });
+
+    suite.addStep(
+        "VisionAgreesWithOdometry",
+        "Fused pose and wheel-only pose agree to within half a metre",
+        Commands.waitSeconds(1.0),
+        () -> {
+          double gap = drive.getPose().getTranslation()
+              .getDistance(drive.getOdometryOnlyPose().getTranslation());
+          if (gap >= 0.5) {
+            System.out.println("  fused vs odometry-only gap is " + gap + " m");
+          }
+          return gap < 0.5;
+        });
+
+    suite.addStep(
+        "LatencyReasonable",
+        "Measurement latency stays under 200 ms",
+        Commands.waitSeconds(2.0),
+        () -> {
+          double mean = vision.getCalibration().getLatency().getMean();
+          if (mean >= 0.2) {
+            System.out.println("  mean latency " + mean + " s");
+          }
+          return vision.getCalibration().getSampleCount() > 0 && mean < 0.2;
+        });
 
     return suite.build();
   }

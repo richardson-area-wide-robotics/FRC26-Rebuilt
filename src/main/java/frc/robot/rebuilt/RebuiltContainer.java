@@ -21,6 +21,8 @@ import frc.robot.common.components.RobotUtils;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
+import frc.robot.common.subsystems.vision.VisionConstants;
+import frc.robot.common.subsystems.vision.VisionSubsystem;
 import frc.robot.rebuilt.RebuiltConstants.CanIds;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
 import frc.robot.rebuilt.RebuiltConstants.ShooterConstants;
@@ -51,6 +53,21 @@ public class RebuiltContainer implements IRobotContainer {
   public static final Intake INTAKE =
       new Intake(CanIds.INTAKE_ROLLER_1, CanIds.INTAKE_ROLLER_2, CanIds.INTAKE_DEPLOY);
   public static final SwerveDriveSubsystem DRIVE_SUBSYSTEM = new SwerveDriveSubsystem();
+
+  /**
+   * AprilTag localisation and calibration.
+   *
+   * <p>Safe to construct with no camera plugged in — it simply contributes nothing. Before
+   * trusting it, check the three values marked MEASURE in
+   * {@link frc.robot.common.subsystems.vision.VisionConstants}.
+   */
+  public static final VisionSubsystem VISION_SUBSYSTEM = new VisionSubsystem(
+      VisionConstants.CAMERA_NAME,
+      DRIVE_SUBSYSTEM::addVisionMeasurement,
+      DRIVE_SUBSYSTEM::getPose,
+      DRIVE_SUBSYSTEM::getOdometryOnlyPose,
+      DRIVE_SUBSYSTEM::getHeading,
+      DRIVE_SUBSYSTEM::getChassisSpeedMetersPerSecond);
 
   public static final RobotSectorEvaluator SECTOR_EVALUATOR = new RobotSectorEvaluator(DRIVE_SUBSYSTEM);
 
@@ -170,6 +187,37 @@ public class RebuiltContainer implements IRobotContainer {
           return position >= IntakeConstants.DEPLOY_REVERSE_SOFT_LIMIT - 1.0
               && position <= IntakeConstants.DEPLOY_FORWARD_SOFT_LIMIT + 1.0;
         });
+
+    monitor.register(
+        "VisionNotDivergingFromOdometry",
+        "Vision and wheel odometry agree to within a metre",
+        () -> {
+          // A large, sustained gap means one of them is wrong: a bad camera transform, the
+          // wrong field layout (welded vs AndyMark), or genuinely bad wheel calibration.
+          // Only meaningful once vision is actually contributing.
+          if (!VISION_SUBSYSTEM.hasRecentMeasurement()) {
+            return true;
+          }
+          return DRIVE_SUBSYSTEM.getPose().getTranslation()
+              .getDistance(DRIVE_SUBSYSTEM.getOdometryOnlyPose().getTranslation()) < 1.0;
+        },
+        // Generous: a legitimate correction after a bad starting pose is a big, brief jump.
+        250);
+
+    monitor.register(
+        "VisionRejectRateReasonable",
+        "Most vision measurements pass the plausibility gates",
+        () -> {
+          int accepted = VISION_SUBSYSTEM.getAcceptedCount();
+          int rejected = VISION_SUBSYSTEM.getRejectedCount();
+          if (accepted + rejected < 50) {
+            return true; // Not enough data to judge.
+          }
+          // Rejecting nearly everything usually means a wrong camera transform putting every
+          // solved pose off the field.
+          return accepted > rejected / 4;
+        },
+        50);
   }
 
 
@@ -348,5 +396,18 @@ public class RebuiltContainer implements IRobotContainer {
   @Override
   public Command getValidationCommand() {
     return RebuiltValidation.build(DRIVE_SUBSYSTEM, SHOOTER, INTAKE, FEEDER);
+  }
+
+  /**
+   * The AprilTag self-test, kept separate from the mechanical one.
+   *
+   * <p>Needs the robot on the practice field with at least one tag in view, so it is not part
+   * of the pit-side Test-mode suite. Schedule it manually, or bind it to a button while
+   * commissioning vision.
+   *
+   * @return the vision validation command.
+   */
+  public static Command getVisionValidationCommand() {
+    return RebuiltValidation.buildVisionChecks(VISION_SUBSYSTEM, DRIVE_SUBSYSTEM);
   }
 }
