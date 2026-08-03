@@ -1,6 +1,8 @@
 package frc.robot.rebuilt.subsystems;
 
+import frc.robot.CommonConstants;
 import frc.robot.common.subsystems.DashboardSubsystem;
+import frc.robot.rebuilt.RebuiltConstants.ClimberConstants;
 
 import org.lasarobotics.hardware.revrobotics.Spark;
 import org.lasarobotics.hardware.revrobotics.Spark.ID;
@@ -18,17 +20,28 @@ import com.revrobotics.PersistMode;
 
 import edu.wpi.first.units.Units;
 
+/**
+ * Telescoping climber with an AdvantageKit mechanism visualisation.
+ *
+ * <p><strong>This subsystem is not currently on the robot.</strong> It is fully written but
+ * never instantiated, and {@code RebuiltConstants.CanIds.CLIMBER_UNASSIGNED} has no real CAN
+ * ID, so the robot has no climb capability. To enable it: assign a free CAN ID (9, 16 and 17
+ * are unused), construct it in {@link frc.robot.rebuilt.RebuiltContainer}, and add driver
+ * bindings for {@link #runClimber()} / {@link #unRunClimber()} / {@link #stopClimber()}.
+ *
+ * <p>{@code METERS_PER_ROTATION} is still a guess and must be measured on the real mechanism
+ * before the visualisation or any position control means anything.
+ */
 public class Climber extends DashboardSubsystem {
 
     private final Spark motor1;
-    // private final Spark motor2;
 
     // AdvantageKit visualization
     private final LoggedMechanism2d climberMech;
     private final LoggedMechanismLigament2d climberLigament;
 
-    private static final double METERS_PER_ROTATION = 0.3; // TODO we will need to adjust this when we have the phy climber
-    private static final double MIN_LENGTH_METERS = 0.05;
+    private static final double METERS_PER_ROTATION = ClimberConstants.METERS_PER_ROTATION;
+    private static final double MIN_LENGTH_METERS = ClimberConstants.MIN_LENGTH_METERS;
 
     public Climber(int id1) {
 
@@ -40,6 +53,7 @@ public class Climber extends DashboardSubsystem {
 
         SparkFlexConfig config = new SparkFlexConfig();
         config.idleMode(IdleMode.kBrake);
+        config.smartCurrentLimit(CommonConstants.SUPERSTRUCTURE_CURRENT_LIMIT);
 
         motor1.configure(
                 config,
@@ -64,11 +78,16 @@ public class Climber extends DashboardSubsystem {
     }
 
     public void runClimber() {
-        motor1.set(0.3);
+        motor1.set(ClimberConstants.CLIMB_SPEED);
     }
 
     public void unRunClimber() {
-        motor1.set(-0.3);
+        motor1.set(-ClimberConstants.CLIMB_SPEED);
+    }
+
+    /** @return extension in metres, derived from the motor encoder. */
+    public double getExtensionMeters() {
+        return Math.max(MIN_LENGTH_METERS, motor1.getInputs().encoderPosition * METERS_PER_ROTATION);
     }
 
     public void stopClimber() {

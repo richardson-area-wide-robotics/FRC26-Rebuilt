@@ -6,6 +6,7 @@ import com.revrobotics.spark.config.AbsoluteEncoderConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
 import frc.robot.CommonConstants.ModuleConstants;
+import frc.robot.CommonConstants.SwerveConstants;
 
 public final class Configs {
     public static final class MAXSwerveModule {
@@ -22,7 +23,7 @@ public final class Configs {
 
             drivingConfig
                     .idleMode(IdleMode.kBrake)
-                    .smartCurrentLimit(50);
+                    .smartCurrentLimit(SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT);
             drivingConfig.encoder
                     .positionConversionFactor(drivingFactor) // meters
                     .velocityConversionFactor(drivingFactor / 60.0); // meters per second
@@ -34,7 +35,7 @@ public final class Configs {
 
             turningConfig
                     .idleMode(IdleMode.kBrake)
-                    .smartCurrentLimit(20);
+                    .smartCurrentLimit(SwerveConstants.ROTATE_MOTOR_CURRENT_LIMIT);
 
             turningConfig.absoluteEncoder
                     // Invert the turning encoder, since the output shaft rotates in the opposite

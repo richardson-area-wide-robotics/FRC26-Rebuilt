@@ -69,7 +69,9 @@ def deployArtifact = deploy.targets.roborio.artifacts.frcJava
 wpi.java.debugJni = false
 
 // Set this to true to enable desktop support.
-def includeDesktopSupport = false
+// Required so unit/integration tests can initialise the HAL and drive the
+// simulation classes (DriverStationSim, SimHooks) from plain JUnit.
+def includeDesktopSupport = true
 
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 5.
@@ -130,13 +132,26 @@ if (errorProneEnabled) {
 
     tasks.withType(JavaCompile).configureEach {
         options.errorprone {
-            disableWarningsInGeneratedCode = false
+            // AdvantageKit's @AutoLog processor emits code we cannot edit; don't
+            // report warnings we have no way to fix.
+            disableWarningsInGeneratedCode = true
 
             disable("FutureReturnValueIgnored")
             disable("DoNotCallSuggester")
 
-            // Example: promote a specific check to error
-            // check("UnusedVariable", net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
+            // Style-only. This project writes plenty of `/** @return ... */` one-liners,
+            // which is a readable convention; flagging every one drowns out real findings.
+            disable("MissingSummary")
+            // Only ever fires inside AdvantageKit's @AutoLog generated sources.
+            disable("MissingOverride")
+
+            // These three checks each caught a real, shipped bug in this codebase
+            // (string identity on the FMS message, integer division in the drive
+            // feedforward, bitwise & in the shooter interlock). Promote them to
+            // errors so they cannot regress.
+            check("ReferenceEquality", net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
+            check("NarrowCalculation", net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
+            check("ShortCircuitBoolean", net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
         }
     }
 }

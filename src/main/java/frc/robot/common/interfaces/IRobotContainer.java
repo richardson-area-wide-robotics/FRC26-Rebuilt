@@ -21,6 +21,15 @@ public interface IRobotContainer {
 
     void robotInit();
 
+    /**
+     * Ran periodically in <em>every</em> mode — disabled, auto, teleop and test.
+     *
+     * <p>Use this for state that must stay current regardless of mode, such as decoding
+     * FMS field state. Anything placed only in {@link #teleopPeriodic()} silently stops
+     * updating during autonomous.
+     */
+    default void robotPeriodic() {
+    }
 
     /**Ran at the start of  auto */
     void autonomousInit();
@@ -30,4 +39,16 @@ public interface IRobotContainer {
 
     /**Ran periodically during teleop */
     void teleopPeriodic();
+
+    /**
+     * The robot's on-blocks self-test, run from the driver station's Test mode.
+     *
+     * <p>Return {@code null} if a team has no self-test. Anything returned here is scheduled
+     * once when Test mode is entered.
+     *
+     * @return a validation command, or null.
+     */
+    default Command getValidationCommand() {
+        return null;
+    }
 }

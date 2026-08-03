@@ -190,3 +190,5 @@ compile_commands.json
 src/main/java/frc/robot/BuildConstants.java
 local.properties
 simgui-ds.json
+
+profile_log.txt

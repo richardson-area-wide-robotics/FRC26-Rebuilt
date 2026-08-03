@@ -106,6 +106,18 @@ public class MAXSwerveModule {
     m_desiredState = desiredState;
   }
 
+  /**
+   * Returns the most recently commanded state of the module, in chassis-relative terms.
+   *
+   * <p>Exposed so the drivetrain can log desired-vs-actual per module, which is what makes
+   * drive PID and feedforward tuning possible from a log file.
+   *
+   * @return The desired state of the module.
+   */
+  public SwerveModuleState getDesiredState() {
+    return m_desiredState;
+  }
+
   /** Zeroes all the SwerveModule encoders. */
   public void resetEncoders() {
     m_drivingEncoder.setPosition(0);

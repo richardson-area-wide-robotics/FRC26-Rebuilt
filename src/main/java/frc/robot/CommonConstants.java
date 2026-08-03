@@ -8,8 +8,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import org.lasarobotics.drive.swerve.child.MAXSwerveModule;
-import org.lasarobotics.hardware.revrobotics.Spark;
 
 
 /**
@@ -39,7 +37,16 @@ public final class CommonConstants {
   public static final boolean SILENCE_NO_CONTROLLER_WARNING = true;
   public static final int PRIMARY_CONTROLLER_PORT = 0;
   public static final int SECONDARY_CONTROLLER_PORT = 1;
-  public static final double CONTROLLER_DEADBAND = 0.6;
+
+  /**
+   * Fraction of stick travel treated as zero. Applied in
+   * {@link frc.robot.common.subsystems.drive.SwerveDriveSubsystem#driveCommand}.
+   *
+   * <p>This was previously 0.6, which would have discarded 60% of stick travel — but it
+   * was never actually applied anywhere, so the robot saw raw stick values. Now that the
+   * deadband is really wired in, it is set to a normal value.
+   */
+  public static final double CONTROLLER_DEADBAND = 0.08;
 
   public static final CommandXboxController DRIVER_CONTROLLER = new CommandXboxController(
     PRIMARY_CONTROLLER_PORT);
@@ -50,41 +57,25 @@ public final class CommonConstants {
 
   public static class SwerveConstants {
 
-    public static final double EPSILON = 5e-3;
-    /**In Amps, the max current a Drive Motor can use*/
-    public static final int DRIVE_MOTOR_CURRENT_LIMIT = 60;
-    /**In Amps, the max current a Rotate Motor can use*/
+    /**
+     * In Amps, the max current a swerve Drive motor may draw.
+     *
+     * <p>This is now the single source of truth — {@link frc.robot.common.swerve.Configs}
+     * reads it. It is 50 rather than the 60 previously declared here, because 50 is the
+     * value that was actually being applied to the hardware; the old constant was dead.
+     */
+    public static final int DRIVE_MOTOR_CURRENT_LIMIT = 50;
+
+    /** In Amps, the max current a swerve Rotate motor may draw. */
     public static final int ROTATE_MOTOR_CURRENT_LIMIT = 20;
 
-    /**The Gear Ratio used for our swerve modules*/
-    public static final MAXSwerveModule.GearRatio GEAR_RATIO = MAXSwerveModule.GearRatio.L3;
-
-    public static final double MAX_AUTO_LOCK_TIME = 10.0;
-
   }
 
-
-  /** Constants for the physical hardware for drive
-   * (Swerve Modules, etc)
-   *
-   * @author PurpleLib
-   * @since 2024
+  /**
+   * In Amps, the max current a superstructure (intake/feeder/shooter/climber) motor may
+   * draw. Matches the value each subsystem constructor was already applying.
    */
-  public static class DriveHardwareConstants {
-    public static final String NAVX_NAME = "DriveHardware/NavX2";
-
-    public static final Spark.ID LEFT_FRONT_DRIVE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/LeftFront/Drive", 5);
-    public static final Spark.ID LEFT_FRONT_ROTATE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/LeftFront/Rotate", 6);
-
-    public static final Spark.ID RIGHT_FRONT_DRIVE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/RightFront/Drive", 3);
-    public static final Spark.ID RIGHT_FRONT_ROTATE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/RightFront/Rotate", 4);
-
-    public static final Spark.ID LEFT_REAR_DRIVE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/LeftRear/Drive", 7);
-    public static final Spark.ID LEFT_REAR_ROTATE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/LeftRear/Rotate", 8);
-
-    public static final Spark.ID RIGHT_REAR_DRIVE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/RightRear/Drive", 1);
-    public static final Spark.ID RIGHT_REAR_ROTATE_MOTOR_ID = new Spark.ID("DriveHardware/Swerve/RightRear/Rotate", 2);
-  }
+  public static final int SUPERSTRUCTURE_CURRENT_LIMIT = 60;
 
   public static final class ModuleConstants {
     // The MAXSwerve module can be configured with one of three pinion gears: 12T,
@@ -92,8 +83,10 @@ public final class CommonConstants {
     // more teeth will result in a robot that drives faster).
     public static final int kDrivingMotorPinionTeeth = 14;
 
-    // Calculations required for driving motor conversion factors and feed forward
-    public static final double kDrivingMotorFreeSpeedRps = 5676 / 60;
+    // Calculations required for driving motor conversion factors and feed forward.
+    // NOTE: the divisor must stay a double literal. As `5676 / 60` this was integer
+    // division, yielding 94.0 instead of 94.6 and biasing the drive feedforward.
+    public static final double kDrivingMotorFreeSpeedRps = 5676 / 60.0;
     public static final double kWheelDiameterMeters = 0.0762;
     public static final double kWheelCircumferenceMeters = kWheelDiameterMeters * Math.PI;
     // 45 teeth on the wheel's bevel gear, 22 teeth on the first-stage spur gear, 15

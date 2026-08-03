@@ -7,6 +7,7 @@ package frc.robot;
 import com.strubium.ssjprofiler.Profiler;
 import com.strubium.ssjprofiler.ProfilerGlobal;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.common.LocalADStarAK;
 import frc.robot.common.components.TeamUtils;
@@ -14,7 +15,10 @@ import frc.robot.common.components.dashboard.DashboardAutoUpdater;
 import frc.robot.common.components.RobotContainerRegistry;
 import frc.robot.common.components.RobotExceptionHandler;
 import frc.robot.common.components.RobotUtils;
+import frc.robot.common.components.diagnostics.ExpectationMonitor;
 import org.littletonrobotics.junction.LoggedRobot;
+import org.littletonrobotics.junction.networktables.NT4Publisher;
+import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import com.pathplanner.lib.pathfinding.Pathfinding;
 
 import edu.wpi.first.wpilibj2.command.Command;
@@ -25,8 +29,8 @@ import org.littletonrobotics.junction.Logger;
 
 /**
  * "Starting point" of the robot, nothing in here should need to be touched.
- * 
- * This sets up the ExceptionHandler, PathPlanner, Logging, and then creates a IRobotContainer based off the team number  
+ *
+ * This sets up the ExceptionHandler, PathPlanner, Logging, and then creates a IRobotContainer based off the team number
  */
 public class Robot extends LoggedRobot {
   private Command autonomousCommand;
@@ -39,6 +43,10 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotInit() {
+    // Logging must come up before anything else, so that any problem during the rest of
+    // robotInit() is actually captured somewhere we can read back.
+    startLogging();
+
     Profiler profiler = new Profiler("robot init");
     profiler.start();
 
@@ -58,6 +66,38 @@ public class Robot extends LoggedRobot {
     profiler.end();
   }
 
+  /**
+   * Brings AdvantageKit up.
+   *
+   * <p>Without this, every {@code Logger.recordOutput(...)} call in the codebase goes
+   * nowhere: no log file is written, nothing is published to NetworkTables, and
+   * AdvantageScope shows an empty session.
+   *
+   * <p>On a real robot we write a WPILOG (to a USB stick when one is mounted) and also
+   * publish live to NetworkTables. In simulation we publish to NetworkTables only, so sim
+   * runs don't litter the working tree with log files.
+   */
+  private void startLogging() {
+    Logger.recordMetadata("ProjectName", BuildConstants.MAVEN_NAME);
+    Logger.recordMetadata("BuildDate", BuildConstants.BUILD_DATE);
+    Logger.recordMetadata("GitSHA", BuildConstants.GIT_SHA);
+    Logger.recordMetadata("GitDate", BuildConstants.GIT_DATE);
+    Logger.recordMetadata("GitBranch", BuildConstants.GIT_BRANCH);
+    Logger.recordMetadata("GitDirty", switch (BuildConstants.DIRTY) {
+      case 0 -> "All changes committed";
+      case 1 -> "Uncommitted changes";
+      default -> "Unknown";
+    });
+    Logger.recordMetadata("TeamNumber", Integer.toString(TeamUtils.getTeamNumber()));
+
+    if (RobotBase.isReal()) {
+      Logger.addDataReceiver(new WPILOGWriter());
+    }
+    Logger.addDataReceiver(new NT4Publisher());
+
+    Logger.start();
+  }
+
 
   @Override
   public void robotPeriodic() {
@@ -65,8 +105,12 @@ public class Robot extends LoggedRobot {
     logController("HID/Operator", CommonConstants.HIDConstants.OPERATOR_CONTROLLER);
 
     DashboardAutoUpdater.updateAll();
-    //CANDiagnostics.getInstance().checkHealth();
     CommandScheduler.getInstance().run();
+
+    // Runs in every mode, so field state and health checks stay live during autonomous
+    // too — previously this work only happened in teleop.
+    robotContainer.robotPeriodic();
+    ExpectationMonitor.getInstance().update();
   }
 
 
@@ -77,8 +121,9 @@ public class Robot extends LoggedRobot {
     Logger.recordOutput(name + "/RightY", controller.getRightY());
     Logger.recordOutput(name + "/AButton", controller.a().getAsBoolean());
     Logger.recordOutput(name + "/BButton", controller.b().getAsBoolean());
+    Logger.recordOutput(name + "/Connected", controller.isConnected());
   }
-  
+
   @Override
   public void disabledPeriodic() {
     robotContainer.disabledPeriodic();
@@ -96,6 +141,8 @@ public class Robot extends LoggedRobot {
       Logger.recordOutput("Auto/AutonomousCommand", autonomousCommand.getName());
 
       CommandScheduler.getInstance().schedule(autonomousCommand);
+    } else {
+      Logger.recordOutput("Auto/AutonomousCommand", "<none selected>");
     }
     profiler.end();
   }
@@ -111,7 +158,6 @@ public class Robot extends LoggedRobot {
     if (autonomousCommand != null) {
       autonomousCommand.cancel();
     }
-    //PearceContainer.DRIVE_SUBSYSTEM.DRIVETRAIN_HARDWARE.navx.reset();
   }
 
   @Override
@@ -125,9 +171,24 @@ public class Robot extends LoggedRobot {
     robotContainer.simulationPeriodic();
   }
 
+  /**
+   * Entering Test mode runs the robot's on-blocks self-test.
+   *
+   * <p>Put the robot on blocks with the wheels clear, then select Test on the driver station.
+   * Results print to the console and land in AdvantageKit under the suite's
+   * {@code Validation} subtable.
+   */
   @Override
   public void testInit() {
     CommandScheduler.getInstance().cancelAll();
+
+    Command validation = robotContainer.getValidationCommand();
+    if (validation != null) {
+      System.out.println("Test mode: running on-robot validation suite");
+      CommandScheduler.getInstance().schedule(validation);
+    } else {
+      System.out.println("Test mode: this robot has no validation suite");
+    }
   }
 
   @Override
