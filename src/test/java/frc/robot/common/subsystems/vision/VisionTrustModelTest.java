@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
@@ -103,6 +104,47 @@ class VisionTrustModelTest {
       assertTrue(pose.getY() >= -0.5 && pose.getY() <= layout.getFieldWidth() + 0.5,
           "Tag " + tag.ID + " y is off the field: " + pose.getY());
     });
+  }
+
+  @Test
+  @DisplayName("Field layout is pinned to AndyMark, which is what this team's field uses")
+  void fieldLayoutIsAndymark() {
+    // Pinned deliberately: this team practises on an AndyMark field. Official events are
+    // normally welded, so travelling to a competition means changing this — and that change
+    // should be a conscious edit that trips this test, not a silent drift.
+    assertEquals(AprilTagFields.k2026RebuiltAndymark, VisionConstants.FIELD_LAYOUT,
+        "Field layout changed. If this is for a welded competition field, update this test; "
+            + "otherwise every tag pose carries a constant offset.");
+  }
+
+  @Test
+  @DisplayName("Welded and AndyMark layouts really do differ, so the choice matters")
+  void layoutsDifferMeasurably() {
+    AprilTagFieldLayout welded = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltWelded);
+    AprilTagFieldLayout andymark =
+        AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
+
+    double maxDelta = 0;
+    int comparedTags = 0;
+    for (var tag : welded.getTags()) {
+      var weldedPose = welded.getTagPose(tag.ID);
+      var andymarkPose = andymark.getTagPose(tag.ID);
+      if (weldedPose.isPresent() && andymarkPose.isPresent()) {
+        comparedTags++;
+        maxDelta = Math.max(maxDelta, weldedPose.get().getTranslation()
+            .getDistance(andymarkPose.get().getTranslation()));
+      }
+    }
+
+    assertTrue(comparedTags > 0, "The two layouts should share tag IDs to compare");
+    // Measured at 0.0358 m for the 2026 layouts. Asserting a range rather than the exact
+    // figure, since a WPILib survey update could legitimately shift it slightly.
+    assertTrue(maxDelta > 0.01,
+        "Layouts differ by only " + maxDelta + " m; if they have converged, the "
+            + "welded/AndyMark guidance in VisionConstants can be relaxed");
+    assertTrue(maxDelta < 0.10,
+        "Layouts differ by " + maxDelta + " m, far more than the ~3.6 cm expected — check "
+            + "that both layouts are for the same season");
   }
 
   @Test

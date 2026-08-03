@@ -20,14 +20,19 @@ public final class VisionConstants {
   }
 
   /**
-   * MEASURE — the field layout your field actually uses.
+   * The field layout this team's field uses: AndyMark.
    *
-   * <p>Welded and AndyMark fields place the tags at slightly different coordinates. Most
-   * competition fields are welded; many practice fields built from the AndyMark kit are not.
-   * Using the wrong one introduces a fixed positional bias of a few centimetres that will
-   * look like a calibration problem and waste an afternoon.
+   * <p>Welded and AndyMark fields place the tags at different coordinates — measured at up
+   * to <b>3.6 cm</b> apart for the 2026 layouts. Picking the wrong one introduces a fixed
+   * positional bias of that size, which looks exactly like a calibration problem and is
+   * large enough to matter when lining up a shot.
+   *
+   * <p><b>Note for competition:</b> official event fields are normally welded. If you travel
+   * to an event on a welded field, switch this to {@code k2026RebuiltWelded} — otherwise
+   * every tag-derived pose carries a small constant offset, and the wheel-scale figure from
+   * {@code VisionCalibration} will be quietly biased along with it.
    */
-  public static final AprilTagFields FIELD_LAYOUT = AprilTagFields.k2026RebuiltWelded;
+  public static final AprilTagFields FIELD_LAYOUT = AprilTagFields.k2026RebuiltAndymark;
 
   /**
    * MEASURE — the camera name exactly as configured in the PhotonVision web UI.
