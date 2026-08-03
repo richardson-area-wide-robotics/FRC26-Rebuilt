@@ -121,6 +121,32 @@ public class MAXSwerveModule {
   }
 
   /**
+   * Commands the drive motor open loop while holding the module at a fixed angle.
+   *
+   * <p>For feedforward characterisation only. Closed-loop velocity control cannot be used to
+   * measure kS and kV, because the loop compensates for exactly the relationship being
+   * measured — the sweep has to see the raw voltage-to-velocity response.
+   *
+   * @param dutyCycle Motor output, −1..1.
+   * @param angle     Chassis-relative angle to hold the module at.
+   */
+  public void setDriveOpenLoop(double dutyCycle, Rotation2d angle) {
+    Rotation2d corrected = angle.plus(Rotation2d.fromRadians(m_chassisAngularOffset));
+    m_turningClosedLoopController.setSetpoint(corrected.getRadians(), ControlType.kPosition);
+    m_drivingSpark.set(dutyCycle);
+  }
+
+  /** @return the drive motor's applied output voltage. */
+  public double getDriveVoltage() {
+    return m_drivingSpark.getAppliedOutput() * m_drivingSpark.getBusVoltage();
+  }
+
+  /** @return the drive wheel's measured velocity in metres per second. */
+  public double getDriveVelocity() {
+    return m_drivingEncoder.getVelocity();
+  }
+
+  /**
    * Re-applies the drive closed-loop gains without touching any other configuration.
    *
    * <p>For live tuning only. Uses no-reset, no-persist so it is a cheap in-memory tweak

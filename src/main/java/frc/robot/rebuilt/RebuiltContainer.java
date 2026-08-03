@@ -7,9 +7,14 @@ package frc.robot.rebuilt;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
+import java.util.Optional;
+import java.util.OptionalDouble;
+
 import com.strubium.ssjprofiler.Profiler;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -18,7 +23,11 @@ import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
+import frc.robot.common.components.diagnostics.CalibrationManeuvers;
+import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
+import frc.robot.common.components.diagnostics.ManeuverRunner;
+import frc.robot.rebuilt.states.RobotStateMachine;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import frc.robot.common.subsystems.vision.VisionConstants;
@@ -73,6 +82,20 @@ public class RebuiltContainer implements IRobotContainer {
 
   private static SendableChooser<Command> automodeChooser;
 
+  /** Localisation-driven behaviour selection. Updated every loop in robotPeriodic. */
+  public static final RobotStateMachine STATE_MACHINE = new RobotStateMachine();
+
+  /** The most recent state decision. Read by the drive default command for heading assist. */
+  private static RobotStateMachine.StateOutput stateOutput = new RobotStateMachine.StateOutput(
+      RobotStateMachine.State.MANUAL, Optional.empty(), OptionalDouble.empty(), "not yet run");
+
+  /** Drivetrain calibration, run from Test mode. */
+  public static final DriveAutoCalibrator CALIBRATOR =
+      new DriveAutoCalibrator(DRIVE_SUBSYSTEM, VISION_SUBSYSTEM);
+
+  /** Manoeuvre suite runner, run from Test mode. */
+  public static final ManeuverRunner MANEUVER_RUNNER = new ManeuverRunner(DRIVE_SUBSYSTEM);
+
   public static IRobotContainer createContainer() {
         // Set drive command.
         //
@@ -83,11 +106,15 @@ public class RebuiltContainer implements IRobotContainer {
         // LeftY drives the x request and LeftX the y request because the field frame has
         // +x forward and +y left, while the stick reports +y backward and +x right — hence
         // the negations.
+        // Heading assist comes from the localisation state machine: aim at the hub on our own
+        // side during our shift, and turn to cross the bump backwards. Translation always stays
+        // with the driver, and touching the rotation stick overrides the assist instantly.
         DRIVE_SUBSYSTEM.setDefaultCommand(
-          DRIVE_SUBSYSTEM.driveCommand(
+          DRIVE_SUBSYSTEM.driveCommandWithHeadingAssist(
             () -> -HIDConstants.DRIVER_CONTROLLER.getLeftY(),
             () -> -HIDConstants.DRIVER_CONTROLLER.getLeftX(),
             () -> -HIDConstants.DRIVER_CONTROLLER.getRightX(),
+            () -> stateOutput.headingTarget(),
             true)
         );
 
@@ -363,6 +390,55 @@ public class RebuiltContainer implements IRobotContainer {
         ScoringLocationLookup.findClosest(DRIVE_SUBSYSTEM.getPose()));
     Logger.recordOutput("Assist/HubPose", ScoringLocationLookup.findHub());
     Logger.recordOutput("Field/GameDataNamesUs", FIELD_STATE.gameDataNamesUs());
+
+    updateStateMachine();
+  }
+
+  /**
+   * Selects the localisation-driven behaviour for this loop.
+   *
+   * <p>The pose is only trusted when an alliance is known and vision has contributed recently.
+   * Without both, the state machine falls back to manual: acting confidently on a bad pose is
+   * worse than not acting, and a heading assist that fights the driver based on a wrong pose is
+   * the most frustrating possible failure.
+   */
+  private static void updateStateMachine() {
+    ChassisSpeeds speeds = DRIVE_SUBSYSTEM.getChassisSpeeds();
+    // Robot-relative speeds rotated into the field frame give the actual travel direction,
+    // which is what the bump logic needs — a swerve chassis can drive one way while facing
+    // another.
+    Translation2d travelDirection = new Translation2d(
+        speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
+        .rotateBy(DRIVE_SUBSYSTEM.getPose().getRotation());
+
+    boolean poseTrustworthy = FIELD_STATE.hasAlliance() && VISION_SUBSYSTEM.hasRecentMeasurement();
+
+    stateOutput = STATE_MACHINE.update(
+        DRIVE_SUBSYSTEM.getPose(),
+        travelDirection,
+        ScoringLocationLookup.findHub(),
+        VISION_SUBSYSTEM.getFieldLayout().getFieldLength(),
+        FIELD_STATE.isAllianceRed(),
+        FIELD_STATE.isHubActive(),
+        poseTrustworthy);
+
+    // Range-based flywheel speed, applied only while the aim state is active so a driver
+    // holding a preset button is never fought.
+    if (stateOutput.state() == RobotStateMachine.State.AIM_AT_HUB
+        && stateOutput.hasShooterTarget()) {
+      SHOOTER.setRangeTargetRpm(stateOutput.shooterRpm().getAsDouble());
+    } else {
+      SHOOTER.clearRangeTarget();
+    }
+
+    Logger.recordOutput("States/HeadingAssistActive", DRIVE_SUBSYSTEM.isHeadingAssistActive());
+    Logger.recordOutput("States/HeadingAssistErrorDeg",
+        DRIVE_SUBSYSTEM.getHeadingAssistErrorDegrees());
+  }
+
+  /** @return the state selected on the most recent loop. */
+  public static RobotStateMachine.StateOutput getStateOutput() {
+    return stateOutput;
   }
 
   @Override
@@ -409,5 +485,46 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getVisionValidationCommand() {
     return RebuiltValidation.buildVisionChecks(VISION_SUBSYSTEM, DRIVE_SUBSYSTEM);
+  }
+
+  /**
+   * The full drivetrain auto-calibration.
+   *
+   * <p>Needs the robot on the floor with about 4 m clear ahead and AprilTags in view. Measures
+   * wheel scale, steering misalignment, gyro scale, effective drive radius and the feedforward,
+   * then runs the 10 ft acceptance test both open loop and closed loop.
+   *
+   * @return the calibration command.
+   */
+  public static Command getCalibrationCommand() {
+    return CALIBRATOR.full();
+  }
+
+  /**
+   * The full manoeuvre suite: sixteen drive-turn-drive permutations, then the out-and-back
+   * families.
+   *
+   * <p>Needs a lot of space and several minutes. Start with
+   * {@link #getPermutationManeuversCommand()} or a single family if space is tight.
+   *
+   * @return the manoeuvre suite command.
+   */
+  public static Command getAllManeuversCommand() {
+    return MANEUVER_RUNNER.runAll(CalibrationManeuvers.all());
+  }
+
+  /** @return just the sixteen drive-turn-drive permutations. */
+  public static Command getPermutationManeuversCommand() {
+    return MANEUVER_RUNNER.runAll(CalibrationManeuvers.permutations());
+  }
+
+  /** @return just the out-and-back manoeuvres that retrace their outbound path. */
+  public static Command getSamePathReturnCommand() {
+    return MANEUVER_RUNNER.runAll(CalibrationManeuvers.outAndBackSamePath());
+  }
+
+  /** @return just the out-and-back manoeuvres that return by a different route. */
+  public static Command getDifferentPathReturnCommand() {
+    return MANEUVER_RUNNER.runAll(CalibrationManeuvers.outAndBackDifferentPath());
   }
 }

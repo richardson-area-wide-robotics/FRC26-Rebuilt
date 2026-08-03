@@ -184,9 +184,43 @@ public class Shooter extends DashboardSubsystem {
         return currentShooterPosition;
     }
 
-    /** @return the RPM the flywheel is currently being asked to hold. */
+    /**
+     * Range-based target from the localisation state machine, when one is active.
+     *
+     * <p>{@code NaN} means no range target, in which case the selected preset applies. Kept
+     * separate from the preset rather than overwriting it, so that when the assist disengages the
+     * shooter returns to whatever the driver had chosen instead of being left on a stale number.
+     */
+    private double rangeTargetRpm = Double.NaN;
+
+    /**
+     * Sets a distance-derived target, overriding the preset while it is active.
+     *
+     * @param rpm Speed for the current range.
+     */
+    public void setRangeTargetRpm(double rpm) {
+        rangeTargetRpm = rpm;
+    }
+
+    /** Clears the range target, handing the flywheel back to the selected preset. */
+    public void clearRangeTarget() {
+        rangeTargetRpm = Double.NaN;
+    }
+
+    /** @return true while a distance-derived target is overriding the preset. */
+    public boolean hasRangeTarget() {
+        return !Double.isNaN(rangeTargetRpm);
+    }
+
+    /**
+     * @return the RPM the flywheel is currently being asked to hold — the range-based target
+     *     when the aim assist is active, otherwise the selected preset. The operator trim
+     *     applies either way, so a driver who knows the shot is running a little short can
+     *     still bias it.
+     */
     public double getTargetRPM() {
-        return currentShooterPosition.rpm + operatorRPMModifer;
+        double base = hasRangeTarget() ? rangeTargetRpm : currentShooterPosition.rpm;
+        return base + operatorRPMModifer;
     }
 
     /** @return the flywheel's measured RPM. */

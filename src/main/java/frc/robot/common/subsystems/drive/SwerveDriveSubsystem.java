@@ -4,7 +4,9 @@
 
 package frc.robot.common.subsystems.drive;
 
+import java.util.Optional;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
@@ -87,6 +89,17 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
 
   /** Last chassis speeds we were asked to achieve, kept for logging and diagnostics. */
   private ChassisSpeeds m_commandedSpeeds = new ChassisSpeeds();
+
+  /**
+   * Heading assist gain, in fraction-of-max-angular-rate per degree of error.
+   *
+   * <p>0.02 means a 25 degree error commands half of the available rotation rate, which snaps to
+   * a target briskly without overshooting into oscillation.
+   */
+  private static final double HEADING_ASSIST_GAIN = 0.02;
+
+  private boolean m_headingAssistActive;
+  private double m_headingAssistErrorDegrees;
 
   /** Creates a new DriveSubsystem. */
   public SwerveDriveSubsystem() {
@@ -298,6 +311,67 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
   }
 
   /**
+   * Like {@link #driveCommand} but with an optional heading target that overrides the driver's
+   * rotation stick.
+   *
+   * <p>This is how the localisation-driven states take effect. Translation always stays with the
+   * driver: an assist that takes the sticks away is one that gets switched off, and the driver is
+   * the one who can see a defender coming.
+   *
+   * <p>When the supplier returns empty the rotation stick passes straight through, so the assist
+   * is invisible when it has nothing to say.
+   *
+   * @param xSpeed         Supplier of forward speed, −1..1.
+   * @param ySpeed         Supplier of sideways speed, −1..1.
+   * @param rot            Supplier of rotation rate, −1..1, used when no heading is targeted.
+   * @param headingTarget  Supplier of a field-relative heading to hold, or empty for none.
+   * @param fieldRelative  Whether x/y are field-relative.
+   * @return a command suitable for use as the drivetrain's default command.
+   */
+  public Command driveCommandWithHeadingAssist(
+      DoubleSupplier xSpeed,
+      DoubleSupplier ySpeed,
+      DoubleSupplier rot,
+      Supplier<Optional<Rotation2d>> headingTarget,
+      boolean fieldRelative) {
+
+    return run(() -> {
+      double x = applyDeadband(xSpeed.getAsDouble());
+      double y = applyDeadband(ySpeed.getAsDouble());
+      double manualRotation = applyDeadband(rot.getAsDouble());
+
+      Optional<Rotation2d> target = headingTarget.get();
+      double rotationCommand;
+
+      if (target.isPresent() && Math.abs(manualRotation) < 1e-6) {
+        // Assist holds the heading, but the driver can always override simply by touching the
+        // rotation stick — no button to remember, no mode to get stuck in.
+        double error = MathUtil.inputModulus(
+            target.get().getDegrees() - getHeading(), -180, 180);
+        rotationCommand = MathUtil.clamp(error * HEADING_ASSIST_GAIN, -0.5, 0.5);
+        m_headingAssistActive = true;
+        m_headingAssistErrorDegrees = error;
+      } else {
+        rotationCommand = manualRotation;
+        m_headingAssistActive = false;
+        m_headingAssistErrorDegrees = 0;
+      }
+
+      drive(x, y, rotationCommand, fieldRelative);
+    });
+  }
+
+  /** @return true while a heading assist is steering rather than the driver. */
+  public boolean isHeadingAssistActive() {
+    return m_headingAssistActive;
+  }
+
+  /** @return the heading assist's current error in degrees, or 0 when inactive. */
+  public double getHeadingAssistErrorDegrees() {
+    return m_headingAssistErrorDegrees;
+  }
+
+  /**
    * Applies the configured controller deadband, rescaling the remaining travel so that the
    * output is still continuous from 0 to 1 just outside the deadband.
    *
@@ -306,6 +380,75 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
    */
   public static double applyDeadband(double value) {
     return MathUtil.applyDeadband(value, HIDConstants.CONTROLLER_DEADBAND);
+  }
+
+  /**
+   * Drives every module open loop at a fixed duty cycle, wheels pointed straight ahead.
+   *
+   * <p>For feedforward characterisation only — see
+   * {@link MAXSwerveModule#setDriveOpenLoop}. Never use this to drive the robot: there is no
+   * velocity control, so output maps to speed only through the very relationship being
+   * measured.
+   *
+   * @param dutyCycle Motor output, −1..1.
+   */
+  public void driveOpenLoop(double dutyCycle) {
+    Rotation2d straight = new Rotation2d();
+    m_frontLeft.setDriveOpenLoop(dutyCycle, straight);
+    m_frontRight.setDriveOpenLoop(dutyCycle, straight);
+    m_rearLeft.setDriveOpenLoop(dutyCycle, straight);
+    m_rearRight.setDriveOpenLoop(dutyCycle, straight);
+  }
+
+  /** @return mean applied drive voltage across the four modules. */
+  public double getAverageDriveVoltage() {
+    return (m_frontLeft.getDriveVoltage() + m_frontRight.getDriveVoltage()
+        + m_rearLeft.getDriveVoltage() + m_rearRight.getDriveVoltage()) / 4.0;
+  }
+
+  /** @return mean signed drive velocity across the four modules, in m/s. */
+  public double getAverageDriveVelocity() {
+    return (m_frontLeft.getDriveVelocity() + m_frontRight.getDriveVelocity()
+        + m_rearLeft.getDriveVelocity() + m_rearRight.getDriveVelocity()) / 4.0;
+  }
+
+  /**
+   * @return mean absolute drive velocity across the four modules, in m/s. Used when spinning
+   *     in place, where the signed velocities cancel but the magnitudes do not.
+   */
+  public double getAverageAbsoluteDriveVelocity() {
+    return (Math.abs(m_frontLeft.getDriveVelocity()) + Math.abs(m_frontRight.getDriveVelocity())
+        + Math.abs(m_rearLeft.getDriveVelocity()) + Math.abs(m_rearRight.getDriveVelocity()))
+        / 4.0;
+  }
+
+  /**
+   * @return mean encoder-reported distance travelled across the four modules, in metres.
+   *     Signed, so this is only meaningful for straight-line motion.
+   */
+  public double getAverageDriveDistance() {
+    SwerveModulePosition[] positions = get();
+    double sum = 0;
+    for (SwerveModulePosition position : positions) {
+      sum += position.distanceMeters;
+    }
+    return sum / positions.length;
+  }
+
+  /** Re-applies drive closed-loop gains to all four modules. For live tuning. */
+  public void applyDriveGains(double p, double d) {
+    m_frontLeft.applyDriveGains(p, d);
+    m_frontRight.applyDriveGains(p, d);
+    m_rearLeft.applyDriveGains(p, d);
+    m_rearRight.applyDriveGains(p, d);
+  }
+
+  /** Re-applies steering closed-loop gains to all four modules. For live tuning. */
+  public void applyTurnGains(double p, double d) {
+    m_frontLeft.applyTurnGains(p, d);
+    m_frontRight.applyTurnGains(p, d);
+    m_rearLeft.applyTurnGains(p, d);
+    m_rearRight.applyTurnGains(p, d);
   }
 
   /**
