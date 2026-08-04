@@ -4,6 +4,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import frc.robot.rebuilt.RebuiltConstants.GeometryConstants;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 
 /**
@@ -90,8 +91,28 @@ public final class ShooterRangeModel {
      * @param hubPose   Our alliance's hub pose.
      * @return the field-relative heading to face.
      */
-    public static Rotation2d headingToHub(Pose2d robotPose, Pose2d hubPose) {
+    public static Rotation2d bearingToHub(Pose2d robotPose, Pose2d hubPose) {
         Translation2d delta = hubPose.getTranslation().minus(robotPose.getTranslation());
         return new Rotation2d(delta.getX(), delta.getY());
+    }
+
+    /**
+     * The chassis heading that puts the <b>shooter</b> on the hub.
+     *
+     * <p>Not the same as {@link #bearingToHub}, and the difference is the whole point. The shooter
+     * fires 90 degrees off the chassis forward axis on this robot — see
+     * {@link GeometryConstants#SHOOTER_YAW_OFFSET_DEGREES} — so commanding the bearing directly would
+     * aim the <em>intake</em> at the goal and fire the shot sideways off the field.
+     *
+     * <p>The shooter points along {@code chassisHeading + offset} in the field frame. Setting that
+     * equal to the bearing and solving gives {@code chassisHeading = bearing - offset}.
+     *
+     * @param robotPose Current robot pose.
+     * @param hubPose   Hub pose for this alliance.
+     * @return the heading to command so the shooter faces the hub.
+     */
+    public static Rotation2d headingToAimShooter(Pose2d robotPose, Pose2d hubPose) {
+        return bearingToHub(robotPose, hubPose)
+                .minus(Rotation2d.fromDegrees(GeometryConstants.SHOOTER_YAW_OFFSET_DEGREES));
     }
 }

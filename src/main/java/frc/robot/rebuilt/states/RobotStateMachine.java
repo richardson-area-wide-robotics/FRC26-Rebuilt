@@ -132,7 +132,10 @@ public class RobotStateMachine {
                 && FieldRegions.isOnOwnSide(robotPose, fieldLength, isRedAlliance)) {
 
             double distance = ShooterRangeModel.distanceToHub(robotPose, hubPose);
-            Rotation2d heading = ShooterRangeModel.headingToHub(robotPose, hubPose);
+            // The heading that aims the SHOOTER, not the chassis nose. The shooter sits 90 degrees
+            // off forward on this robot, so those are not the same thing and using the bearing
+            // directly would fire the shot sideways off the field.
+            Rotation2d heading = ShooterRangeModel.headingToAimShooter(robotPose, hubPose);
             double rpm = ShooterRangeModel.rpmForDistance(distance);
 
             String reason = ShooterRangeModel.isInRange(distance)

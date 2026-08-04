@@ -83,6 +83,58 @@ public final class RebuiltConstants {
     }
   }
 
+  /**
+   * Where the robot's mechanisms point, relative to the chassis forward axis.
+   *
+   * <p><b>The intake and the shooter are 90 degrees apart on this robot, and the camera is in line
+   * with the shooter.</b> That single fact has consequences the code cannot infer, so it lives here.
+   *
+   * <p>The chassis forward axis (+x) is whatever the robot drives toward on a forward stick. Taking
+   * that as the <b>intake</b> direction, which is the usual convention for a robot with a floor
+   * intake and is what {@code BUMP_REVERSE} assumes when it leads with the back, the shooter and the
+   * camera both sit at 90 degrees to it.
+   *
+   * <p><b>This is what {@code AIM_AT_HUB} has to account for.</b> Aiming the chassis +x axis at the
+   * hub points the <em>intake</em> at the hub and the shooter at whatever is 90 degrees away, so the
+   * shot misses the field. The heading target has to be the bearing to the hub <em>minus</em> this
+   * offset, so that once the robot is there the shooter is the thing pointing at the goal.
+   */
+  public static final class GeometryConstants {
+
+    /**
+     * CONFIRM THE SIGN — degrees from chassis forward (+x) to the direction the shooter fires.
+     *
+     * <p>Magnitude is 90, which is known. The sign is not, and it cannot be read off the code:
+     *
+     * <ul>
+     *   <li>{@code +90} means the shooter fires out of the robot's <b>left</b> side, since +y is
+     *       left in WPILib's frame.
+     *   <li>{@code -90} means it fires out of the <b>right</b> side.
+     * </ul>
+     *
+     * <p>To settle it: stand behind the robot looking the way it drives forward. If the shooter is on
+     * your left, this is {@code +90}. Getting it backwards aims the robot 180 degrees away from the
+     * hub, which at least fails obviously rather than subtly.
+     */
+    public static final double SHOOTER_YAW_OFFSET_DEGREES = 90.0;
+
+    /**
+     * Degrees from chassis forward to the camera's optical axis.
+     *
+     * <p>Deliberately defined as equal to {@link #SHOOTER_YAW_OFFSET_DEGREES} rather than as its own
+     * number, because the camera is physically in line with the shooter — so they cannot disagree
+     * without someone having moved the camera. {@code VisionConstants.ROBOT_TO_CAMERA} must carry
+     * this same yaw, and a test asserts it does.
+     *
+     * <p>That matters: the placeholder transform has a yaw of 0, which would rotate every
+     * tag-derived pose by 90 degrees. Vision would be confidently, enormously wrong.
+     */
+    public static final double CAMERA_YAW_OFFSET_DEGREES = SHOOTER_YAW_OFFSET_DEGREES;
+
+    private GeometryConstants() {
+    }
+  }
+
   public static final class ShooterConstants {
     /** Closed-loop velocity gains for the flywheel leader. */
     public static final double kP = 0.00035;

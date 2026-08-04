@@ -43,17 +43,40 @@ public final class VisionConstants {
   public static final String CAMERA_NAME = "frontCamera";
 
   /**
+   * Degrees from chassis forward to the camera's optical axis.
+   *
+   * <p><b>90, because the camera is mounted in line with the shooter and the shooter is 90 degrees
+   * from the intake.</b> Not zero, which is what a placeholder naturally wants to be and what this
+   * originally had — and a yaw of 0 against a camera actually pointing out the side rotates every
+   * tag-derived pose by a quarter turn. Vision is then confidently, enormously wrong, which is worse
+   * than having no vision at all because the estimator fuses it in and reports high confidence.
+   *
+   * <p>Deliberately a duplicate of {@code RebuiltConstants.GeometryConstants.CAMERA_YAW_OFFSET_DEGREES}
+   * rather than an import: this class sits in {@code common} and that one is this year's robot, so
+   * importing it would have the shared framework depend on a specific robot. {@code
+   * GeometryConsistencyTest} pins the two together instead, so they cannot drift apart silently.
+   *
+   * <p><b>Confirm the sign against the robot.</b> +90 means the camera looks out of the robot's left
+   * side, since +y is left. Same question, and the same answer, as the shooter offset.
+   */
+  public static final double CAMERA_YAW_DEGREES = 90.0;
+
+  /**
    * MEASURE — the rigid transform from robot centre to camera lens.
    *
-   * <p>Translation is metres in robot coordinates: +x forward, +y left, +z up, measured from
-   * the robot's centre of rotation on the floor. Rotation is the camera's orientation: pitch
-   * is positive downward in this constructor's convention, so a camera tilted up gets a
-   * negative pitch.
+   * <p>Translation is metres in robot coordinates: <b>+x forward, +y left, +z up</b>, measured from
+   * the robot's <b>centre of rotation at floor level</b> — which is the centre of the square formed by
+   * the four wheel contact patches, not the centre of the bumper perimeter. Step 0a of
+   * {@code SHOP_RUNBOOK.md} is the procedure for finding and marking it.
    *
-   * <p>The placeholder below describes a camera 30 cm forward of centre, on the centreline,
-   * 20 cm off the floor, pointing straight ahead and tilted up 15 degrees. <b>Replace every
-   * number with a measurement from the actual robot.</b> An error of a few degrees in pitch
-   * translates to tens of centimetres of pose error at the far end of the field.
+   * <p>Rotation is the camera's orientation. <b>Pitch is positive downward</b>, so a camera tilted up
+   * gets a negative pitch — asserted by {@code PitchConventionTest} so it cannot be misremembered.
+   *
+   * <p>The yaw below is real: {@link #CAMERA_YAW_DEGREES}, because this camera looks out along the
+   * shooter axis. <b>The translation and the pitch are still placeholders</b> describing a lens 12 in
+   * forward of centre, on the centreline, 8 in off the floor, tilted up 15 degrees. Replace all four
+   * numbers with measurements — step 0c of the runbook gives two independent methods for pitch,
+   * because a few degrees there becomes tens of centimetres of pose error at the far end of the field.
    */
   public static final Transform3d ROBOT_TO_CAMERA = new Transform3d(
       new Translation3d(
@@ -63,7 +86,7 @@ public final class VisionConstants {
       new Rotation3d(
           0.0,
           Units.degreesToRadians(-15.0),
-          0.0));
+          Units.degreesToRadians(CAMERA_YAW_DEGREES)));
 
   /**
    * Reject any single-tag sighting whose pose ambiguity exceeds this.

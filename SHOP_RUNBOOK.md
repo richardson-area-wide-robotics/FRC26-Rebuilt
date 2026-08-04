@@ -4,7 +4,18 @@ Branch `StuartRevisions`. **Nothing here has touched hardware.** Work top to bot
 gates the next, and step 2 is a hard stop if it fails.
 
 Console output from every routine is prefixed, so you can follow along in the driver station
-Console tab without AdvantageScope: `[validate]`, `[calib]`, `[maneuver]`, `[state]`.
+Console tab without AdvantageScope: `[validate]`, `[calib]`, `[maneuver]`, `[state]`,
+`[Traction]`, `[LoadCalibration]`, `[sysid]`, `[bump]`.
+
+**Steps 0, 2, 3, 8, 9 and 10 are written as numbered procedures.** Step 0 in particular says what
+each measurement is taken *from* and *to* — a wrong datum there produces confidently wrong poses,
+which is worse than no vision at all.
+
+**Start with 0c.** It takes two minutes, needs no tools, and the camera measurement in 0d depends on
+its answer.
+
+**Every measurement assumes bumpers on**, since that is how this robot is always tested. Step 0b
+explains why that changes nothing about the numbers and everything about where you take them from.
 
 Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-hardening.md`.
 
@@ -14,7 +25,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 
 | Step | What | Needs | Rough time |
 | --- | --- | --- | --- |
-| 0 | Measure and enter three values | Tape measure, PhotonVision UI | 20 min |
+| 0 | **Five measurements** — origin, module spacing, shooter side, camera, bump | Tape, square, angle finder, PhotonVision UI | 45 min |
 | 1 | Deploy | Laptop | 5 min |
 | 2 | **On blocks** — 14-check self-test | Blocks, wheels clear | 10 min |
 | 3 | **Verify drive directions** | ~3 m clear floor | 10 min |
@@ -32,7 +43,11 @@ first — step 8 needs only a wall and step 9 only blocks.
 
 ### Bring to the shop
 
-- **Tape measure** — module spacing (decision 1), camera position, bump band edges
+- **Tape measure**, **masking tape**, a **carpenter's square**, a **marker**, and **string or a
+  chalk line** — step 0 needs all of them
+- A **digital angle finder or phone inclinometer** for camera pitch
+- **Bumpers on**, as always. Step 0b explains why that changes nothing about the numbers but
+  everything about where you measure them from
 - **Scale** if you want to re-check the 47.6272 kg in `settings.json`
 - **Blocks** — steps 2 and 9 will not be skipped
 - **~20 game pieces** for step 9, and **a second person** to feed them
@@ -58,51 +73,239 @@ reads anything but 0, someone fitted one and that needs knowing.
 
 ---
 
-## 0. Before power-on — three values only you can supply
+## 0. Before power-on — the five measurements only you can make
 
-Both live in `src/main/java/frc/robot/common/subsystems/vision/VisionConstants.java` and are
-marked `MEASURE`. Vision cannot be trusted until they are right, and a wrong camera transform
-produces *confidently wrong* poses, which is worse than none.
+Nothing in the code can derive these, and a wrong camera transform produces *confidently wrong*
+poses, which is worse than no vision at all — the estimator fuses the error in and reports high
+confidence while doing it.
 
-| Constant | What it is | How to get it |
-| --- | --- | --- |
-| `CAMERA_NAME` | Camera name exactly as PhotonVision shows it | PhotonVision web UI. A mismatch fails **silently** — no error, vision just never contributes |
-| `ROBOT_TO_CAMERA` | Lens position and angle relative to robot centre on the floor | Tape measure. +x forward, +y left, +z up. Pitch is negative when tilted **up** |
-| Module spacing | Distance between module centres, both axes | Tape measure the frame. See decision below — the code and PathPlanner currently disagree by 6.5 mm per side |
+**Everything below is measured with bumpers on**, since that is how this robot is always tested.
+That matters most in 0b: bumpers hide the frame entirely, and the frame is not the datum anyway.
 
-**Measuring `ROBOT_TO_CAMERA` properly is worth the ten minutes.** Measure from the robot's centre
-of rotation, at floor level, to the camera *lens* — not the case. Pitch matters most: a few degrees
-of error becomes tens of centimetres of pose error at the far end of the field, and it will look
-like a calibration problem rather than a measurement one.
-
-Field layout is already set to **AndyMark** (`k2026RebuiltAndymark`). If you ever run on a
-welded field, change it — the two layouts place tags up to **3.6 cm** apart, which is larger
-than your 1″ budget.
-
-Also check `FieldRegions.BUMP_NEAR_EDGE_METERS` / `BUMP_FAR_EDGE_METERS` — currently a
-placeholder mid-field band. The bump-reverse state fires off these.
-
-### Two decisions: PathPlanner settings disagree with the code
-
-PathPlanner *plans* using `src/main/deploy/pathplanner/settings.json`; the robot *executes* using
-`CommonConstants`. Two properties disagree, so PathPlanner is planning for a slightly different
-robot than the one that runs. Both are pinned by `PathPlannerSettingsConsistencyTest` so they
-cannot grow, but both need a human decision:
-
-| Property | PathPlanner | Code | Decision |
+| # | What | Where it goes | Time |
 | --- | --- | --- | --- |
-| Module offset | ±0.343 m (27.01″ spacing) | ±0.3366 m (26.50″) | **Measure the frame.** 6.5 mm per side skews the kinematics, so commanded rotation and translation bleed into each other |
-| Drive current limit | 60 A | 50 A applied in `Configs.java` | **Electrical call.** PathPlanner plans acceleration assuming 20% more torque than the drivetrain will deliver, so the robot falls behind on hard acceleration |
+| 0a | Robot origin marked on the floor | *(needed for 0d)* | 10 min |
+| 0b | Module spacing, wheel centre to wheel centre | `CommonConstants.DriveConstants` + `settings.json` | 10 min |
+| 0c | **Which side the shooter fires from** | `GeometryConstants` + `VisionConstants` | 2 min |
+| 0d | Camera position and angle | `VisionConstants.ROBOT_TO_CAMERA` | 20 min |
+| 0e | Bump band position | `FieldRegions` | 5 min |
 
-Whichever value is right in each row, change the other to match. Once they agree, tighten the two
-`KNOWN_*_DIVERGENCE` constants in that test to zero — a test in the suite will tell you to.
+You need: tape measure, masking tape, a carpenter's square, a marker, a digital angle finder or
+phone inclinometer, and string or a chalk line.
 
-Two things that *do* agree and are worth knowing: wheel radius (0.038 vs 0.0381, a 0.26% difference
-that does not matter) and the motor type, recorded as `vortex`, which independently confirms the
-drive free-speed fix.
+---
 
-Also note `settings.json` already carries **measured** mass (47.6272 kg) and MOI (3.733 kg·m²).
-Those are now used by the code fallback rather than guessed at.
+### 0a. Mark the robot origin on the floor
+
+Everything in 0d is measured **from the robot's centre of rotation, at floor level**. That is not
+the centre of the bumper perimeter and not the centre of the frame — it is the centre of the square
+formed by the four wheel contact patches. Find it once and mark it.
+
+1. Put the robot on flat, hard floor. Not carpet — you need marks that stay put.
+2. Point all four wheels **straight ahead**. Run step 2's self-test if the robot is already
+   deployed, or push each wheel round by hand until it is square to the frame.
+3. Lay a strip of masking tape on the floor beside each wheel.
+4. For each wheel, hold the carpenter's square vertically against the **outer face of the wheel**
+   and mark on the tape where the wheel's contact patch centre falls. On REV MAXSwerve the wheel is
+   coaxial with the steering axis, so the contact patch centre sits directly below the module's
+   turning axis — sighting down the turning motor is a good cross-check.
+5. You now have four marks. **Measure both diagonals** — front-left to rear-right, and front-right
+   to rear-left.
+   - They should be equal. For a 26.5″ module square, each diagonal is **37.48″** (0.952 m).
+   - If they differ by more than about ¼″ the frame is racked. Note it and carry on, but know that
+     the kinematics assumes a perfect rectangle, so a racked frame puts a floor under how good the
+     10 ft / 1 inch result can get.
+6. Snap a chalk line or run string along each diagonal. **Where they cross is the robot origin.**
+   Mark it with a cross and label it.
+7. Extend a line forward from the origin, parallel to the robot's centreline, and mark it. This is
+   the **+x axis** and you will measure along it in 0d.
+
+---
+
+### 0b. Module spacing — wheel centre to wheel centre
+
+This is the open decision from the summary table: PathPlanner's `settings.json` says the modules sit
+at ±0.343 m (27.01″ apart), the code says ±0.3366 m (26.50″ apart). One of them is wrong.
+
+> **Do not measure the frame, and do not measure the bumpers.** With bumpers on, the frame is not
+> even visible — and the number the code wants is the distance between wheel *centres*, which is
+> unaffected by bumpers. Measuring across bumpers would give you roughly 32–33″ and quietly wreck the
+> kinematics.
+
+1. Use the four floor marks from 0a — they already are the wheel centres.
+2. **Track width**: distance between the two *front* marks. Repeat for the two rear marks; they
+   should match.
+3. **Wheel base**: distance between the two *left* marks. Repeat on the right.
+4. If you would rather measure on the robot than on the floor, measure **outside-to-outside across
+   both front tyres, then subtract one tyre width** (each tyre contributes half a width). Measure the
+   tyre width rather than assuming it.
+5. Record all four figures. On a square chassis all four should agree.
+
+Then resolve the disagreement:
+
+- Both `kTrackWidth` and `kWheelBase` in `CommonConstants.DriveConstants` are `Units.inchesToMeters(26.5)`.
+- `src/main/deploy/pathplanner/settings.json` carries `moduleOffset`, which is **half** the spacing.
+- Change whichever is wrong so both describe the robot you measured, then set the two
+  `KNOWN_*_DIVERGENCE` constants in `PathPlannerSettingsConsistencyTest` to zero. A test in the suite
+  will tell you to.
+
+**Why 6.5 mm per side matters:** the kinematics converts chassis motion into module motion using
+these distances. Get them wrong and commanded rotation bleeds into translation and vice versa — the
+robot drifts sideways slightly while spinning, and yaws slightly while driving straight. It looks
+like a tuning problem and no amount of tuning fixes it.
+
+---
+
+### 0c. Which side the shooter fires from — two minutes, and everything else leans on it
+
+The intake and shooter are 90 degrees apart, and the camera is in line with the shooter. The code
+knows the magnitude; **it does not know which way round**, and two separate things depend on it.
+
+1. Stand **behind** the robot, looking the direction it drives on a forward stick.
+2. Find the shooter. Is it firing out of your **left** or your **right**?
+3. If **left**: both offsets are `+90`. If **right**: both are `-90`.
+4. Set `RebuiltConstants.GeometryConstants.SHOOTER_YAW_OFFSET_DEGREES`.
+5. Set `VisionConstants.CAMERA_YAW_DEGREES` to the same value. A test fails the build if they
+   disagree, since the camera and shooter share a physical axis.
+
+**What each one breaks if the sign is wrong:**
+
+| Constant | Wrong sign does this |
+| --- | --- |
+| `SHOOTER_YAW_OFFSET_DEGREES` | `AIM_AT_HUB` turns the robot 180° from where it should be. Fails obviously, at least |
+| `CAMERA_YAW_DEGREES` | Every tag pose is rotated 180° instead of being correct. The estimator fuses it and reports confidence |
+
+> Also worth knowing: **while these were both 0, `AIM_AT_HUB` aimed the intake at the goal.** The
+> heading it commanded was the bearing to the hub, which points the chassis nose there — and the
+> shooter is a quarter turn off the nose, so every shot would have gone sideways across the field.
+> Fixed, and `RobotStateMachineTest` now asserts the *shooter* ends up on the hub rather than the nose.
+
+---
+
+### 0d. Camera position and angle → `ROBOT_TO_CAMERA`
+
+This is a `Transform3d` from the robot origin to the **camera lens**. Six numbers: three distances
+and three angles.
+
+**Measure to the lens glass, not the case, not the mount, not the USB connector.** The optical
+centre is a few millimetres inside the front face of the glass; the front face is close enough and
+is something you can actually put a square against.
+
+Robot coordinates, all from the origin you marked in 0a:
+
+- **+x is forward**, the direction the robot drives on a forward stick
+- **+y is LEFT** — this catches people out; it is left, not right
+- **+z is up**, from the floor
+
+#### The three distances
+
+1. Hold the carpenter's square vertically, one edge flat on the floor, and slide it until the
+   vertical edge just touches the **centre of the front face of the lens**.
+2. Mark the floor at the base of the square's vertical edge. That mark is the lens projected straight
+   down onto the floor.
+3. **x** = distance from the origin cross to the lens mark, measured **along the +x centreline you
+   marked in 0a**. Positive if the camera is forward of the origin.
+4. **y** = perpendicular distance from that centreline to the lens mark. **Positive if the camera is
+   to the robot's left.** A camera on the centreline is 0.
+5. **z** = vertical height from the floor to the centre of the lens glass. Always positive.
+
+Enter all three in inches via `Units.inchesToMeters(...)`, matching the existing style.
+
+#### Roll and yaw
+
+6. **Roll** is rotation about the forward axis — the camera being tilted sideways. Normally **0**.
+   Check by looking at the PhotonVision stream: if the horizon is level, roll is 0. Leave it 0 unless
+   the camera is deliberately canted.
+7. **Yaw** is rotation about the vertical axis, positive counterclockwise seen from above — which
+   means rotated toward the robot's **left**.
+
+> **On this robot the yaw is 90 degrees, not 0.** The camera is mounted in line with the shooter, and
+> the shooter is 90 degrees from the intake. Since the chassis forward axis is the intake direction,
+> the camera looks out of the side.
+>
+> **A yaw of 0 here rotates every tag-derived pose by a quarter turn.** Vision becomes confidently,
+> enormously wrong — worse than no vision, because the estimator fuses it and reports high confidence
+> while doing it. This was the placeholder value and it is now 90; `GeometryConsistencyTest` keeps it
+> tied to the shooter offset so the two cannot drift apart.
+>
+> **Confirm the sign, which is the one thing nobody has yet.** Stand behind the robot looking the way
+> it drives forward on a forward stick:
+>
+> - Shooter and camera out of **your left** → both offsets are **+90**
+> - Out of **your right** → both are **−90**
+>
+> Set `RebuiltConstants.GeometryConstants.SHOOTER_YAW_OFFSET_DEGREES` and
+> `VisionConstants.CAMERA_YAW_DEGREES` to match. Getting the sign backwards aims the robot 180
+> degrees from the hub, which at least fails obviously.
+
+#### Pitch — measure this one twice
+
+Pitch is the number that costs you the most if it is wrong. **A few degrees of pitch error becomes
+tens of centimetres of pose error at the far end of the field**, and it looks exactly like a
+calibration problem rather than a measurement one.
+
+> **Sign: a camera tilted UP has a NEGATIVE pitch.** In WPILib's right-handed frame a positive
+> rotation about +y takes the nose down, so up is negative. The placeholder in the file is `-15.0`
+> for a camera tilted up 15°. This is asserted by `PitchConventionTest` so it cannot drift.
+
+**Method 1 — the bracket.** Put a digital angle finder, or a phone inclinometer, flat against a
+surface of the camera or its mount that is parallel to the optical axis. Read the angle off level.
+Negate it if the camera points up. Quick, and enough to get within a degree or two.
+
+**Method 2 — the crosshair.** Slower, better, and it measures the optical axis itself rather than a
+surface you hope is parallel to it. Do this one as well and reconcile.
+
+1. Park the robot on flat floor facing a wall, roughly 3 m away, square to the wall.
+2. Measure **h_lens** — floor to lens centre. (You already have this: it is *z*.)
+3. Measure **d** — horizontal distance from the lens to the wall.
+4. Open the PhotonVision stream. Identify what sits at the **exact vertical centre** of the image.
+   Have someone hold a marker against the wall and move it until it is dead centre.
+5. Mark the wall there and measure **h_target** — floor to that mark.
+6. Then:
+
+   ```
+   pitch_degrees = -atan((h_target - h_lens) / d) in degrees
+   ```
+
+   Camera tilted up puts the crosshair above the lens height, so `h_target > h_lens`, and the minus
+   sign makes pitch negative. Which is the convention.
+
+7. Worked example: lens at 0.20 m, crosshair lands at 1.00 m on a wall 3.00 m away.
+   `-atan(0.80 / 3.00)` = `-atan(0.2667)` = **−14.9°**. Enter `-14.9`.
+
+If the two methods disagree by more than about 2°, trust the crosshair and find out why the bracket
+is lying — usually the surface you measured is not parallel to the optical axis.
+
+#### Also do this while you are here
+
+8. Copy the camera name **exactly** as PhotonVision's web UI shows it into `CAMERA_NAME`. A mismatch
+   fails **silently**: no error, vision simply never contributes.
+9. Check the bumper does not clip the bottom of the camera's view. Bumpers sit high enough to matter
+   for a low-mounted camera, and an occluded lower field of view means close tags disappear exactly
+   when you most want them.
+
+---
+
+### 0e. Bump band → `FieldRegions`
+
+Two numbers, both **distances along the field from the blue alliance wall**, in metres. The reverse-
+crossing state fires off these, so if they are wrong the robot either turns round for no reason or
+fails to turn when it matters.
+
+1. Work in the WPILib field frame: **x is measured from the blue alliance perimeter wall**, and
+   increases toward the red end. This holds regardless of which alliance you are on — the code
+   mirrors for red rather than keeping two sets of numbers.
+2. Run a tape from the **blue alliance wall**, along the length of the field, to the **near edge of
+   the bump** — the point where the floor first starts to rise, not the crest. That is
+   `BUMP_NEAR_EDGE_METERS`.
+3. Continue to the **far edge**, where the floor returns to flat. That is `BUMP_FAR_EDGE_METERS`.
+4. Sanity check: `BUMP_FAR_EDGE_METERS - BUMP_NEAR_EDGE_METERS` should equal the physical width of
+   the bump. The placeholders give 2.2 m, which is a guess.
+
+> **With only half a field of carpet you may not be able to measure this at all.** If the bump is not
+> on your half, take both numbers from the official field drawings rather than estimating. Leaving
+> the placeholders in place is the one option that is definitely wrong: they describe a generic
+> mid-field band and the state machine will act on them as though they were measured.
 
 ---
 
@@ -133,7 +336,16 @@ but it is no longer the *only* thing covering container wiring.
 
 ## 2. On blocks — mechanical self-test
 
-**Robot on blocks, wheels clear.** Select **Test** mode.
+1. Block the robot up so **all four wheels spin completely free** — at least 25 mm of air under each
+   tyre. Blocks under the frame rails, not under the modules.
+2. Push each wheel by hand and confirm it spins freely and the module rotates without binding.
+3. Confirm nothing can reach a wheel: cables dressed, no game pieces on the floor under the robot.
+4. Deploy if you have not already (step 1), then select **Test** mode on the driver station.
+5. Watch the Console tab. Fourteen checks run automatically and each prints its own result.
+6. Watch `Rebuilt/Validation/AllPassed` in AdvantageScope, or read the console summary.
+
+**The robot will spin its wheels and move the intake without further warning.** Hands clear before
+you enable.
 
 Fourteen checks run automatically: gyro reporting, module positions readable, drive motors
 actually turn the wheels, steering responds, shooter reaches its idle setpoint, intake deploy
@@ -160,6 +372,23 @@ unplugged encoder before it becomes a broken mechanism.
 ---
 
 ## 3. On the floor — verify drive directions
+
+Do this before anything that trusts odometry. A sign error here makes every later calibration
+measure the wrong thing, and it is the fastest possible thing to check.
+
+1. Robot on the floor, roughly 3 m of clear space ahead and to each side.
+2. Stand **behind** the robot, looking the same way it faces. All directions below are from that
+   viewpoint.
+3. Enable teleop. Push the left stick **forward** — the robot must drive **away from you**.
+4. Push the left stick **left** — the robot must drive **to your left**, not rotate.
+5. Push the right stick **left** — the robot must rotate **counterclockwise seen from above**.
+6. With the robot stationary, check `SwerveDriveSubsystem/GyroAngleDeg`. Rotate the robot
+   counterclockwise by hand; the angle must **increase**.
+7. Drive forward about 2 m and check the pose in AdvantageScope moved in **+x**.
+
+Any one of these being backwards is a sign flip, not a tuning issue. Fix it before step 4 — the
+calibration in step 5 compares odometry against AprilTags, and a sign error there produces a
+plausible-looking wheel scale that is completely wrong.
 
 **This is the likeliest surprise of the day.** The original code had no negations and a comment
 reading *"LeftY is the xRequest and LeftX is the yRequest for some reason"*. Because the
@@ -306,8 +535,20 @@ Both fall back to `MANUAL` if the pose is untrustworthy, so if neither ever enga
 
 ## 8. Traction — the drive current limit
 
-**Robot square against a wall, on carpet, on a good battery.** Schedule
-`RebuiltContainer.getTractionCalibrationCommand()`.
+1. Pick a **solid wall** — the field perimeter or a shop wall that will not move. Not a door, not
+   shelving.
+2. Drive the robot slowly up to it until the **bumper face contacts flat across its whole width**.
+   Bumpers are what touch, so square the bumper, not the frame.
+3. Check squareness by eye along the bumper face: no daylight at either end. A robot cocked at an
+   angle will push itself sideways and the run aborts as "robot moved".
+4. Fit a **freshly charged battery**. A sagging pack under-reports the traction limit, and the report
+   will flag it but a good battery avoids the wasted run.
+5. Keep hands and feet clear. The robot pushes at full output for 0.75 s at a time.
+6. Schedule `RebuiltContainer.getTractionCalibrationCommand()`.
+7. Watch the console. Each step prints one line as it completes.
+
+Bumper compression lets the robot creep a centimetre or two as it loads up. That is expected and is
+well inside the 10 cm the run allows before it decides the robot is not against the wall.
 
 It pushes at full output while stepping the drive current limit from 20 A upward in 5 A steps,
 stopping the moment the wheels break loose. Each step is 0.75 s of pushing with 2.5 s of
@@ -368,6 +609,23 @@ the console as they start:
 Order is intake → spindexer → feeder → shooter, which is the order pieces travel, so a piece
 fed for one phase is roughly where it needs to be for the next.
 
+### Running it
+
+1. Robot on blocks, as step 2. Mechanisms will run without warning.
+2. Put **at least 20 game pieces** within arm's reach of whoever is feeding.
+3. Two people: one at the driver station, one at the mechanism. The console prints each phase as it
+   starts and the person feeding needs to hear it.
+4. Schedule `RebuiltContainer.getLoadCalibrationCommand()`.
+5. **Empty phase, 4 s** — hands and pieces clear. Do not touch the mechanism.
+6. **Loaded phase, 8 s** — feed pieces through continuously, one after another, for the whole phase.
+   Gaps between pieces are expected and handled. Feeding only two pieces in eight seconds is the one
+   way to waste the run.
+7. **Obstructed phase, 2 s** — hold the mechanism so it cannot move product. Use a piece of wood or a
+   spare game piece, **not your hand**. Two seconds only; a near-stalled motor turns almost all its
+   input into heat.
+8. Read the line printed for that mechanism before moving on. If it says `INCOMPLETE`, re-run just
+   that mechanism rather than continuing.
+
 **The shooter has no obstructed phase.** Obstructing a flywheel by hand is how people lose
 fingers, and a wheel carrying that much momentum will throw or shear whatever holds it. Its jam
 threshold is inferred from the loaded phase instead, and the report says `INFERRED` rather than
@@ -401,8 +659,21 @@ with a piece deliberately wedged and confirm it stops on its own.
 
 ## 10. SysId — the feedforward, including kA
 
-**Start at one end of the carpet, facing down its length.** Schedule
-`RebuiltContainer.getSysIdCommand()`.
+1. Clear the **full 28 ft** of carpet. Nothing on it, nobody standing on it.
+2. Place the robot at **one end**, facing down the length of the carpet, with its rear bumper roughly
+   200 mm from the wall behind it. The forward runs go away from that wall.
+3. Fit a **freshly charged battery**. kV is voltage-referenced, so a sagging pack biases the fit.
+4. Check the robot is square to the carpet's length. It drives in a straight line with no correction,
+   so a few degrees of yaw at the start becomes a metre of lateral drift by the end.
+5. Schedule `RebuiltContainer.getSysIdCommand()`.
+6. Watch it. **The robot drives itself at up to about 2.4 m/s and does not steer.** Be ready to
+   disable.
+7. The console prints each run's name as it starts and the distance it used as it finishes.
+
+Budget check you can do on the day: the longest run is planned at about 4.1 m, aborts at 6.0 m, and
+your carpet is 8.53 m. Starting 0.2 m off the back wall, a worst-case aborted run leaves roughly
+2.3 m in front of the robot to stop in from 2.4 m/s, in brake mode. Comfortable, but this is why the
+carpet needs to be clear rather than mostly clear.
 
 Runs a quasistatic ramp forward and reverse, then four short alternating voltage steps, then
 prints kS, kV and kA per module plus the mean. **No log transfer and no desktop analyser** — the

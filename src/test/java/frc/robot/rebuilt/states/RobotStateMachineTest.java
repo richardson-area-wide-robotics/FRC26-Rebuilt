@@ -1,6 +1,7 @@
 package frc.robot.rebuilt.states;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -62,14 +63,27 @@ class RobotStateMachineTest {
     }
 
     @Test
-    @DisplayName("Points back down the field at the hub, not away from it")
-    void headingPointsAtHub() {
-      // Directly down-field of the blue hub, so the hub is in the −x direction: 180 degrees.
+    @DisplayName("Aims the shooter at the hub, which is not the same as aiming the chassis")
+    void headingPointsShooterAtHub() {
+      // Directly down-field of the blue hub, so the hub lies in the −x direction: bearing 180.
       Pose2d pose = new Pose2d(7.5, 4, new Rotation2d());
       StateOutput output = machine.update(
           pose, STILL, BLUE_HUB, FIELD_LENGTH, false, true, true);
 
-      assertEquals(180.0, output.headingTarget().orElseThrow().getDegrees(), 1e-6);
+      Rotation2d commanded = output.headingTarget().orElseThrow();
+
+      // This test used to assert 180 — the bearing — which was asserting the bug. The shooter fires
+      // 90 degrees off the chassis nose, so commanding 180 would have pointed the intake at the hub
+      // and fired the shot across the field.
+      assertNotEquals(180.0, commanded.getDegrees(), 1e-6,
+          "commanding the bearing aims the intake, not the shooter");
+
+      // What must hold: once the chassis is at the commanded heading, the shooter is on 180.
+      Rotation2d shooterPointsAt = commanded.plus(Rotation2d.fromDegrees(
+          frc.robot.rebuilt.RebuiltConstants.GeometryConstants.SHOOTER_YAW_OFFSET_DEGREES));
+
+      assertEquals(180.0, shooterPointsAt.getDegrees(), 1e-6,
+          "the shooter, not the nose, has to end up pointing down-field at the hub");
     }
 
     @Test
@@ -336,12 +350,53 @@ class RobotStateMachineTest {
     }
 
     @Test
-    @DisplayName("Heading to hub is the bearing from robot to hub")
-    void headingToHub() {
+    @DisplayName("Bearing to hub is the plain direction from robot to hub")
+    void bearingToHub() {
       Pose2d robot = new Pose2d(0, 0, new Rotation2d());
       Pose2d hub = new Pose2d(1, 1, new Rotation2d());
       assertEquals(45.0,
-          ShooterRangeModel.headingToHub(robot, hub).getDegrees(), 1e-6);
+          ShooterRangeModel.bearingToHub(robot, hub).getDegrees(), 1e-6);
+    }
+
+    @Test
+    @DisplayName("The aiming heading offsets the bearing by the shooter's mounting angle")
+    void aimingHeadingAccountsForTheShooterOffset() {
+      // The shooter fires 90 degrees off the chassis nose on this robot. So to put the shooter on a
+      // hub that lies at a bearing of 45 degrees, the chassis has to sit at 45 - 90 = -45.
+      Pose2d robot = new Pose2d(0, 0, new Rotation2d());
+      Pose2d hub = new Pose2d(1, 1, new Rotation2d());
+
+      double bearing = ShooterRangeModel.bearingToHub(robot, hub).getDegrees();
+      double aim = ShooterRangeModel.headingToAimShooter(robot, hub).getDegrees();
+
+      assertEquals(45.0, bearing, 1e-6);
+      assertEquals(-45.0, aim, 1e-6);
+
+      // The two must NOT be equal. Before this was fixed the state machine commanded the bearing
+      // directly, which aimed the intake at the hub and fired the shot sideways off the field.
+      assertNotEquals(bearing, aim,
+          "aiming the chassis nose at the hub points the intake at it, not the shooter");
+    }
+
+    @Test
+    @DisplayName("Once at the aiming heading, the shooter really does point at the hub")
+    void shooterEndsUpPointingAtTheHub() {
+      // The property that matters, checked at several bearings rather than trusting one subtraction.
+      Pose2d robot = new Pose2d(2.0, 3.0, new Rotation2d());
+
+      for (double[] hubXy : new double[][] {{5, 3}, {2, 8}, {-1, 3}, {2, -2}, {6, 7}}) {
+        Pose2d hub = new Pose2d(hubXy[0], hubXy[1], new Rotation2d());
+
+        Rotation2d chassis = ShooterRangeModel.headingToAimShooter(robot, hub);
+        Rotation2d shooterPointsAt = chassis.plus(Rotation2d.fromDegrees(
+            frc.robot.rebuilt.RebuiltConstants.GeometryConstants.SHOOTER_YAW_OFFSET_DEGREES));
+
+        Rotation2d bearing = ShooterRangeModel.bearingToHub(robot, hub);
+
+        assertEquals(0.0, shooterPointsAt.minus(bearing).getDegrees(), 1e-6,
+            "shooter must end up on the hub bearing for hub at "
+                + hubXy[0] + "," + hubXy[1]);
+      }
     }
 
     @Test
