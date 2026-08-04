@@ -1,14 +1,46 @@
-# Shop runbook — first robot session
+# Shop runbook — what to do with physical robot access
 
-Branch `StuartRevisions`. Nothing here has touched hardware. Work top to bottom; each step
-gates the next.
+Branch `StuartRevisions`. **Nothing here has touched hardware.** Work top to bottom; each step
+gates the next, and step 2 is a hard stop if it fails.
 
 Console output from every routine is prefixed, so you can follow along in the driver station
 Console tab without AdvantageScope: `[validate]`, `[calib]`, `[maneuver]`, `[state]`.
 
+Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-hardening.md`.
+
 ---
 
-## 0. Before power-on — two numbers only you can supply
+## Session plan at a glance
+
+| Step | What | Needs | Rough time |
+| --- | --- | --- | --- |
+| 0 | Measure and enter three values | Tape measure, PhotonVision UI | 20 min |
+| 1 | Deploy | Laptop | 5 min |
+| 2 | **On blocks** — 14-check self-test | Blocks, wheels clear | 10 min |
+| 3 | **Verify drive directions** | ~3 m clear floor | 10 min |
+| 4 | Vision commissioning | Practice field, tags visible | 20 min |
+| 5 | Auto-calibration | ~4 m clear, tags visible | 20 min |
+| 6 | Manoeuvre suite | Large clear space | 20–60 min |
+| 7 | Localisation states | Practice field | 20 min |
+| 8 | Tuning | Time and patience | open-ended |
+
+### Bring to the shop
+
+- **Tape measure** — module spacing (decision 1), camera position, bump band edges
+- **Scale** if you want to re-check the 47.6272 kg in `settings.json`
+- **Blocks** — step 2 will not be skipped
+- **A notebook**, or willingness to pull the WPILOG off the USB stick afterwards
+
+### Data to capture before you leave
+
+The calibrator prints a paste-ready block; keep it. Also worth recording:
+`Calibration/Auto/WheelScale`, `Calibration/Auto/SteerOffsetDeg`,
+`Calibration/Auto/ModuleKvSpreadPercent`, both `Acceptance/*/TotalErrorMm` figures, and
+`Calibration/Maneuvers/Summary/*`.
+
+---
+
+## 0. Before power-on — three values only you can supply
 
 Both live in `src/main/java/frc/robot/common/subsystems/vision/VisionConstants.java` and are
 marked `MEASURE`. Vision cannot be trusted until they are right, and a wrong camera transform
@@ -18,6 +50,12 @@ produces *confidently wrong* poses, which is worse than none.
 | --- | --- | --- |
 | `CAMERA_NAME` | Camera name exactly as PhotonVision shows it | PhotonVision web UI. A mismatch fails **silently** — no error, vision just never contributes |
 | `ROBOT_TO_CAMERA` | Lens position and angle relative to robot centre on the floor | Tape measure. +x forward, +y left, +z up. Pitch is negative when tilted **up** |
+| Module spacing | Distance between module centres, both axes | Tape measure the frame. See decision below — the code and PathPlanner currently disagree by 6.5 mm per side |
+
+**Measuring `ROBOT_TO_CAMERA` properly is worth the ten minutes.** Measure from the robot's centre
+of rotation, at floor level, to the camera *lens* — not the case. Pitch matters most: a few degrees
+of error becomes tens of centimetres of pose error at the far end of the field, and it will look
+like a calibration problem rather than a measurement one.
 
 Field layout is already set to **AndyMark** (`k2026RebuiltAndymark`). If you ever run on a
 welded field, change it — the two layouts place tags up to **3.6 cm** apart, which is larger
@@ -88,6 +126,18 @@ moves its encoder, feeder and spindexer accept demands.
 
 **Do not proceed past a failure here.** This is the step that catches a swapped CAN ID or an
 unplugged encoder before it becomes a broken mechanism.
+
+---
+
+### If a self-test check fails
+
+| Check | Most likely cause |
+| --- | --- |
+| `DriveMotorsTurnWheels` — names the corner and how far it moved | Swapped CAN ID, unplugged encoder, or a motor wired backwards on that corner |
+| `SteeringResponds` | Through Bore encoder unplugged, or a steering CAN ID swapped |
+| `ShooterSpinsUp` — prints target vs measured | Follower fighting the leader (check `follow()` inversion), or the interlock reporting the hub closed |
+| `IntakeDeployMoves` — prints rotations travelled | Deploy motor not moving, encoder not counting, or the soft limits are stopping it early |
+| `GyroReporting` | NavX not seated on the MXP port |
 
 ---
 
@@ -215,42 +265,74 @@ often direction-dependent.
 
 ---
 
-## 7. Localization states
+## 7. Localisation states
 
-Two assists, both supplying **heading and shooter speed only** — translation always stays with
-the driver, and touching the rotation stick overrides instantly.
+Practice field, tags visible, alliance set on the driver station.
 
-- **`AIM_AT_HUB`** — own half, hub open: faces the hub and sets the flywheel from a
-  distance-interpolated curve built from your own four tuned presets. Outside 2.0–6.1 m it
-  clamps rather than extrapolating.
-- **`BUMP_REVERSE`** — approaching or on the bump: turns so the back crosses first, committing
-  ~1 m early because turning halfway up is worse than not turning.
+**`AIM_AT_HUB`** — drive onto your own half with the hub open. The robot should turn to face the hub
+and spin the flywheel to a range-appropriate speed. Watch `States/Active`, `States/Reason` and
+`States/DistanceToHub`. Touch the rotation stick: the assist must yield instantly.
 
-Bump outranks aiming. Both fall back to `MANUAL` when the pose is not trustworthy.
+**`BUMP_REVERSE`** — this one needs the bump band measured first, or it will fire in the wrong place.
+Drive towards the bump; the robot should turn so its back leads, committing about a metre out.
+`States/Active` should read `BUMP_REVERSE` and `States/OnBump` should go true as you cross.
 
-Watch `States/Active` and `States/Reason`. Verify the bump band matches the real field before
-trusting it.
+Both fall back to `MANUAL` if the pose is untrustworthy, so if neither ever engages, check
+`Vision/SecondsSinceAccepted` and `Field/HasAlliance` before suspecting the states themselves.
 
 ---
 
-## 8. Tuning session
+## 8. Tuning
 
-Set `TunableNumber.TUNING_ENABLED = true`, redeploy. Shooter `kP`/`kI`/`kD` appear under
-`Tuning/` and reconfigure only on change (no flash wear, no CAN flood).
+Set `TunableNumber.TUNING_ENABLED = true`, redeploy. Shooter `kP`/`kI`/`kD` appear under `Tuning/`
+and reconfigure only on change — no flash wear, no CAN flood.
 
 Highest-value targets, in order:
 
-1. **PathPlanner gains** — translation `P` is 14.0 and the rotation constants are byte-identical
-   to the module steering PID, which is a copy-paste signature. More importantly, until this
-   branch every path ran flat out regardless of profile, so **these have never been evaluated
-   against correct behaviour.** Re-tune from scratch.
-2. **Shooter PID** — spin-up and recovery dominate cycle time; effect visible within a second on
+1. **PathPlanner gains.** Translation `P` is 14.0, and the rotation constants are byte-identical to
+   the module steering PID — a copy-paste signature. More importantly, until this branch every path
+   ran flat out regardless of profile, so **these have never been evaluated against correct
+   behaviour.** Re-tune from scratch.
+2. **Shooter PID.** Spin-up and recovery dominate cycle time; effect visible within a second on
    `Shooter/Activity/RPMError`.
-3. **Max speed** — currently capped at 4.8 m/s, which coincidentally matched the *wrong* motor's
-   free speed. Physical capability with NEO Vortex is ~5.74 m/s, so ~19% is unused. Left alone
-   deliberately: that is a driveability call.
+3. **Vision standard deviations.** Replace the guessed `SINGLE_TAG_XY_STD_DEV_BASE` with the
+   measured `Calibration/VisionNoise/MeasuredXyStdDevMeters` from a stationary run.
+4. **Wheel diameter.** Multiply `kWheelDiameterMeters` by `Calibration/Auto/WheelScale`. Remember to
+   update `driveWheelRadius` in `settings.json` to match.
 
 **Turn tuning off before competition.**
+
+---
+
+## Before you pack up
+
+- [ ] Paste-ready calibration report saved somewhere
+- [ ] Decisions 1 and 2 resolved, or at least measured
+- [ ] `settings.json` and `CommonConstants` reconciled — then tighten the two
+      `KNOWN_*_DIVERGENCE` constants in `PathPlannerSettingsConsistencyTest` to zero
+- [ ] Bump band measured and entered in `FieldRegions`
+- [ ] The four `CONFIRM` motors in `RebuiltConstants.CanIds` filled in
+- [ ] `TunableNumber.TUNING_ENABLED` back to `false`
+- [ ] `./gradlew build` still green after any constant changes
+- [ ] Update the known-unverified list below — cross off what you verified
+
+---
+
+## Known-unverified list
+
+Everything below is reasoned or measured in simulation, never on hardware. **Cross items off as you
+verify them** — this list is the honest measure of how much of this code has met a robot.
+
+- Drive direction signs (step 3)
+- Camera transform and camera name (step 0)
+- Bump band position (`FieldRegions`)
+- Module angular offsets — never measured, and worth ±1″ over 10 ft on their own
+- Module spacing — PathPlanner says 27.01″, code says 26.50″; measure the frame (section 0)
+- Drive current limit — PathPlanner assumes 60 A, code applies 50 A; pick one (section 0)
+- PathPlanner gains — never run against correct velocities
+- Whether the intake deploy soft limits (0–11 rotations) match real travel
+- All calibration figures — the routines are tested against synthetic data with known answers,
+  but have never seen a real robot
 
 ---
 
@@ -287,18 +369,3 @@ from fact rather than from method names:
 Still outstanding for a working model: the NavX sim yaw sign and scale, and the velocity filter's
 transient. If drivetrain sim becomes a priority, `maple-sim` is purpose-built for swerve and worth
 evaluating against finishing this by hand.
-
-## Known-unverified list
-
-Everything below is reasoned or measured in simulation, never on hardware:
-
-- Drive direction signs (step 3)
-- Camera transform and camera name (step 0)
-- Bump band position (`FieldRegions`)
-- Module angular offsets — never measured, and worth ±1″ over 10 ft on their own
-- Module spacing — PathPlanner says 27.01″, code says 26.50″; measure the frame (section 0)
-- Drive current limit — PathPlanner assumes 60 A, code applies 50 A; pick one (section 0)
-- PathPlanner gains — never run against correct velocities
-- Whether the intake deploy soft limits (0–11 rotations) match real travel
-- All calibration figures — the routines are tested against synthetic data with known answers,
-  but have never seen a real robot
