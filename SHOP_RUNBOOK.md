@@ -24,7 +24,8 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 7 | Localisation states | Practice field | 20 min |
 | 8 | **Traction / drive current limit** | Wall, carpet, good battery | 10 min |
 | 9 | **Load thresholds** — piece and jam detection | Blocks, ~20 game pieces, a helper | 15 min |
-| 10 | Tuning | Time and patience | open-ended |
+| 10 | **SysId feedforward** — the only source of kA | 28 ft of carpet, robot at one end | 10 min |
+| 11 | Tuning | Time and patience | open-ended |
 
 Steps 8 and 9 are independent of everything above them. If the field is busy, do them
 first — step 8 needs only a wall and step 9 only blocks.
@@ -36,6 +37,7 @@ first — step 8 needs only a wall and step 9 only blocks.
 - **Blocks** — steps 2 and 9 will not be skipped
 - **~20 game pieces** for step 9, and **a second person** to feed them
 - **A good battery** for step 8 — a sagging pack under-reports the traction limit
+- **The full 28 ft of carpet clear** for step 10, robot starting at one end
 - **A notebook**, or willingness to pull the WPILOG off the USB stick afterwards
 
 ### Data to capture before you leave
@@ -388,7 +390,63 @@ with a piece deliberately wedged and confirm it stops on its own.
 
 ---
 
-## 10. Tuning
+## 10. SysId — the feedforward, including kA
+
+**Start at one end of the carpet, facing down its length.** Schedule
+`RebuiltContainer.getSysIdCommand()`.
+
+Runs a quasistatic ramp forward and reverse, then four short alternating voltage steps, then
+prints kS, kV and kA per module plus the mean. **No log transfer and no desktop analyser** — the
+regression the SysId GUI performs is done on the robot.
+
+### Why this exists when step 5 already fits a feedforward
+
+Step 5's sweep waits for steady state, where acceleration is zero. So kA is not merely unmeasured
+there, it is **unmeasurable** — the data contains no information about it. kA is what
+second-order kinematics needs.
+
+Run both and compare: kS and kV agreeing between two different excitations and two different
+regressions is real evidence. Disagreeing means one run was bad, which is much better learned
+from two printed numbers than from a robot that follows paths oddly.
+
+### It is sized for your 28 ft
+
+Half a field is 8.53 m. **The textbook SysId ramp — 1 V/s for 6 s — covers 8.10 m on this
+drivetrain**, which is the whole carpet before allowing for the robot's length or stopping
+distance. So the stock configuration would drive into the wall on its first test.
+
+The configuration here reaches 5.25 V in about **4.1 m** by ramping faster (1.5 V/s for 3.5 s).
+That works because for a given final voltage, distance is inversely proportional to ramp rate —
+and a faster ramp is only a problem for the classical two-stage analysis, which assumes the ramp
+has no acceleration. The on-robot fit solves for kA at the same time, so that acceleration is
+signal rather than contamination.
+
+The dynamic tests are four short alternating steps of about 0.9 m each rather than one long one.
+All the kA information is in the first few time constants (~0.16 s here), so a long step just
+drives; alternating short ones capture four transients and end up where they started.
+
+**Every test also aborts at 6.0 m regardless of the clock.** The distance predictions above use
+the nominal kV, and measured kV is what this routine produces — so the prediction is circular and
+the abort is the guard that does not depend on it. A cut-short run still contributes its samples;
+the report says which were cut.
+
+### Reading the report
+
+| Line says | Meaning |
+| --- | --- |
+| `kS = … kV = … kA = … (R2 …) — OK` | Paste the MEAN line into `CommonConstants.DriveFeedforwardConstants` |
+| `SINGULAR` | The dynamic steps did not run, so acceleration was constant and kS and kA are not separable at all |
+| `REJECT: kV is not positive` | A wiring or inversion fault, not a fit problem. No amount of extra data fixes it |
+| `REJECT: kA is negative` | Unphysical — check that run for wheel slip or a collision |
+| `SUSPECT: R2 … below 0.95` | Go and look at the log. The standard SysId log is still written, so the desktop analyser and its residual plots are available |
+
+Also check **kA spread across modules**. Over 25% means one corner accelerates differently from
+the other three, and a chassis feedforward built on the mean will under-drive it — which shows up
+as the robot yawing under hard acceleration rather than as anything obviously feedforward-related.
+
+---
+
+## 11. Tuning
 
 Set `TunableNumber.TUNING_ENABLED = true`, redeploy. Shooter `kP`/`kI`/`kD` appear under `Tuning/`
 and reconfigure only on change — no flash wear, no CAN flood.
@@ -415,6 +473,8 @@ Highest-value targets, in order:
 - [ ] Paste-ready calibration reports saved somewhere — drivetrain, traction, and load
 - [ ] `LoadConstants` updated, or the NOT VIABLE mechanisms noted as such
 - [ ] `SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT` updated from the traction sweep
+- [ ] `DriveFeedforwardConstants` kS/kV/kA pasted from the SysId report
+- [ ] SysId kS/kV cross-checked against the auto-calibrator's figures
 - [ ] `Shooter/Sensors/AnalogRPM` confirmed reading 0
 - [ ] Decisions 1 and 2 resolved, or at least measured
 - [ ] `settings.json` and `CommonConstants` reconciled — then tighten the two

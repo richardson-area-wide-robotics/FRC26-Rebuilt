@@ -10,23 +10,26 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.CommonConstants.ModuleConstants;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
 import org.littletonrobotics.junction.Logger;
 
 /**
- * WPILib SysId, wired up and made automatic.
+ * WPILib SysId, wired up, made automatic, and sized for half a field of carpet.
  *
  * <p>The documented SysId workflow is four separate button presses, then pulling a log onto a laptop
  * and reading gains off the analyser GUI. This keeps the standard routine — so the log is still a
- * normal SysId log and the desktop analyser still works on it if you want the plots — but adds the
- * two things that make it usable in a short shop session:
+ * normal SysId log and the desktop analyser still works on it if the plots are wanted — but adds the
+ * three things that make it usable in a short shop session on a short field:
  *
  * <ul>
- *   <li><b>{@link #full()} chains all four tests</b> with pauses and console prompts between them, so
- *       it is one schedule rather than four presses in the right order with the right rests.
+ *   <li><b>{@link #full()} chains every test</b> with pauses and console prompts, so it is one
+ *       schedule rather than several presses in the right order with the right rests.
  *   <li><b>The fit happens on the robot.</b> The analyser's job is an ordinary least squares fit of
  *       {@code V = kS*sgn(v) + kV*v + kA*a}, which {@link SysIdRegression} does here. Gains print to
  *       the console when the run ends. No laptop step, no log transfer, no GUI.
+ *   <li><b>It fits in 28 ft.</b> See below, because this is where the standard configuration falls
+ *       over and the fix is not obvious.
  * </ul>
  *
  * <h2>Why bother, given the auto-calibrator already fits a feedforward</h2>
@@ -34,55 +37,133 @@ import org.littletonrobotics.junction.Logger;
  * <p>{@link DriveAutoCalibrator} sweeps duty cycle and waits for steady state, which fits kS and kV
  * well and <b>cannot fit kA at all</b> — at steady state acceleration is zero, so the data contains
  * no information about it. SysId's dynamic test is a voltage step, which is nothing but acceleration.
+ * kA is what second-order kinematics needs, since that turns a chassis acceleration into module
+ * accelerations and then needs something to turn those into volts.
  *
- * <p>So they are complementary, and running both is a real cross-check rather than duplicated work:
- * two different excitations and two different regressions agreeing on kS and kV is evidence the
- * numbers are right. Disagreeing means one run was bad, which is far better learned from two printed
- * numbers than from a robot that follows paths oddly.
+ * <p>They are complementary, and running both is a real cross-check rather than duplicated work: two
+ * different excitations and two different regressions agreeing on kS and kV is evidence the numbers
+ * are right. Disagreeing means one run was bad, which is far better learned from two printed numbers
+ * than from a robot that follows paths oddly.
  *
- * <h2>Space</h2>
+ * <h2>Fitting into 28 ft of carpet</h2>
  *
- * <p><b>This needs more room than anything else in the calibration suite — plan on 10 m of clear
- * runway.</b> That is the honest cost of SysId on a drivetrain: the quasistatic ramp has to reach a
- * useful voltage, and the robot keeps accelerating the whole time it does. The forward and reverse
- * tests return the robot roughly to where it started, so the runway is needed once, not per test.
+ * <p>Half a field is <b>8.53 m</b>. A textbook SysId quasistatic ramp of 1 V/s for 6 s covers
+ * <b>8.10 m</b> on this drivetrain — the entire carpet, before allowing for the robot's own length or
+ * any stopping distance. As configured out of the box this test hits the wall.
  *
- * <p>Each test stops itself on a timeout. If space is tight, lower {@link #RAMP_SECONDS} — the fit
- * degrades gracefully because it simply sees a smaller voltage range, and the reported R² will say
- * whether what remains was enough.
+ * <p>The way out falls out of the arithmetic. Distance under a ramp is
+ * {@code (rate * t^2 / 2 - kS * t) / kV}, and the final voltage is {@code rate * t}. Substituting,
+ * <b>for a given final voltage the distance is inversely proportional to the ramp rate.</b> Reaching
+ * 6 V at 1 V/s costs 8.10 m; reaching the same 6 V at 2 V/s costs 4.05 m. Half the runway, identical
+ * voltage range, identical information about kV.
+ *
+ * <p>Normally you cannot spend that, because a fast ramp is no longer <em>quasi</em>static: it
+ * carries real acceleration, which contaminates kS and kV in SysId's classical two-stage analysis
+ * where the ramp is assumed to have none. <b>The combined fit here solves for kA at the same time, so
+ * acceleration during the ramp is signal rather than contamination.</b> Doing the regression on the
+ * robot is what buys the space back.
+ *
+ * <p>The dynamic test gets the same treatment differently. One long step spends most of its distance
+ * travelling at steady state, which says nothing about kA — all the information is in the first few
+ * time constants, and the time constant here is about 0.16 s. So instead of one long step this runs
+ * <b>{@value #DYNAMIC_STEPS} short steps in alternating directions</b>: each one re-excites the
+ * transient, and because they alternate the robot ends up roughly where it started. A tight field
+ * yields <em>more</em> kA data this way, not less.
+ *
+ * <p>Planned excursions, on nominal constants: quasistatic about <b>4.1 m</b>, each dynamic step
+ * about <b>0.9 m</b>. Both well inside the carpet.
+ *
+ * <p><b>Start at one end of the carpet, facing down its length.</b> Forward tests run out, reverse
+ * tests come back, so the runway is needed once rather than per test.
+ *
+ * <h2>The abort is what actually keeps it off the wall</h2>
+ *
+ * <p>Those distance figures assume nominal kS and kV — and kV is the thing being measured, so the
+ * prediction is circular and could be wrong in either direction. Every test therefore also stops
+ * itself the moment the robot has travelled {@value #MAX_RUN_METERS} m from where that test started,
+ * whatever the clock says. A test cut short by distance still contributes its samples; the report
+ * says which tests were cut and the R² says whether what remains was enough.
  */
 public class DriveSysId {
 
-    /** Volts per second for the quasistatic ramp. */
-    private static final double RAMP_VOLTS_PER_SECOND = 1.0;
+    /**
+     * Volts per second for the quasistatic ramp.
+     *
+     * <p>1.5 rather than SysId's typical 1.0. See the class docs: for a given final voltage, distance
+     * scales as 1/rate, and the combined fit tolerates the acceleration a faster ramp introduces.
+     */
+    private static final double RAMP_VOLTS_PER_SECOND = 1.5;
 
     /**
      * Seconds the quasistatic ramp runs.
      *
-     * <p>6 s at 1 V/s reaches 6 V, which is half the bus and plenty of range for a linear fit.
-     * Distance covered is roughly 8 m, which is what sets the runway requirement.
+     * <p>3.5 s at 1.5 V/s reaches 5.25 V over about 4.1 m — half the carpet, with enough voltage
+     * range for a solid linear fit.
      */
-    private static final double RAMP_SECONDS = 6.0;
+    private static final double RAMP_SECONDS = 3.5;
 
     /**
-     * Step voltage for the dynamic test.
+     * Step voltage for the dynamic tests.
      *
-     * <p>4 V rather than SysId's default 7. The dynamic test only needs to capture the acceleration
-     * transient, which is over in a few hundred milliseconds, and 7 V would spend the rest of the
-     * window travelling fast for no extra information.
+     * <p>3.5 V rather than SysId's default 7. A step exists to excite acceleration, and the size of
+     * the step does not change the time constant — it only changes how far the robot travels while
+     * the transient plays out. On a short field that is all cost and no benefit.
      */
-    private static final double STEP_VOLTS = 4.0;
+    private static final double STEP_VOLTS = 3.5;
 
-    /** Seconds the dynamic step runs. Long enough for the transient plus a little steady state. */
-    private static final double STEP_SECONDS = 2.0;
+    /**
+     * Seconds each dynamic step runs.
+     *
+     * <p>0.75 s is roughly 4.5 time constants, so the transient is fully captured, and about 0.9 m of
+     * travel. Longer would only add steady-state samples, which carry no information about kA.
+     */
+    private static final double STEP_SECONDS = 0.75;
+
+    /**
+     * Dynamic steps, alternating direction.
+     *
+     * <p>Four short alternating steps capture four acceleration transients while ending roughly where
+     * they began. One long step captures one transient and then drives for metres. Since the
+     * transient is the only part that informs kA, this is strictly better on a short field.
+     */
+    private static final int DYNAMIC_STEPS = 4;
+
+    /**
+     * Metres from a test's own start at which it aborts, whatever the clock says.
+     *
+     * <p>6.0 m against 8.53 m of carpet leaves room for the robot's length and for it to stop. This
+     * is the guard that does not depend on the distance predictions being right — and they cannot be
+     * fully trusted, since they are computed from the kV this routine exists to measure.
+     */
+    public static final double MAX_RUN_METERS = 6.0;
+
+    /** Half a field of carpet: 28 ft, which is the runway this team actually has. */
+    public static final double HALF_FIELD_METERS = 28 * 0.3048;
+
+    /**
+     * Metres reserved for the robot's own length plus stopping distance.
+     *
+     * <p>The robot is a 26.5 in frame, so about 0.7 m, and it needs somewhere to stop after a run
+     * ends. 2.0 m of the carpet is therefore not runway.
+     */
+    public static final double RESERVED_METERS = 2.0;
 
     /** Seconds of rest between tests, to let the drivetrain and the operator settle. */
-    private static final double REST_SECONDS = 3.0;
+    private static final double REST_SECONDS = 2.5;
 
     private static final String[] MODULE_NAMES = {"FL", "FR", "RL", "RR"};
 
     private final SwerveDriveSubsystem drive;
-    private final SysIdRoutine routine;
+
+    /**
+     * Separate routines per test type.
+     *
+     * <p>{@code SysIdRoutine.Config} carries one timeout for both quasistatic and dynamic, and these
+     * need very different ones — 3.5 s of ramp against 0.75 s of step. One routine would force the
+     * step to run as long as the ramp, which is exactly the metres this class is trying not to spend.
+     */
+    private final SysIdRoutine quasistaticRoutine;
+    private final SysIdRoutine dynamicRoutine;
 
     /** One accumulator per module, because motors vary and an average hides a weak corner. */
     private final SysIdRegression.Accumulator[] perModule = {
@@ -96,8 +177,12 @@ public class DriveSysId {
     private double[] previousVelocities;
     private double previousTimestamp;
 
-    /** Voltage most recently commanded, needed to pair with each sample. */
-    private double commandedVolts;
+    /** Where the current test started, for the distance abort. */
+    private double runStartDistance;
+
+    /** Longest excursion any single test needed, and how many were cut short. */
+    private double worstRunMeters;
+    private int abortedRuns;
 
     /**
      * @param drive The drivetrain.
@@ -105,45 +190,78 @@ public class DriveSysId {
     public DriveSysId(SwerveDriveSubsystem drive) {
         this.drive = drive;
 
-        this.routine = new SysIdRoutine(
+        SysIdRoutine.Mechanism mechanism = new SysIdRoutine.Mechanism(
+                voltage -> drive.driveVoltage(voltage.in(Volts)),
+                log -> {
+                    // The standard SysId log, so the desktop analyser still works on this if the
+                    // on-robot fit ever looks suspect and the residual plots are wanted.
+                    double[] positions = drive.getModuleDrivePositions();
+                    double[] velocities = drive.getModuleDriveVelocities();
+                    double[] volts = drive.getModuleDriveVoltages();
+
+                    for (int i = 0; i < MODULE_NAMES.length; i++) {
+                        log.motor("drive-" + MODULE_NAMES[i])
+                                .voltage(Volts.of(volts[i]))
+                                .linearPosition(Meters.of(positions[i]))
+                                .linearVelocity(MetersPerSecond.of(velocities[i]));
+                    }
+                },
+                drive,
+                "drive");
+
+        this.quasistaticRoutine = new SysIdRoutine(
                 new SysIdRoutine.Config(
                         Volts.of(RAMP_VOLTS_PER_SECOND).per(Second),
                         Volts.of(STEP_VOLTS),
-                        Seconds.of(Math.max(RAMP_SECONDS, STEP_SECONDS)),
+                        Seconds.of(RAMP_SECONDS),
                         state -> Logger.recordOutput("SysId/State", state.toString())),
-                new SysIdRoutine.Mechanism(
-                        voltage -> {
-                            commandedVolts = voltage.in(Volts);
-                            drive.driveVoltage(commandedVolts);
-                        },
-                        log -> {
-                            // The standard SysId log, so the desktop analyser still works on this
-                            // if the on-robot fit ever looks suspect and the plots are wanted.
-                            double[] positions = drive.getModuleDrivePositions();
-                            double[] velocities = drive.getModuleDriveVelocities();
-                            double[] volts = drive.getModuleDriveVoltages();
+                mechanism);
 
-                            for (int i = 0; i < MODULE_NAMES.length; i++) {
-                                log.motor("drive-" + MODULE_NAMES[i])
-                                        .voltage(Volts.of(volts[i]))
-                                        .linearPosition(Meters.of(positions[i]))
-                                        .linearVelocity(MetersPerSecond.of(velocities[i]));
-                            }
-                        },
-                        drive,
-                        "drive"));
+        this.dynamicRoutine = new SysIdRoutine(
+                new SysIdRoutine.Config(
+                        Volts.of(RAMP_VOLTS_PER_SECOND).per(Second),
+                        Volts.of(STEP_VOLTS),
+                        Seconds.of(STEP_SECONDS),
+                        state -> Logger.recordOutput("SysId/State", state.toString())),
+                mechanism);
+    }
+
+    /**
+     * @return nominal volts per metre per second, from the drivetrain constants.
+     *
+     *     <p>The theoretical kV, used only to predict how far a test will travel. The measured kV is
+     *     what this class exists to produce, so the prediction is necessarily circular — which is why
+     *     {@link #MAX_RUN_METERS} exists as a guard that does not depend on it.
+     */
+    static double nominalKv() {
+        return 12.0 / ModuleConstants.kDriveWheelFreeSpeedRps;
+    }
+
+    /**
+     * @return predicted metres covered by one quasistatic ramp, on nominal constants.
+     *
+     *     <p>Integrating the quasi-steady velocity {@code (rate * t - kS) / kV} over the ramp. kS is
+     *     taken as a nominal 0.18 V; it contributes only a small negative offset, so being wrong
+     *     about it makes this prediction slightly conservative rather than dangerous.
+     */
+    static double plannedRampMeters() {
+        double nominalKs = 0.18;
+        return (RAMP_VOLTS_PER_SECOND * RAMP_SECONDS * RAMP_SECONDS / 2 - nominalKs * RAMP_SECONDS)
+                / nominalKv();
+    }
+
+    /** @return voltage the quasistatic ramp reaches. */
+    static double rampFinalVolts() {
+        return RAMP_VOLTS_PER_SECOND * RAMP_SECONDS;
     }
 
     /**
      * Folds one loop's readings into the per-module fits.
      *
      * <p>Acceleration comes from a finite difference of velocity, which is what the desktop analyser
-     * does too. It is noisy, and that is tolerable here because least squares over hundreds of
-     * samples averages zero-mean noise away — but it is also why a single bad sample cannot be
-     * spotted from the printed gains alone, and why a poor R² means go and look at the log.
-     *
-     * <p>Call this every loop while a test is running. Between tests it is harmless: samples below
-     * the velocity threshold are discarded.
+     * does too. It is noisy, and that is tolerable because least squares over hundreds of samples
+     * averages zero-mean noise away — but it is also why a single bad sample cannot be spotted from
+     * the printed gains alone, and why a poor R² means go and look at the log.
      */
     public void update() {
         double now = Timer.getFPGATimestamp();
@@ -167,81 +285,111 @@ public class DriveSysId {
         previousTimestamp = now;
     }
 
-    /** @return the quasistatic ramp, forward. Informs kS and kV. */
-    public Command quasistaticForward() {
-        return instrumented(routine.quasistatic(SysIdRoutine.Direction.kForward),
-                "quasistatic forward");
-    }
-
-    /** @return the quasistatic ramp, reverse. */
-    public Command quasistaticReverse() {
-        return instrumented(routine.quasistatic(SysIdRoutine.Direction.kReverse),
-                "quasistatic reverse");
-    }
-
-    /** @return the dynamic step, forward. This is the test that makes kA measurable. */
-    public Command dynamicForward() {
-        return instrumented(routine.dynamic(SysIdRoutine.Direction.kForward), "dynamic forward");
-    }
-
-    /** @return the dynamic step, reverse. */
-    public Command dynamicReverse() {
-        return instrumented(routine.dynamic(SysIdRoutine.Direction.kReverse), "dynamic reverse");
+    /** @return metres travelled since the current test began. */
+    private double metersThisRun() {
+        return Math.abs(drive.getAverageDriveDistance() - runStartDistance);
     }
 
     /**
-     * All four tests in sequence, then the report.
-     *
-     * <p>This is the automation the documented workflow lacks: one schedule instead of four button
-     * presses in the correct order with the correct rests, and no log transfer afterwards.
-     *
-     * <p><b>Both directions matter and are not redundant.</b> Running only forward leaves kS
-     * confounded with any directional asymmetry in the drivetrain — a dragging brake or a
-     * tight bearing on one side shows up as a larger kS rather than as the mechanical fault it is.
-     * Forward and reverse together also return the robot roughly to its starting point, so the
-     * runway is needed once rather than four times.
-     *
-     * <p>Order is quasistatic first: it is the gentler test, so if something is wrong mechanically it
-     * shows up before the drivetrain is asked to take a 4 V step.
-     *
-     * @return the full characterisation.
-     */
-    public Command full() {
-        return Commands.sequence(
-                        Commands.runOnce(() -> {
-                            reset();
-                            System.out.println("[sysid] === Drive characterisation ===");
-                            System.out.println("[sysid] Needs about 10 m of clear runway. "
-                                    + "Four tests, roughly 30 s including rests.");
-                        }),
-                        quasistaticForward(),
-                        Commands.waitSeconds(REST_SECONDS),
-                        quasistaticReverse(),
-                        Commands.waitSeconds(REST_SECONDS),
-                        dynamicForward(),
-                        Commands.waitSeconds(REST_SECONDS),
-                        dynamicReverse(),
-                        Commands.runOnce(this::printReport))
-                .withName("SysId/Full");
-    }
-
-    /**
-     * Wraps a SysId command so samples are collected while it runs and the drivetrain is stopped
-     * afterwards.
+     * Wraps a SysId command so samples are collected, distance is bounded, and the drivetrain stops.
      *
      * @param inner The SysId command.
      * @param label Console label.
-     * @return the instrumented command.
+     * @return the instrumented, distance-bounded command.
      */
     private Command instrumented(Command inner, String label) {
         return Commands.sequence(
                         Commands.runOnce(() -> {
                             previousVelocities = null;
+                            runStartDistance = drive.getAverageDriveDistance();
                             System.out.println("[sysid] " + label + " starting");
                         }),
-                        inner.alongWith(Commands.run(this::update)),
-                        Commands.runOnce(() -> drive.driveVoltage(0), drive))
+                        inner.alongWith(Commands.run(this::update))
+                                // Whichever ends first. The clock is the plan; the distance is the
+                                // wall.
+                                .until(() -> metersThisRun() >= MAX_RUN_METERS),
+                        Commands.runOnce(() -> {
+                            drive.driveVoltage(0);
+
+                            double used = metersThisRun();
+                            worstRunMeters = Math.max(worstRunMeters, used);
+
+                            if (used >= MAX_RUN_METERS) {
+                                abortedRuns++;
+                                System.out.printf("[sysid] %s CUT SHORT at %.2f m (limit %.1f m) "
+                                                + "— samples still counted%n",
+                                        label, used, MAX_RUN_METERS);
+                            } else {
+                                System.out.printf("[sysid] %s done, used %.2f m%n", label, used);
+                            }
+                        }, drive))
                 .withName("SysId/" + label);
+    }
+
+    /** @return the quasistatic ramp, forward. Informs kS and kV. */
+    public Command quasistaticForward() {
+        return instrumented(quasistaticRoutine.quasistatic(SysIdRoutine.Direction.kForward),
+                "quasistatic forward");
+    }
+
+    /** @return the quasistatic ramp, reverse. */
+    public Command quasistaticReverse() {
+        return instrumented(quasistaticRoutine.quasistatic(SysIdRoutine.Direction.kReverse),
+                "quasistatic reverse");
+    }
+
+    /** @return one dynamic step, forward. This is the test that makes kA measurable. */
+    public Command dynamicForward() {
+        return instrumented(dynamicRoutine.dynamic(SysIdRoutine.Direction.kForward),
+                "dynamic forward");
+    }
+
+    /** @return one dynamic step, reverse. */
+    public Command dynamicReverse() {
+        return instrumented(dynamicRoutine.dynamic(SysIdRoutine.Direction.kReverse),
+                "dynamic reverse");
+    }
+
+    /**
+     * All tests in sequence, then the report. Sized for 28 ft of carpet.
+     *
+     * <p>Quasistatic first: it is the gentler test, so a mechanical problem shows up before the
+     * drivetrain is asked to take a voltage step.
+     *
+     * <p><b>Both directions matter and are not redundant.</b> Running only forward leaves kS
+     * confounded with any directional asymmetry in the drivetrain — a dragging brake or a tight
+     * bearing shows up as a larger kS rather than as the mechanical fault it is. Alternating also
+     * returns the robot to roughly where it started, which is what makes the whole sequence fit on
+     * half a field.
+     *
+     * @return the full characterisation.
+     */
+    public Command full() {
+        Command[] phases = new Command[4 + DYNAMIC_STEPS * 2];
+        int at = 0;
+
+        phases[at++] = Commands.runOnce(() -> {
+            reset();
+            System.out.println("[sysid] === Drive characterisation ===");
+            System.out.printf("[sysid] Sized for half a field. Start at one end facing down the "
+                            + "carpet. Longest single run is about 4.1 m; hard abort at %.1f m.%n",
+                    MAX_RUN_METERS);
+        });
+
+        phases[at++] = quasistaticForward();
+        phases[at++] = Commands.waitSeconds(REST_SECONDS);
+        phases[at++] = quasistaticReverse();
+
+        // Alternating short steps: each re-excites the transient that carries the kA information,
+        // and the alternation keeps the robot near where it started.
+        for (int step = 0; step < DYNAMIC_STEPS; step++) {
+            phases[at++] = Commands.waitSeconds(REST_SECONDS);
+            phases[at++] = step % 2 == 0 ? dynamicForward() : dynamicReverse();
+        }
+
+        return Commands.sequence(phases)
+                .andThen(Commands.runOnce(this::printReport))
+                .withName("SysId/Full");
     }
 
     /** Mean gains across the four modules, with the spread that says whether the mean is honest. */
@@ -258,14 +406,13 @@ public class DriveSysId {
      * Averages the four module fits.
      *
      * <p>The mean is what a chassis-level feedforward wants — second-order kinematics turns a chassis
-     * acceleration into a module acceleration, and kA converts that into volts, so it needs one
-     * number per module or one for the drivetrain.
+     * acceleration into module accelerations, and kA converts those into volts.
      *
      * <p><b>The spread is reported because the mean alone can hide the thing you care about.</b> Four
-     * modules with kA within a few percent means the mean describes all of them. One corner 30% off
-     * means that corner accelerates differently from the other three, and a chassis feedforward built
-     * on the average will under-drive it — which shows up as the robot yawing under hard acceleration
-     * rather than as anything obviously feedforward-related.
+     * modules within a few percent means the mean describes all of them. One corner 30% off means
+     * that corner accelerates differently, and a chassis feedforward on the average will under-drive
+     * it — which shows up as the robot yawing under hard acceleration rather than as anything
+     * obviously feedforward-related.
      *
      * @return the summary.
      */
@@ -304,7 +451,7 @@ public class DriveSysId {
         return new Summary(sumS / n, sumV / n, meanA, spread, worst, trustworthy);
     }
 
-    /** Prints the per-module fits. */
+    /** Prints the per-module fits and the mean. */
     public void printReport() {
         System.out.println();
         System.out.println("=== SYSID FEEDFORWARD REPORT ===");
@@ -347,11 +494,26 @@ public class DriveSysId {
                     + "not reliable yet.%n", summary.trustworthyModules());
         }
 
+        System.out.println();
+        System.out.printf("  Space used: longest single run %.2f m against a %.1f m limit; "
+                        + "%d run(s) cut short.%n",
+                worstRunMeters, MAX_RUN_METERS, abortedRuns);
+
+        if (abortedRuns > 0) {
+            System.out.println("  ^ runs hit the distance limit, so they carry less voltage range");
+            System.out.println("    than planned. If R2 is good the fit is still fine. If not,");
+            System.out.println("    raise RAMP_VOLTS_PER_SECOND — a faster ramp reaches the same");
+            System.out.println("    voltage in less distance, and the combined fit tolerates the");
+            System.out.println("    extra acceleration.");
+        }
+
         Logger.recordOutput("SysId/Mean/kS", summary.kS());
         Logger.recordOutput("SysId/Mean/kV", summary.kV());
         Logger.recordOutput("SysId/Mean/kA", summary.kA());
         Logger.recordOutput("SysId/Mean/KaSpreadPercent", summary.kaSpreadPercent());
         Logger.recordOutput("SysId/Mean/TrustworthyModules", summary.trustworthyModules());
+        Logger.recordOutput("SysId/WorstRunMeters", worstRunMeters);
+        Logger.recordOutput("SysId/AbortedRuns", abortedRuns);
 
         System.out.println();
         System.out.println("kA is what second-order kinematics needs: it converts a commanded");
@@ -372,10 +534,25 @@ public class DriveSysId {
             accumulator.reset();
         }
         previousVelocities = null;
+        worstRunMeters = 0;
+        abortedRuns = 0;
     }
 
-    /** @return the per-module fit, in FL, FR, RL, RR order. */
+    /**
+     * @param module Index in FL, FR, RL, RR order.
+     * @return that module's fit.
+     */
     public SysIdRegression.Gains getGains(int module) {
         return perModule[module].fit();
+    }
+
+    /** @return metres of runway the longest single test needed. */
+    public double getWorstRunMeters() {
+        return worstRunMeters;
+    }
+
+    /** @return how many tests were cut short by the distance limit. */
+    public int getAbortedRuns() {
+        return abortedRuns;
     }
 }
