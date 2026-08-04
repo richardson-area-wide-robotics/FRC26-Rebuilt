@@ -460,6 +460,44 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     return sum / positions.length;
   }
 
+  /** @return drive output current per module in amps, in FL, FR, RL, RR order. */
+  public double[] getModuleDriveCurrents() {
+    return new double[] {
+      m_frontLeft.getDriveCurrent(),
+      m_frontRight.getDriveCurrent(),
+      m_rearLeft.getDriveCurrent(),
+      m_rearRight.getDriveCurrent()
+    };
+  }
+
+  /**
+   * @return total drive current across all four modules, in amps.
+   *
+   *     <p>This is the figure that matters against the 120 A main breaker, and it is four times the
+   *     per-motor limit. A per-motor limit that looks modest on its own can still put the whole
+   *     drivetrain past what the breaker will carry.
+   */
+  public double getTotalDriveCurrent() {
+    return m_frontLeft.getDriveCurrent() + m_frontRight.getDriveCurrent()
+        + m_rearLeft.getDriveCurrent() + m_rearRight.getDriveCurrent();
+  }
+
+  /**
+   * Applies a drive smart current limit to all four modules.
+   *
+   * <p>Does not persist, so the limit reverts to
+   * {@code SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT} on the next power cycle. See
+   * {@link MAXSwerveModule#applyDriveCurrentLimit}.
+   *
+   * @param amps Smart current limit in amps.
+   */
+  public void applyDriveCurrentLimit(int amps) {
+    m_frontLeft.applyDriveCurrentLimit(amps);
+    m_frontRight.applyDriveCurrentLimit(amps);
+    m_rearLeft.applyDriveCurrentLimit(amps);
+    m_rearRight.applyDriveCurrentLimit(amps);
+  }
+
   /** Re-applies drive closed-loop gains to all four modules. For live tuning. */
   public void applyDriveGains(double p, double d) {
     m_frontLeft.applyDriveGains(p, d);

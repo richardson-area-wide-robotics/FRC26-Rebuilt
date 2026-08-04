@@ -2,7 +2,10 @@ package frc.robot.rebuilt.subsystems;
 
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.NamedAuto;
+import frc.robot.common.components.diagnostics.GamePieceCounter;
+import frc.robot.common.components.diagnostics.MotorLoadMonitor;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
+import frc.robot.rebuilt.RebuiltConstants.LoadConstants;
 import org.littletonrobotics.junction.Logger;
 
 import com.revrobotics.PersistMode;
@@ -182,14 +185,96 @@ public class Intake extends DashboardSubsystem {
         return Commands.runOnce(this::manualReverseDeploy, this);
     }
 
+    /**
+     * Pumps the deploy arm a fixed number of times to shake a jammed piece loose.
+     *
+     * <p>Was an unbounded {@code repeatingSequence}: it never finished, so it would have jostled
+     * until something interrupted it. Acceptable behind a held button, but not for anything a
+     * sensor can trigger — so it is now bounded.
+     *
+     * <p>For automatic clearing prefer {@link JamClearing#intakeJostle}, which also re-checks
+     * between attempts and gives up rather than pumping a mechanism that is not going to free.
+     *
+     * @return a bounded jostle command.
+     */
     public Command jiggleItALittleCommand() {
-        return Commands.repeatingSequence(
+        return Commands.sequence(
             RobotUtils.timedCommand(0.35, Commands.run(this::manualReverseDeploy), stopIntakeCommand()),
-            RobotUtils.timedCommand(0.25, Commands.run(this::manualDeploy), stopIntakeCommand()));
+            RobotUtils.timedCommand(0.25, Commands.run(this::manualDeploy), stopIntakeCommand()),
+            RobotUtils.timedCommand(0.35, Commands.run(this::manualReverseDeploy), stopIntakeCommand()),
+            RobotUtils.timedCommand(0.25, Commands.run(this::manualDeploy), stopIntakeCommand()))
+            .withName("JiggleIntake");
+    }
+
+    /** @return roller speed in motor RPM, averaged across the two rollers. */
+    public double getRollerVelocity() {
+        return (Math.abs(intakeMotor1.getEncoder().getVelocity())
+            + Math.abs(intakeMotor2.getEncoder().getVelocity())) / 2.0;
+    }
+
+    /** @return combined roller current in amps, which is what a game piece shows up in. */
+    public double getRollerCurrent() {
+        return intakeMotor1.getOutputCurrent() + intakeMotor2.getOutputCurrent();
+    }
+
+    /** @return deploy arm current in amps. */
+    public double getDeployCurrent() {
+        return deployMotor.getOutputCurrent();
+    }
+
+    /** @return deploy arm speed in motor RPM. */
+    public double getDeployVelocity() {
+        return deployEncoder.getVelocity();
+    }
+
+    /**
+     * Detects game pieces and jams from roller current and speed.
+     *
+     * <p>The robot has no game-piece sensor — {@code EasyBreakBeam} exists in the framework and is
+     * never instantiated — so current is the sensor that is already fitted.
+     */
+    private final MotorLoadMonitor rollerLoad = new MotorLoadMonitor(
+        "Intake/Rollers",
+        LoadConstants.INTAKE_WORK_EXCESS_AMPS,
+        LoadConstants.INTAKE_EXPECTED_RPM,
+        LoadConstants.JAM_SPEED_FRACTION,
+        LoadConstants.JAM_CONFIRM_LOOPS);
+
+    private final GamePieceCounter pieceCounter = new GamePieceCounter(
+        "Intake", rollerLoad,
+        LoadConstants.PIECE_SUSTAIN_LOOPS,
+        LoadConstants.PIECE_REFRACTORY_LOOPS);
+
+    /** @return true while a game piece appears to be going through the rollers. */
+    public boolean isIntakingPiece() {
+        return rollerLoad.isDoingWork();
+    }
+
+    /** @return true when the rollers are loaded but not turning. */
+    public boolean isJammed() {
+        return rollerLoad.isJammed();
+    }
+
+    /** @return pieces detected since the last reset. A strong hint, not ground truth. */
+    public int getPieceCount() {
+        return pieceCounter.getCount();
+    }
+
+    /** Zeroes the piece count, e.g. at the start of a match. */
+    public void resetPieceCount() {
+        pieceCounter.reset();
+    }
+
+    /** @return the roller load monitor, for jam-clearing routines and diagnostics. */
+    public MotorLoadMonitor getRollerLoad() {
+        return rollerLoad;
     }
 
     @Override
     public void periodic() {
+        rollerLoad.update(getRollerCurrent(), getRollerVelocity(), intakeRunning);
+        pieceCounter.update();
+
         Logger.recordOutput(getName() + "/Encoder/Position", getDeployPosition());
         Logger.recordOutput(getName() + "/Deploy/OutputCurrent", deployMotor.getOutputCurrent());
         Logger.recordOutput(getName() + "/Deploy/Deployed", isDeployed());

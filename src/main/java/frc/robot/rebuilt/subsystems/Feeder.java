@@ -14,7 +14,10 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.NamedAuto;
 import frc.robot.common.subsystems.DashboardSubsystem;
+import frc.robot.common.components.diagnostics.GamePieceCounter;
+import frc.robot.common.components.diagnostics.MotorLoadMonitor;
 import frc.robot.rebuilt.RebuiltConstants.FeederConstants;
+import frc.robot.rebuilt.RebuiltConstants.LoadConstants;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -115,8 +118,95 @@ public class Feeder extends DashboardSubsystem {
         return spindexerDemand > FeederConstants.SPINDEXER_HOLD_SPEED;
     }
 
+    /** @return feeder current in amps, which is what a game piece passing through shows up in. */
+    public double getFeederCurrent() {
+        return feederMotor.getOutputCurrent();
+    }
+
+    /** @return feeder speed in motor RPM. */
+    public double getFeederVelocity() {
+        return feederMotor.getEncoder().getVelocity();
+    }
+
+    /** @return spindexer current in amps. */
+    public double getSpindexerCurrent() {
+        return spindexerMotor.getOutputCurrent();
+    }
+
+    /** @return spindexer speed in motor RPM. */
+    public double getSpindexerVelocity() {
+        return spindexerMotor.getEncoder().getVelocity();
+    }
+
+    /** Detects pieces and jams in the spindexer from its current and speed. */
+    private final MotorLoadMonitor spindexerLoad = new MotorLoadMonitor(
+        "Feeder/Spindexer",
+        LoadConstants.SPINDEXER_WORK_EXCESS_AMPS,
+        LoadConstants.SPINDEXER_EXPECTED_RPM,
+        LoadConstants.JAM_SPEED_FRACTION,
+        LoadConstants.JAM_CONFIRM_LOOPS);
+
+    /**
+     * Detects pieces and jams in the feeder.
+     *
+     * <p>The feeder is the vertical run up to the flywheel, which is the mechanism usually referred
+     * to as the tower. If a separate tower motor is ever added it needs its own monitor.
+     */
+    private final MotorLoadMonitor feederLoad = new MotorLoadMonitor(
+        "Feeder/Feeder",
+        LoadConstants.FEEDER_WORK_EXCESS_AMPS,
+        LoadConstants.FEEDER_EXPECTED_RPM,
+        LoadConstants.JAM_SPEED_FRACTION,
+        LoadConstants.JAM_CONFIRM_LOOPS);
+
+    private final GamePieceCounter feederPieceCounter = new GamePieceCounter(
+        "Feeder", feederLoad,
+        LoadConstants.PIECE_SUSTAIN_LOOPS,
+        LoadConstants.PIECE_REFRACTORY_LOOPS);
+
+    /** @return true when the spindexer is loaded but not turning. */
+    public boolean isSpindexerJammed() {
+        return spindexerLoad.isJammed();
+    }
+
+    /** @return true when the feeder is loaded but not turning. */
+    public boolean isFeederJammed() {
+        return feederLoad.isJammed();
+    }
+
+    /** @return true when either mechanism is jammed. */
+    public boolean isJammed() {
+        return isSpindexerJammed() || isFeederJammed();
+    }
+
+    /** @return pieces detected past the feeder, which is the count that has reached the flywheel. */
+    public int getPieceCount() {
+        return feederPieceCounter.getCount();
+    }
+
+    /** Zeroes the piece count. */
+    public void resetPieceCount() {
+        feederPieceCounter.reset();
+    }
+
+    /** @return the spindexer load monitor, for jam clearing and diagnostics. */
+    public MotorLoadMonitor getSpindexerLoad() {
+        return spindexerLoad;
+    }
+
+    /** @return the feeder load monitor, for jam clearing and diagnostics. */
+    public MotorLoadMonitor getFeederLoad() {
+        return feederLoad;
+    }
+
     @Override
     public void periodic() {
+        // The spindexer holds at a crawl rather than stopping, so "commanded" means indexing at
+        // speed — a crawl is not evidence of anything either way.
+        spindexerLoad.update(getSpindexerCurrent(), getSpindexerVelocity(), isCycling());
+        feederLoad.update(getFeederCurrent(), getFeederVelocity(), isLoading());
+        feederPieceCounter.update();
+
         Logger.recordOutput(getName() + "/Activity/Spindexer", isCycling());
         Logger.recordOutput(getName() + "/Activity/Feeder", isLoading());
         Logger.recordOutput(getName() + "/Demand/Spindexer", spindexerDemand);

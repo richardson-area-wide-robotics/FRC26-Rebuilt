@@ -4,8 +4,11 @@ import java.util.function.BooleanSupplier;
 
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.NamedAuto;
+import frc.robot.common.components.diagnostics.GamePieceCounter;
+import frc.robot.common.components.diagnostics.MotorLoadMonitor;
 import frc.robot.common.components.diagnostics.TunableNumber;
 import frc.robot.common.subsystems.DashboardSubsystem;
+import frc.robot.rebuilt.RebuiltConstants.LoadConstants;
 import frc.robot.rebuilt.RebuiltConstants.ShooterConstants;
 import lombok.Setter;
 import org.lasarobotics.hardware.revrobotics.Spark;
@@ -223,9 +226,31 @@ public class Shooter extends DashboardSubsystem {
         return base + operatorRPMModifer;
     }
 
-    /** @return the flywheel's measured RPM. */
+    /**
+     * @return the flywheel's measured RPM, from the motor's built-in encoder.
+     *
+     *     <p>This previously read {@code analogVelocity}. In PurpleLib that field is populated from
+     *     {@code SparkBase.getAnalog().getVelocity()} — the <b>analog sensor on the SPARK's data
+     *     port</b>, not the motor encoder. There is no analog sensor on either shooter motor, so it
+     *     returned 0 on the real robot.
+     *
+     *     <p>The flywheel still span correctly, because the SPARK runs its velocity loop against its
+     *     own primary encoder internally and never consults this value. What broke was everything
+     *     built on top of it: {@link #isAtTargetRPM()} compared the target against 0 and so could
+     *     never be true, and {@code Shooter/Activity/RPMError} logged the full setpoint as error for
+     *     the whole match. Any "wait until up to speed" gate would have hung.
+     *
+     *     <p>{@code encoderVelocity} is the built-in encoder, which is what the closed loop already
+     *     uses. Both fields are still logged so the shop session can confirm the analog channel is
+     *     genuinely dead rather than merely assumed to be.
+     */
     public double getMeasuredRPM() {
-        return motor1.getInputs().analogVelocity;
+        return motor1.getInputs().encoderVelocity;
+    }
+
+    /** @return leader stator current in amps, which is what a game piece leaving shows up in. */
+    public double getShooterCurrent() {
+        return motor1.getInputs().statorCurrent.in(Units.Amps);
     }
 
     /** @return true while the flywheel is commanded to run. */
@@ -294,6 +319,54 @@ public class Shooter extends DashboardSubsystem {
         System.out.println("Shooter gains updated: p=" + p + " i=" + i + " d=" + d);
     }
 
+    /**
+     * Detects game pieces passing through the flywheel from current and RPM.
+     *
+     * <p>The flywheel is the one mechanism where the current signature is unambiguous. A piece
+     * entering loads it hard and pulls the RPM down, then the closed loop drives current up to
+     * recover. That excess-current-with-RPM-dip pattern is a shot, and nothing else on this
+     * mechanism looks like it.
+     *
+     * <p>Expected speed is supplied live from {@link #getTargetRPM()} rather than fixed, because the
+     * setpoint ranges from 1700 (IDLE) to 4500 (CORNER) RPM.
+     */
+    private final MotorLoadMonitor flywheelLoad = new MotorLoadMonitor(
+            "Shooter/Flywheel",
+            LoadConstants.SHOOTER_WORK_EXCESS_AMPS,
+            this::getTargetRPM,
+            LoadConstants.SHOOTER_JAM_SPEED_FRACTION,
+            LoadConstants.JAM_CONFIRM_LOOPS);
+
+    private final GamePieceCounter shotCounter = new GamePieceCounter(
+            "Shooter", flywheelLoad,
+            LoadConstants.PIECE_SUSTAIN_LOOPS,
+            LoadConstants.SHOT_REFRACTORY_LOOPS);
+
+    /** @return true while a game piece appears to be passing through the flywheel. */
+    public boolean isShooting() {
+        return flywheelLoad.isDoingWork();
+    }
+
+    /** @return true when the flywheel is loaded but not recovering speed — a wedged piece. */
+    public boolean isJammed() {
+        return flywheelLoad.isJammed();
+    }
+
+    /** @return shots detected since the last reset. A strong hint, not ground truth. */
+    public int getShotCount() {
+        return shotCounter.getCount();
+    }
+
+    /** Zeroes the shot count, e.g. at the start of a match. */
+    public void resetShotCount() {
+        shotCounter.reset();
+    }
+
+    /** @return the flywheel load monitor, for calibration and diagnostics. */
+    public MotorLoadMonitor getFlywheelLoad() {
+        return flywheelLoad;
+    }
+
     @Override
     public void periodic() {
         // No-ops entirely when tuning is disabled.
@@ -301,7 +374,17 @@ public class Shooter extends DashboardSubsystem {
         tunableI.ifChanged(i -> applyGains(tunableP.get(), i, tunableD.get()));
         tunableD.ifChanged(d -> applyGains(tunableP.get(), tunableI.get(), d));
 
+        flywheelLoad.update(getShooterCurrent(), getMeasuredRPM(), shooterRunning);
+        shotCounter.update();
+
         Logger.recordOutput(getName() + "/Activity/Shooter", shooterRunning);
+        Logger.recordOutput(getName() + "/Activity/ShotCount", getShotCount());
+
+        // Both velocity fields, so the shop session can confirm the analog channel really is dead
+        // rather than taking the claim in getMeasuredRPM()'s docs on trust.
+        Logger.recordOutput(getName() + "/Sensors/EncoderRPM", motor1.getInputs().encoderVelocity);
+        Logger.recordOutput(getName() + "/Sensors/AnalogRPM", motor1.getInputs().analogVelocity);
+        Logger.recordOutput(getName() + "/Sensors/StatorAmps", getShooterCurrent());
         Logger.recordOutput(getName() + "/Activity/DesiredRPM", getTargetRPM());
         Logger.recordOutput(getName() + "/Activity/CurrentRPM", getMeasuredRPM());
         Logger.recordOutput(getName() + "/Activity/RPMError", getTargetRPM() - getMeasuredRPM());

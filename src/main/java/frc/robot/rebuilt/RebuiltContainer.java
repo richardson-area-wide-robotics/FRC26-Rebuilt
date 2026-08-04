@@ -29,7 +29,9 @@ import frc.robot.common.components.diagnostics.CalibrationStore;
 import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
+import frc.robot.common.components.diagnostics.LoadCalibrationRoutine;
 import frc.robot.common.components.diagnostics.ManeuverRunner;
+import frc.robot.common.components.diagnostics.TractionCalibrator;
 import frc.robot.rebuilt.states.RobotStateMachine;
 import frc.robot.common.interfaces.IRobotContainer;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
@@ -42,6 +44,7 @@ import frc.robot.rebuilt.components.FieldState;
 import frc.robot.rebuilt.components.RobotSector;
 import frc.robot.rebuilt.subsystems.Feeder;
 import frc.robot.rebuilt.subsystems.Intake;
+import frc.robot.rebuilt.subsystems.JamClearing;
 import frc.robot.rebuilt.subsystems.Shooter;
 import frc.robot.rebuilt.subsystems.Shooter.ShooterPosition;
 import frc.robot.rebuilt.subsystems.smart.RobotSectorEvaluator;
@@ -101,6 +104,14 @@ public class RebuiltContainer implements IRobotContainer {
 
   /** Manoeuvre suite runner, run from Test mode. */
   public static final ManeuverRunner MANEUVER_RUNNER = new ManeuverRunner(DRIVE_SUBSYSTEM);
+
+  /** Current-threshold calibration for piece and jam detection, run from Test mode. */
+  public static final LoadCalibrationRoutine LOAD_CALIBRATOR =
+      new LoadCalibrationRoutine(INTAKE, FEEDER, SHOOTER);
+
+  /** Drive current limit calibration, run against a wall on carpet. */
+  public static final TractionCalibrator TRACTION_CALIBRATOR =
+      new TractionCalibrator(DRIVE_SUBSYSTEM);
 
   /**
    * Watches live estimates against the constants in use, so break-in is noticed rather than
@@ -336,6 +347,28 @@ public class RebuiltContainer implements IRobotContainer {
         250);
 
     monitor.register(
+        "BallPathNotJammed",
+        "No mechanism in the ball path is loaded but stalled",
+        () -> !INTAKE.isJammed() && !FEEDER.isJammed(),
+        // Generous: a jam only counts once the load monitors have confirmed it, and the clearing
+        // routine gets a chance to fix it before this is worth flagging to a driver.
+        100);
+
+    monitor.register(
+        "LoadBaselinesLearned",
+        "Current baselines are established, so piece and jam detection means something",
+        () -> {
+          // Only meaningful once the mechanisms have actually been run; before that, an
+          // unestablished baseline is expected rather than a fault.
+          if (!INTAKE.isRunning() && !FEEDER.isLoading()) {
+            return true;
+          }
+          return INTAKE.getRollerLoad().isBaselineEstablished()
+              || FEEDER.getFeederLoad().isBaselineEstablished();
+        },
+        250);
+
+    monitor.register(
         "VisionRejectRateReasonable",
         "Most vision measurements pass the plausibility gates",
         () -> {
@@ -457,6 +490,19 @@ public class RebuiltContainer implements IRobotContainer {
     RobotUtils.bindControl(HIDConstants.DRIVER_CONTROLLER.leftBumper(),
       Commands.runOnce(INTAKE::outtake, INTAKE),
       Commands.runOnce(INTAKE::stopRollers, INTAKE));
+
+    // Operator Back - clear the whole ball path on demand.
+    //
+    // Bound to a button as well as being available automatically, because a driver often knows a
+    // piece is stuck before the current signature confirms it — and because a manual override
+    // needs to exist for when the detection thresholds turn out to be wrong.
+    HIDConstants.OPERATOR_CONTROLLER.back().onTrue(
+        JamClearing.clearWholePath(INTAKE, FEEDER,
+            () -> INTAKE.isJammed() || FEEDER.isJammed()));
+
+    // Operator Start - jostle just the intake, the most common case.
+    HIDConstants.OPERATOR_CONTROLLER.start().onTrue(
+        JamClearing.intakeJostle(INTAKE, INTAKE::isJammed));
 
     bindingProfiler.end();
   }
@@ -633,6 +679,42 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getAllManeuversCommand() {
     return MANEUVER_RUNNER.runAll(CalibrationManeuvers.all());
+  }
+
+  /**
+   * The current-threshold calibration for game piece and jam detection.
+   *
+   * <p>Needs the robot on blocks, a stack of game pieces, and a person at the mechanism to feed them
+   * and then to obstruct it. Takes about a minute per mechanism. Prints recommended values for
+   * {@code LoadConstants} — it writes nothing itself.
+   *
+   * @return the load calibration command.
+   */
+  public static Command getLoadCalibrationCommand() {
+    return LOAD_CALIBRATOR.full();
+  }
+
+  /** @return just the intake roller thresholds, for when only that mechanism has changed. */
+  public static Command getIntakeLoadCalibrationCommand() {
+    return LOAD_CALIBRATOR.calibrateIntake();
+  }
+
+  /**
+   * The drive current limit calibration.
+   *
+   * <p><b>Robot square against a wall, on carpet, on a good battery.</b> Pushes at full output while
+   * stepping the drive current limit from 20 A upward until the wheels break traction, then
+   * recommends a limit below that point. Aborts if the robot is not actually against the wall.
+   *
+   * <p>Takes about a minute. Stalls the drive motors in short bursts with cooldowns between, so it is
+   * hard on the drivetrain but not damaging. Prints a recommendation for
+   * {@code SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT}; the limits it applies while running do not
+   * persist across a power cycle.
+   *
+   * @return the traction calibration command.
+   */
+  public static Command getTractionCalibrationCommand() {
+    return TRACTION_CALIBRATOR.sweep();
   }
 
   /** @return just the sixteen drive-turn-drive permutations. */

@@ -168,6 +168,37 @@ class ContainerWiringTest {
       assertNotNull(RebuiltContainer.getSamePathReturnCommand());
       assertNotNull(RebuiltContainer.getDifferentPathReturnCommand());
       assertNotNull(RebuiltContainer.getAllManeuversCommand());
+      assertNotNull(RebuiltContainer.getLoadCalibrationCommand());
+      assertNotNull(RebuiltContainer.getIntakeLoadCalibrationCommand());
+      assertNotNull(RebuiltContainer.getTractionCalibrationCommand());
+    });
+  }
+
+  @Test
+  @Order(9)
+  @DisplayName("The traction sweep owns the drivetrain, so the default command cannot fight it")
+  void tractionSweepRequiresTheDrivetrain() {
+    // Without this requirement the sweep still runs and still reports numbers, but the default
+    // drive command keeps writing zero output over every push, so it measures a drivetrain that
+    // is not pushing and concludes the wheels never slip. A silently wrong calibration.
+    Command sweep = RebuiltContainer.getTractionCalibrationCommand();
+
+    assertTrue(sweep.getRequirements().contains(RebuiltContainer.DRIVE_SUBSYSTEM),
+        "the traction sweep must require the drivetrain, or it competes with the default command");
+  }
+
+  @Test
+  @Order(9)
+  @DisplayName("Load calibration commands compose legally for every mechanism")
+  void loadCalibrationComposesLegally() {
+    // Each mechanism's routine is a sequence that starts and stops one subsystem. Sequences may
+    // repeat a requirement, but a composition mistake here would throw at construction and take
+    // the robot program down before teleop — the same failure mode as the binding regression above.
+    assertDoesNotThrow(() -> {
+      assertNotNull(RebuiltContainer.LOAD_CALIBRATOR.calibrateIntake());
+      assertNotNull(RebuiltContainer.LOAD_CALIBRATOR.calibrateSpindexer());
+      assertNotNull(RebuiltContainer.LOAD_CALIBRATOR.calibrateFeeder());
+      assertNotNull(RebuiltContainer.LOAD_CALIBRATOR.calibrateShooter());
     });
   }
 

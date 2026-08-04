@@ -176,6 +176,32 @@ public class MAXSwerveModule {
         config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
   }
 
+  /** @return the drive motor's output current in amps. */
+  public double getDriveCurrent() {
+    return m_drivingSpark.getOutputCurrent();
+  }
+
+  /**
+   * Re-applies the drive smart current limit without touching any other configuration.
+   *
+   * <p>For the traction calibration, which steps the limit upward until the wheels break loose.
+   * No-persist, like the gain setters: the limit is stepped many times in one run and each persisted
+   * write is a flash erase cycle on the controller.
+   *
+   * <p>Because it does not persist, the limit reverts to whatever
+   * {@code SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT} says on the next power cycle. That is the
+   * intended behaviour — a calibration run must not be able to leave the robot configured for a limit
+   * nobody chose.
+   *
+   * @param amps Smart current limit in amps.
+   */
+  public void applyDriveCurrentLimit(int amps) {
+    SparkFlexConfig config = new SparkFlexConfig();
+    config.smartCurrentLimit(amps);
+    m_drivingSpark.configure(
+        config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+  }
+
   /** Zeroes all the SwerveModule encoders. */
   public void resetEncoders() {
     m_drivingEncoder.setPosition(0);

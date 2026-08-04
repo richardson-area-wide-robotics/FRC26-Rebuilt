@@ -132,6 +132,99 @@ public final class RebuiltConstants {
     }
   }
 
+  /**
+   * Thresholds for detecting game pieces and jams from motor current.
+   *
+   * <p><strong>Every value here is reasoned, not measured.</strong> The robot already logs current
+   * for each mechanism, so one session gives the real numbers: run each mechanism empty and note
+   * {@code Load/<mechanism>/BaselineAmps}, then send a game piece through and note
+   * {@code ExcessAmps}. Set the work threshold between the two, nearer the empty end.
+   *
+   * <p>Getting these wrong is not dangerous but it is annoying in both directions: too high and
+   * pieces go uncounted, too low and the robot decides it is jammed during normal operation and
+   * starts jostling itself mid-match.
+   */
+  public static final class LoadConstants {
+    /** MEASURE — amps above idle indicating a piece is moving through the intake rollers. */
+    public static final double INTAKE_WORK_EXCESS_AMPS = 10.0;
+
+    /** MEASURE — unloaded intake roller speed, in motor RPM. */
+    public static final double INTAKE_EXPECTED_RPM = 5000.0;
+
+    /** MEASURE — amps above idle indicating a piece moving through the spindexer. */
+    public static final double SPINDEXER_WORK_EXCESS_AMPS = 8.0;
+
+    /** MEASURE — unloaded spindexer speed, in motor RPM. */
+    public static final double SPINDEXER_EXPECTED_RPM = 5000.0;
+
+    /** MEASURE — amps above idle indicating a piece moving through the feeder. */
+    public static final double FEEDER_WORK_EXCESS_AMPS = 10.0;
+
+    /** MEASURE — unloaded feeder speed, in motor RPM. */
+    public static final double FEEDER_EXPECTED_RPM = 5000.0;
+
+    /**
+     * MEASURE — amps above idle indicating a game piece is passing through the flywheel.
+     *
+     * <p>Higher than the other mechanisms because a flywheel at speed carries real momentum: a piece
+     * entering takes a large bite out of it and the closed loop answers with a lot of current.
+     *
+     * <p>There is deliberately no {@code SHOOTER_EXPECTED_RPM}. The flywheel's expected speed is its
+     * live setpoint, which ranges from 1700 to 4500 RPM, so it is supplied to the monitor as a
+     * supplier instead of pinned here.
+     */
+    public static final double SHOOTER_WORK_EXCESS_AMPS = 20.0;
+
+    /**
+     * Fraction of setpoint below which the flywheel counts as jammed.
+     *
+     * <p>Much tighter than the roller figure. A flywheel is speed-controlled and recovers within a
+     * few hundred milliseconds of a shot, so it should never sit far below setpoint for long. 0.70
+     * means "still 30% down well after the shot should have cleared", which on a flywheel means
+     * something is rubbing or wedged rather than being shot.
+     */
+    public static final double SHOOTER_JAM_SPEED_FRACTION = 0.70;
+
+    /**
+     * MEASURE — loops to ignore further shot detections after counting one.
+     *
+     * <p>Shorter than {@link #PIECE_REFRACTORY_LOOPS} because the flywheel is the fastest point in
+     * the path: the feeder can push pieces through back to back, and a refractory period longer than
+     * the gap between them would undercount a volley. 12 loops is 240 ms.
+     */
+    public static final int SHOT_REFRACTORY_LOOPS = 12;
+
+    /**
+     * Fraction of expected speed below which a mechanism counts as stuck.
+     *
+     * <p>0.30 is deliberately generous: a roller genuinely slows when it bites a piece, and calling
+     * that a jam would trigger jostling every time the robot did its job.
+     */
+    public static final double JAM_SPEED_FRACTION = 0.30;
+
+    /**
+     * Consecutive loops of high current and low speed before declaring a jam.
+     *
+     * <p>15 loops is 300 ms. Long enough that a piece seating does not trigger it, short enough that
+     * a real jam is cleared before the driver has finished noticing.
+     */
+    public static final int JAM_CONFIRM_LOOPS = 15;
+
+    /** Loops of sustained load before a game piece is counted. 3 loops is 60 ms. */
+    public static final int PIECE_SUSTAIN_LOOPS = 3;
+
+    /**
+     * MEASURE — loops to ignore further detections after counting one piece.
+     *
+     * <p>Set from the fastest the mechanism can physically pass two pieces. 25 loops is half a
+     * second; if pieces can arrive faster than that, lower it or the second will be missed.
+     */
+    public static final int PIECE_REFRACTORY_LOOPS = 25;
+
+    private LoadConstants() {
+    }
+  }
+
   public static final class FeederConstants {
     /** Open-loop feeder speed while loading into the flywheel. */
     public static final double FEEDER_SPEED = 1.0;
