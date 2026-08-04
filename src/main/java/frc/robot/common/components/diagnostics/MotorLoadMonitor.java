@@ -1,6 +1,7 @@
 package frc.robot.common.components.diagnostics;
 
 import edu.wpi.first.math.filter.LinearFilter;
+import edu.wpi.first.wpilibj.RobotController;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
 
@@ -91,11 +92,49 @@ public class MotorLoadMonitor {
      */
     private static final double BASELINE_ALPHA = 0.01;
 
+    /**
+     * How fast the learned speed ratio tracks, per loop.
+     *
+     * <p>Same time constant as the current baseline, and for the same reason.
+     */
+    private static final double SPEED_RATIO_ALPHA = 0.01;
+
+    /**
+     * Bounds on the learned speed ratio.
+     *
+     * <p>A mechanism running at less than 20% or more than 150% of its nominal expected speed while
+     * apparently unloaded means something is wrong with the nominal figure, the gearing, or the
+     * reading. Clamping stops one bad sample from moving the jam threshold somewhere it can never
+     * fire, or somewhere it fires constantly.
+     */
+    private static final double MIN_SPEED_RATIO = 0.20;
+    private static final double MAX_SPEED_RATIO = 1.50;
+
     private double filteredCurrent;
     private double baselineCurrent;
     private double lastSpeed;
     private boolean baselineEstablished;
     private int baselineSamples;
+
+    /**
+     * Measured unloaded speed as a fraction of the nominal expected speed.
+     *
+     * <p><b>Why a ratio rather than an absolute learned speed.</b> The nominal figure is a datasheet
+     * number, and a real mechanism never reaches it: gearing and belt drag, bearing friction and air
+     * resistance all take a cut, and <b>battery voltage falls as current spikes and as charge
+     * depletes</b>, which scales speed directly. A jam threshold set as a fraction of the datasheet
+     * figure therefore drifts closer to a healthy mechanism's real speed as the match goes on — so
+     * late in a match, on a tired pack, a perfectly good roller starts reading as jammed.
+     *
+     * <p>Learning the ratio absorbs all of it. It is dimensionless, which is what makes it work for
+     * the flywheel too: there the nominal figure is the live setpoint, so an absolute learned speed
+     * would be stale the moment the operator changed preset and a drop from the corner shot to the
+     * hub shot would read as a jam. A ratio stays near 1.0 across every setpoint because the closed
+     * loop tracks whatever it is given.
+     *
+     * <p>Starts at 1.0, so before anything is learned the behaviour is exactly the old behaviour.
+     */
+    private double speedRatio = 1.0;
     private int elevatedLowSpeedLoops;
     private LoadState state = LoadState.IDLE;
 
@@ -156,14 +195,19 @@ public class MotorLoadMonitor {
             return state;
         }
 
-        double expected = expectedSpeed();
+        double nominalExpected = expectedSpeed();
+
+        // The speed a healthy mechanism actually reaches, rather than the one the datasheet
+        // promises. This is what the jam threshold is a fraction of.
+        double expected = nominalExpected * speedRatio;
+
         double excess = filteredCurrent - baselineCurrent;
         boolean elevated = baselineEstablished && excess >= workExcessAmps;
         boolean speedCollapsed = expected > 0
                 && Math.abs(speed) < expected * jamSpeedFraction;
 
-        // Only learn the baseline while running and apparently unloaded, so a game piece does not
-        // teach the monitor that loaded current is normal.
+        // Only learn while running and apparently unloaded, so a game piece does not teach the
+        // monitor that loaded current is normal or that a bogged-down speed is healthy.
         if (!elevated) {
             if (baselineSamples == 0) {
                 // Seed from the first raw reading rather than from zero. Starting at zero and
@@ -172,6 +216,19 @@ public class MotorLoadMonitor {
             } else {
                 baselineCurrent += BASELINE_ALPHA * (filteredCurrent - baselineCurrent);
             }
+
+            // Learn the speed ratio on the same gate. Skipped when the nominal figure is zero or
+            // near it — a stopped flywheel would otherwise produce a meaningless or infinite ratio.
+            if (nominalExpected > 1e-6) {
+                double observedRatio = Math.abs(speed) / nominalExpected;
+                if (baselineSamples == 0) {
+                    speedRatio = observedRatio;
+                } else {
+                    speedRatio += SPEED_RATIO_ALPHA * (observedRatio - speedRatio);
+                }
+                speedRatio = Math.max(MIN_SPEED_RATIO, Math.min(MAX_SPEED_RATIO, speedRatio));
+            }
+
             baselineSamples++;
             if (baselineSamples >= 25) {
                 baselineEstablished = true;
@@ -208,6 +265,12 @@ public class MotorLoadMonitor {
         Logger.recordOutput(root + "/ExcessAmps", filteredCurrent - baselineCurrent);
         Logger.recordOutput(root + "/Speed", lastSpeed);
         Logger.recordOutput(root + "/BaselineEstablished", baselineEstablished);
+        Logger.recordOutput(root + "/SpeedRatio", speedRatio);
+        Logger.recordOutput(root + "/EffectiveExpectedSpeed", expectedSpeed() * speedRatio);
+
+        // Bus voltage, because it is the usual reason a mechanism is slower today than yesterday.
+        // Logged here rather than left to be correlated by hand across two different log trees.
+        Logger.recordOutput(root + "/BusVolts", RobotController.getBatteryVoltage());
     }
 
     /** @return the state from the most recent update. */
@@ -228,6 +291,22 @@ public class MotorLoadMonitor {
     /** @return smoothed current in amps. */
     public double getFilteredCurrent() {
         return filteredCurrent;
+    }
+
+    /**
+     * @return measured unloaded speed as a fraction of the nominal expected speed.
+     *
+     *     <p>A value well below 1.0 is not a fault — it is drag, friction and battery voltage,
+     *     which is exactly what it exists to absorb. It is worth watching though: a ratio that
+     *     falls steadily over a season is a mechanism binding up.
+     */
+    public double getSpeedRatio() {
+        return speedRatio;
+    }
+
+    /** @return the speed the jam threshold is actually a fraction of, in the supplied unit. */
+    public double getEffectiveExpectedSpeed() {
+        return expectedSpeed() * speedRatio;
     }
 
     /** @return learned unloaded current in amps. */
@@ -257,6 +336,7 @@ public class MotorLoadMonitor {
         baselineEstablished = false;
         baselineSamples = 0;
         elevatedLowSpeedLoops = 0;
+        speedRatio = 1.0;
         state = LoadState.IDLE;
     }
 

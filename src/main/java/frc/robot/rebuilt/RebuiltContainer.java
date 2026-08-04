@@ -29,6 +29,7 @@ import frc.robot.common.components.diagnostics.CalibrationStore;
 import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
+import frc.robot.common.components.diagnostics.BumpCrossingDiagnostic;
 import frc.robot.common.components.diagnostics.LoadCalibrationRoutine;
 import frc.robot.common.components.diagnostics.ManeuverRunner;
 import frc.robot.common.components.diagnostics.TractionCalibrator;
@@ -112,6 +113,10 @@ public class RebuiltContainer implements IRobotContainer {
   /** Drive current limit calibration, run against a wall on carpet. */
   public static final TractionCalibrator TRACTION_CALIBRATOR =
       new TractionCalibrator(DRIVE_SUBSYSTEM);
+
+  /** Diagnoses why the chassis bogs down on the field ramps. */
+  public static final BumpCrossingDiagnostic BUMP_DIAGNOSTIC =
+      new BumpCrossingDiagnostic(DRIVE_SUBSYSTEM, VISION_SUBSYSTEM::hasRecentMeasurement);
 
   /**
    * Watches live estimates against the constants in use, so break-in is noticed rather than
@@ -715,6 +720,23 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getTractionCalibrationCommand() {
     return TRACTION_CALIBRATOR.sweep();
+  }
+
+  /**
+   * Diagnoses why the chassis slows or fails on the field ramps.
+   *
+   * <p>Schedule it, then drive over the ramp normally — it watches rather than taking control, so
+   * what gets measured is the crossing as actually driven. Classifies the run as current-limited,
+   * traction-limited or voltage-limited, which need three different fixes, and says so in words.
+   *
+   * <p><b>Run it where an AprilTag is visible.</b> Slip is wheel speed against chassis speed, and
+   * the only chassis speed on this robot that is independent of the wheels comes from the tags. With
+   * no tag in view it reports the run as inconclusive rather than clearing traction wrongly.
+   *
+   * @return the bump diagnostic command.
+   */
+  public static Command getBumpDiagnosticCommand() {
+    return BUMP_DIAGNOSTIC.watch();
   }
 
   /** @return just the sixteen drive-turn-drive permutations. */

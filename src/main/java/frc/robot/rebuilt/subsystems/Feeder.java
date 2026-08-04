@@ -151,8 +151,7 @@ public class Feeder extends DashboardSubsystem {
      *
      * <p>The feeder is the vertical run up to the flywheel. <b>This is the motor the team calls the
      * tower motor</b> — confirmed, not inferred. There is no separate tower mechanism, and the name
-     * kept here is {@code feeder}. Which <em>motor</em> it is remains unresolved; see the CONFLICT
-     * note in {@code RebuiltConstants.CanIds}.
+     * kept here is {@code feeder}. It is a NEO Vortex on a SPARK Flex, 6784 RPM free.
      *
      * <p>Beware the collision: {@code ShooterPosition.TOWER} and {@code SectorType.TOWER} are a shot
      * preset and a field region respectively. Neither has anything to do with this motor.

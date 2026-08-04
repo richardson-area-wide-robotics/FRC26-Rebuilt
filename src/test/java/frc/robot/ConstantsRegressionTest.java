@@ -36,10 +36,10 @@ class ConstantsRegressionTest {
     // The drivetrain runs NEO Vortex on SPARK Flex: 6784 RPM per REV's datasheet.
     //
     // This previously read `5676 / 60`, integer-divided. 5676 RPM is the free speed of the
-    // NEO 2.0 and NEO 1.1, and it is WPILib's MAXSwerve template default. That is precisely why
-    // the wrong value survived review: it is a real free speed for a real REV motor, so nothing
-    // about it looks wrong on inspection — it was only wrong for this shaft. 19.5% of error went
-    // into the velocity feedforward.
+    // NEO 2.0 and NEO 1.1, and it is WPILib's MAXSwerve template default. This robot does carry
+    // NEO 2.0s — the intake deploy and the spindexer, both SPARK MAX — so 5676 is a real figure
+    // for a real motor here and only wrong because it names the wrong one. That is precisely why
+    // it survived review. 19.5% of error went into the velocity feedforward.
     assertEquals(6784 / 60.0, ModuleConstants.kDrivingMotorFreeSpeedRps, 1e-9);
     assertNotEquals(94.0, ModuleConstants.kDrivingMotorFreeSpeedRps, "integer division");
     assertNotEquals(5676 / 60.0, ModuleConstants.kDrivingMotorFreeSpeedRps,
@@ -47,26 +47,47 @@ class ConstantsRegressionTest {
   }
 
   @Test
-  @DisplayName("Feeder expected RPM is valid whichever motor CAN 18 turns out to be")
-  void feederExpectedRpmSurvivesTheUnresolvedMotor() {
-    // CAN 18 is either a NEO 2.0 (5676 RPM) or a NEO Vortex (6784 RPM) — see the CONFLICT note
-    // in RebuiltConstants.CanIds. Rather than block on that, pin the one property that has to
-    // hold either way: the expected unloaded speed must sit below the LOWER candidate's free
-    // speed. If it were above, the jam detector would think a healthy feeder was always slow and
-    // would jostle the robot mid-match, and it would do so only if the motor turned out to be
-    // the slower of the two — a bug that appears when a fact is discovered rather than when code
-    // is changed.
+  @DisplayName("Every expected mechanism speed sits below its motor's free speed")
+  void expectedSpeedsArePhysicallyPossible() {
+    // Motors are derived from the controller type: SPARK Flex means Vortex, SPARK MAX means
+    // NEO 2.0 unless it is swerve steering. So each mechanism has a known physical ceiling, and an
+    // expected unloaded speed above it is impossible rather than merely optimistic.
+    //
+    // This matters because the jam threshold is a FRACTION of expected speed. Set expected too
+    // high and a perfectly healthy mechanism reads as permanently slow, so the robot starts
+    // clearing a jam that does not exist during a match. Too low is the safe direction: jams take
+    // longer to catch, but nothing fires spuriously.
+    double vortexFreeSpeedRpm = 6784;
     double neo20FreeSpeedRpm = 5676;
 
-    assertTrue(LoadConstants.FEEDER_EXPECTED_RPM < neo20FreeSpeedRpm,
-        "FEEDER_EXPECTED_RPM=" + LoadConstants.FEEDER_EXPECTED_RPM
-            + " must stay below the slower candidate motor's free speed of " + neo20FreeSpeedRpm
-            + " so it is valid whichever motor CAN 18 is");
+    assertTrue(LoadConstants.INTAKE_EXPECTED_RPM < vortexFreeSpeedRpm,
+        "intake rollers are Vortex on SPARK Flex; " + LoadConstants.INTAKE_EXPECTED_RPM
+            + " must be below " + vortexFreeSpeedRpm);
 
-    // And the jam threshold has to leave room below a working feeder, or clearing fires on
+    assertTrue(LoadConstants.FEEDER_EXPECTED_RPM < vortexFreeSpeedRpm,
+        "feeder is Vortex on SPARK Flex; " + LoadConstants.FEEDER_EXPECTED_RPM
+            + " must be below " + vortexFreeSpeedRpm);
+
+    assertTrue(LoadConstants.SPINDEXER_EXPECTED_RPM < neo20FreeSpeedRpm,
+        "spindexer is NEO 2.0 on SPARK MAX, which is the SLOWER motor; "
+            + LoadConstants.SPINDEXER_EXPECTED_RPM + " must be below " + neo20FreeSpeedRpm);
+
+    // And the jam threshold has to leave room below a working mechanism, or clearing fires on
     // healthy operation.
     assertTrue(LoadConstants.JAM_SPEED_FRACTION > 0 && LoadConstants.JAM_SPEED_FRACTION < 1.0,
         "jam fraction must be a fraction of expected speed");
+  }
+
+  @Test
+  @DisplayName("The shooter jam threshold is tighter than the roller one, as a flywheel needs")
+  void shooterJamThresholdIsTighterThanRollers() {
+    // A flywheel is speed-controlled and recovers within a few hundred ms of a shot, so it should
+    // never sit far below setpoint for long. A roller genuinely bogs down when it bites a piece.
+    // Using one threshold for both would either miss flywheel problems or jostle on every intake.
+    assertTrue(LoadConstants.SHOOTER_JAM_SPEED_FRACTION > LoadConstants.JAM_SPEED_FRACTION,
+        "flywheel threshold " + LoadConstants.SHOOTER_JAM_SPEED_FRACTION
+            + " should be tighter (higher) than the roller threshold "
+            + LoadConstants.JAM_SPEED_FRACTION);
   }
 
   @Test

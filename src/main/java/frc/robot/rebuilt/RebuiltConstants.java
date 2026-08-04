@@ -21,42 +21,47 @@ public final class RebuiltConstants {
   /**
    * CAN IDs for the 2026 superstructure. Swerve IDs live in {@code CommonConstants}.
    *
-   * <p><b>Motor inventory.</b> Recorded here because not knowing which motor sits where is
-   * exactly what let a wrong free-speed constant survive review: 5676 RPM is a real figure for
-   * a motor that <em>is</em> on this robot — the feeder on CAN 18 — just not on the drive shaft.
+   * <p><b>Motor inventory.</b> Recorded here because not knowing which motor sits where is exactly
+   * what let a wrong free-speed constant survive review.
    *
-   * <p><b>Team rule:</b> a SPARK Flex always has a NEO Vortex on it — nothing else is ever
-   * connected to a SPARK Flex on this robot. Controller types below are read straight from the
-   * code and are certain, so that rule fixes the motor for every SPARK Flex mechanism.
+   * <p><b>The controller determines the motor on this robot.</b> Stated by the team as a complete
+   * rule, and every mechanism below follows from it:
+   *
+   * <ul>
+   *   <li><b>SPARK Flex &rarr; NEO Vortex</b>, always. Nothing else is ever connected to one.
+   *   <li><b>SPARK MAX &rarr; NEO 2.0</b>, <em>except</em> a swerve steering motor, which is a
+   *       NEO 550.
+   * </ul>
+   *
+   * <p>Controller types are read straight from the code and are certain, so the motor column is
+   * derived rather than guessed. Nothing here is marked CONFIRM any more.
    *
    * <pre>
    *   CAN 1,3,5,7   swerve drive      NEO Vortex   + SPARK Flex   6784 RPM free
-   *   CAN 2,4,6,8   swerve steering   NEO 550      + SPARK MAX    + Through Bore V2 absolute
-   *   CAN 10,11     shooter           NEO Vortex   + SPARK Flex   (MotorKind.NEO_VORTEX in code)
-   *   CAN 13,15     intake rollers    NEO Vortex   + SPARK Flex   6784 RPM free (per team rule)
-   *   CAN 18        feeder            *** CONFLICT ***  + SPARK Flex
-   *                 (aka "tower motor" — same mechanism, confirmed; no separate tower exists)
-   *   CAN 12        intake deploy     SPARK MAX                   CONFIRM motor
-   *   CAN 14        spindexer         SPARK MAX                   CONFIRM motor
+   *   CAN 2,4,6,8   swerve steering   NEO 550      + SPARK MAX   11000 RPM free
+   *                 (the steering exception to the SPARK MAX rule) + Through Bore V2 absolute
+   *   CAN 10,11     shooter           NEO Vortex   + SPARK Flex   6784 RPM free
+   *                 (independently confirmed: MotorKind.NEO_VORTEX in Shooter.java)
+   *   CAN 13,15     intake rollers    NEO Vortex   + SPARK Flex   6784 RPM free
+   *   CAN 18        feeder            NEO Vortex   + SPARK Flex   6784 RPM free
+   *                 (aka "tower motor" — same mechanism; no separate tower exists)
+   *   CAN 12        intake deploy     NEO 2.0      + SPARK MAX    5676 RPM free
+   *   CAN 14        spindexer         NEO 2.0      + SPARK MAX    5676 RPM free
    * </pre>
    *
-   * <p><b>CAN 18 is unresolved and must not be assumed.</b> It was stated to be a NEO 2.0, and
-   * separately the rule above says every SPARK Flex carries a Vortex. Both cannot be true of the
-   * same motor. The two candidates are <b>5676 RPM</b> (NEO 2.0) and <b>6784 RPM</b> (Vortex),
-   * 19.5% apart — the exact magnitude and the exact failure mode of the drive free-speed bug this
-   * inventory exists to prevent. Picking one to make the table look finished is how that bug
-   * happened the first time.
+   * <p>The feeder was at one point recorded as a NEO 2.0 and carried as an open conflict, since it
+   * is a SPARK Flex. The rule resolves it to a <b>Vortex</b>. Worth remembering that the two
+   * candidates were 5676 and 6784 RPM — 19.5% apart, the same magnitude and the same failure mode
+   * as the drive free-speed bug this inventory exists to prevent.
    *
-   * <p>Two ways to settle it, either of which takes seconds: read the label on the motor, or look
-   * at {@code LoadCalibration/FEEDER/FreeSpeed} after the load calibration, which measures
-   * unloaded speed directly. 5676 and 6784 are not close enough to confuse.
+   * <p><b>The NEO 2.0s on this robot are the intake deploy and the spindexer.</b> That is what makes
+   * 5676 RPM a real figure for a real motor here, and it is why the wrong drive constant survived
+   * review: it named a motor that exists on the robot, just not on the drive shaft.
    *
-   * <p>The two SPARK MAX mechanisms are still open. The team rule covers SPARK Flex only, and says
-   * nothing about what hangs off a SPARK MAX — steering uses NEO 550 there, but that is the
-   * steering module, not evidence about the superstructure.
-   *
-   * <p>Free speeds for reference: NEO Vortex 6784 RPM, NEO 2.0 and NEO 1.1 both 5676 RPM,
-   * NEO 550 11000 RPM.
+   * <p>The shop session still confirms rather than assumes: the load calibration measures unloaded
+   * speed directly, so each mechanism's {@code FreeSpeed} entry under {@code LoadCalibration} will
+   * show roughly 6,500 for the Vortex mechanisms and roughly 5,400 for the spindexer. A mechanism
+   * landing near the wrong figure means the rule has an exception nobody has mentioned.
    */
   public static final class CanIds {
     public static final int SHOOTER_LEADER = 10;
@@ -164,13 +169,31 @@ public final class RebuiltConstants {
     /** MEASURE — amps above idle indicating a piece is moving through the intake rollers. */
     public static final double INTAKE_WORK_EXCESS_AMPS = 10.0;
 
-    /** MEASURE — unloaded intake roller speed, in motor RPM. */
+    /**
+     * MEASURE — unloaded intake roller speed, in motor RPM.
+     *
+     * <p>NEO Vortex, free speed 6784 RPM, run at {@code ROLLER_SPEED = 0.75}. So expect roughly
+     * 5,100 unloaded before drag, and this placeholder is about right by coincidence rather than
+     * by measurement.
+     *
+     * <p>Erring low is the safe direction: the jam threshold is a fraction of this, so too low
+     * means jams are detected less readily, while too high means a healthy roller reads as stuck
+     * and the robot jostles itself mid-match.
+     */
     public static final double INTAKE_EXPECTED_RPM = 5000.0;
 
     /** MEASURE — amps above idle indicating a piece moving through the spindexer. */
     public static final double SPINDEXER_WORK_EXCESS_AMPS = 8.0;
 
-    /** MEASURE — unloaded spindexer speed, in motor RPM. */
+    /**
+     * MEASURE — unloaded spindexer speed, in motor RPM.
+     *
+     * <p>NEO 2.0 on a SPARK MAX, free speed 5676 RPM, run at {@code SPINDEXER_SPEED = 1.0}. So
+     * expect something a little under 5676 — this is 88% of free speed, plausible for a plate with
+     * drag on it.
+     *
+     * <p>This is one of only two NEO 2.0s on the robot; the other is the intake deploy.
+     */
     public static final double SPINDEXER_EXPECTED_RPM = 5000.0;
 
     /** MEASURE — amps above idle indicating a piece moving through the feeder. */
@@ -179,17 +202,13 @@ public final class RebuiltConstants {
     /**
      * MEASURE — unloaded feeder speed, in motor RPM.
      *
-     * <p>Deliberately left at a value that suits <em>neither</em> candidate motor, because which
-     * motor CAN 18 carries is unresolved — see the CONFLICT note in {@link CanIds}. Free speed is
-     * either 5676 RPM (NEO 2.0) or 6784 RPM (Vortex), and at {@code FEEDER_SPEED = 1.0} the
-     * unloaded figure lands a little under whichever it is.
+     * <p>NEO Vortex, free speed 6784 RPM, run at {@code FEEDER_SPEED = 1.0}. So expect something a
+     * little under 6784; 5000 is only 74% of that, which is conservative rather than accurate.
      *
-     * <p>So this one measurement resolves the motor as a side effect. If
-     * {@code LoadCalibration/FEEDER/FreeSpeed} comes back near 5,400 it is a NEO 2.0; near 6,500 it
-     * is a Vortex. Update the inventory at the same time as this constant.
-     *
-     * <p>A value well below both means the feeder is dragging with nothing in it, and the jam
-     * threshold derived from it will be wrong in the same proportion.
+     * <p>Left conservative on purpose until measured, because the error directions are not
+     * symmetric. Too low and the jam threshold sits lower than it should, so jams take longer to
+     * catch. Too high and a healthy feeder reads as permanently slow, and the robot starts clearing
+     * a jam that does not exist during a match.
      */
     public static final double FEEDER_EXPECTED_RPM = 5000.0;
 

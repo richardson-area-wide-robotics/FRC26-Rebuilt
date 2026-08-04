@@ -92,12 +92,13 @@ public final class CommonConstants {
      *
      * <p>It previously read {@code 5676 / 60}. That is the free speed of the <b>NEO 2.0</b>
      * (and of the NEO 1.1 — both are 5676 RPM), and it is the default in WPILib's MAXSwerve
-     * template. The trap is that 5676 is a real free speed for a real REV motor, so nothing about
-     * it looks wrong on inspection — it was only wrong for <em>this</em> shaft. So it looked
-     * plausible while being 19.5% wrong for the drivetrain, and the error went into the velocity
-     * feedforward: {@code kV = 12 V / kDriveWheelFreeSpeedRps} came out at 2.50 instead of
-     * 2.09, so the feedforward over-commanded voltage on every drive request and the closed
-     * loop had to fight it continuously.
+     * template. The trap is that this robot <em>does</em> carry NEO 2.0s — the intake deploy and
+     * the spindexer — so 5676 is a real figure for a real motor here, just not for this shaft.
+     * Nothing about it looks wrong on inspection. So it looked plausible while being 19.5% wrong
+     * for the drivetrain, and the error went straight into the velocity feedforward:
+     * {@code kV = 12 V / kDriveWheelFreeSpeedRps} came out at 2.50 instead of 2.09, so the
+     * feedforward over-commanded voltage on every drive request and the closed loop had to fight
+     * it continuously.
      *
      * <p>The divisor must also stay a double literal: as {@code 5676 / 60} this was integer
      * division, discarding the fraction on top of naming the wrong motor.
@@ -146,12 +147,18 @@ public final class CommonConstants {
     public static final double kBackLeftChassisAngularOffset = Math.PI;
     public static final double kBackRightChassisAngularOffset = Math.PI / 2;
 
-    // SPARK MAX CAN IDs
+    // Swerve CAN IDs.
+    //
+    // The driving controllers are SPARK Flex, not SPARK MAX — this comment said SPARK MAX, which
+    // is wrong and is worth more than a typo here: on this robot the controller type is how you
+    // identify the motor (SPARK Flex means Vortex, SPARK MAX means NEO 2.0 unless it is steering).
+    // A comment naming the wrong controller is how the drive free-speed bug above gets made again.
     public static final int kFrontLeftDrivingCanId = 5;
     public static final int kRearLeftDrivingCanId = 7;
     public static final int kFrontRightDrivingCanId = 3;
     public static final int kRearRightDrivingCanId = 1;
 
+    // Steering: SPARK MAX with NEO 550, the exception to the SPARK MAX rule.
     public static final int kFrontLeftTurningCanId = 6;
     public static final int kRearLeftTurningCanId = 8;
     public static final int kFrontRightTurningCanId = 4;

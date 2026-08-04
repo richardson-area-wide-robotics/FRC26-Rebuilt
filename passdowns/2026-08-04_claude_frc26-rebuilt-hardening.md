@@ -99,17 +99,22 @@ motor's free speed, so roughly 19% of top speed is unused. **The cap was deliber
 raising it is a driveability decision, not a correctness one.
 
 There is now a motor inventory beside the CAN IDs in `RebuiltConstants` so this cannot recur. Four
-superstructure motors are marked `CONFIRM` rather than guessed.
+superstructure motors are now fully resolved, from a rule the team stated:
 
-The team rule is that **a SPARK Flex always has a NEO Vortex on it** — nothing else is ever
-connected to one. Since controller types are read from code and certain, that fixes the motor for
-the intake rollers (CAN 13/15) too.
+- **SPARK Flex → NEO Vortex**, always. Nothing else is ever connected to one.
+- **SPARK MAX → NEO 2.0**, *except* swerve steering, which is a NEO 550.
 
-**CAN 18 is an unresolved conflict, deliberately left that way.** It was stated to be a NEO 2.0,
-and it is a SPARK Flex, so the rule says Vortex. Both cannot be true. The candidates are 5676 and
-6784 RPM — 19.5% apart, the same magnitude and the same failure mode as the bug this inventory
-exists to prevent. Picking one to finish the table is how it happened the first time. The load
-calibration measures unloaded speed directly, so step 9 settles it as a side effect.
+Controller types are read from code and certain, so the whole motor column derives from that
+rather than being guessed. **The NEO 2.0s are the intake deploy and the spindexer** — which is
+what makes 5676 RPM a real figure for a real motor on this robot, and why the wrong drive
+constant survived review.
+
+Worth recording how this landed, because it is a good example of not finishing a table early. The
+feeder was stated to be a NEO 2.0; it is a SPARK Flex, so the rule contradicted that. The two
+candidates were 5676 and 6784 RPM — 19.5% apart, the same magnitude and the same failure mode as
+the bug the inventory exists to prevent. It was carried as `*** CONFLICT ***` for one commit
+rather than resolved by guessing, and the rule then settled it as a Vortex. Step 9 still checks
+it: the load calibration measures unloaded speed directly.
 
 ---
 
@@ -229,7 +234,7 @@ form of the defect that started all this. `ValidationSuite` + `RebuiltValidation
 | 3 | **Camera name + `ROBOT_TO_CAMERA`** | Vision is untrustworthy until measured. A wrong transform produces confidently wrong poses |
 | 4 | **Bump band position** (`FieldRegions`) | Currently a placeholder mid-field band; `BUMP_REVERSE` fires off it |
 | 5 | **Max speed cap** — 4.8 m/s vs ~5.74 physical | ~19% of top speed unused. Left alone deliberately |
-| 6 | **CAN 18 motor: NEO 2.0 or Vortex?** Plus two `CONFIRM` SPARK MAX motors | 5676 vs 6784 RPM is 19.5%, and it feeds `FEEDER_EXPECTED_RPM` and therefore the jam threshold. Read the label or read step 9's measured free speed |
+| 6 | ~~Superstructure motor identification~~ **RESOLVED** | All seven derive from the controller-to-motor rule. Step 9's measured free speeds spot-check it |
 | 7 | **`docs/` tracked** — 49 generated files rewritten every build | Dirties the tree on every build. Untracking loses GitHub SVG previews; your call |
 
 Decisions 1 and 2 are pinned by `PathPlannerSettingsConsistencyTest` as named allowances so they
