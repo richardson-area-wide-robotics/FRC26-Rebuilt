@@ -212,8 +212,8 @@ public class DriveAutoCalibrator {
                     // Unwrap both heading sources so multiple turns accumulate.
                     double gyro = drive.getHeading();
                     double tag = drive.getPose().getRotation().getDegrees();
-                    gyroAccumulated[0] += shortestDelta(lastGyro[0], gyro);
-                    tagAccumulated[0] += shortestDelta(lastTag[0], tag);
+                    gyroAccumulated[0] += RotationAccumulator.shortestDelta(lastGyro[0], gyro);
+                    tagAccumulated[0] += RotationAccumulator.shortestDelta(lastTag[0], tag);
                     lastGyro[0] = gyro;
                     lastTag[0] = tag;
 
@@ -253,17 +253,6 @@ public class DriveAutoCalibrator {
                     Logger.recordOutput("Calibration/Auto/DriveRadiusGeometric", geometric);
                 }))
                 .withName("MeasureGyroScaleAndRadius");
-    }
-
-    /** Shortest signed angular difference from a to b, in degrees. */
-    private static double shortestDelta(double fromDegrees, double toDegrees) {
-        double delta = (toDegrees - fromDegrees) % 360.0;
-        if (delta > 180) {
-            delta -= 360;
-        } else if (delta < -180) {
-            delta += 360;
-        }
-        return delta;
     }
 
     // -----------------------------------------------------------------------------------
@@ -406,7 +395,7 @@ public class DriveAutoCalibrator {
                             startHeading[0],
                             displacement.getX(),
                             displacement.getY(),
-                            shortestDelta(startHeading[0], drive.getHeading()));
+                            RotationAccumulator.shortestDelta(startHeading[0], drive.getHeading()));
                     reportAcceptance("OpenLoop", openLoopAcceptance);
                 }))
                 .withName("AcceptanceOpenLoop");
@@ -441,7 +430,7 @@ public class DriveAutoCalibrator {
                             startHeading[0],
                             displacement.getX(),
                             displacement.getY(),
-                            shortestDelta(startHeading[0], drive.getHeading()));
+                            RotationAccumulator.shortestDelta(startHeading[0], drive.getHeading()));
                     reportAcceptance("ClosedLoop", closedLoopAcceptance);
                 }))
                 .withName("AcceptanceClosedLoop");

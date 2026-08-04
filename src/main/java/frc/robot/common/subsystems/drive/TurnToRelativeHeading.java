@@ -3,6 +3,7 @@ package frc.robot.common.subsystems.drive;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.common.components.diagnostics.RotationAccumulator;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -38,8 +39,14 @@ public class TurnToRelativeHeading extends Command {
     /** Gain in fraction-of-max-rate per degree of remaining rotation. */
     private final PIDController controller = new PIDController(0.012, 0, 0);
 
-    private double accumulatedDegrees;
-    private double lastHeading;
+    /**
+     * Unwraps heading readings into a running total.
+     *
+     * <p>Shared with the auto-calibrator's gyro-scale sweep rather than reimplemented — the same
+     * logic was written twice before.
+     */
+    private final RotationAccumulator rotation = new RotationAccumulator();
+
     private int loopsInTolerance;
 
     /**
@@ -54,8 +61,7 @@ public class TurnToRelativeHeading extends Command {
 
     @Override
     public void initialize() {
-        accumulatedDegrees = 0;
-        lastHeading = drive.getHeading();
+        rotation.reset(drive.getHeading());
         loopsInTolerance = 0;
         controller.reset();
         Logger.recordOutput("TurnRelative/Requested", requestedDegrees);
@@ -63,10 +69,7 @@ public class TurnToRelativeHeading extends Command {
 
     @Override
     public void execute() {
-        double heading = drive.getHeading();
-        accumulatedDegrees += shortestDelta(lastHeading, heading);
-        lastHeading = heading;
-
+        double accumulatedDegrees = rotation.update(drive.getHeading());
         double remaining = requestedDegrees - accumulatedDegrees;
 
         double command = MathUtil.clamp(
@@ -98,24 +101,19 @@ public class TurnToRelativeHeading extends Command {
     @Override
     public void end(boolean interrupted) {
         drive.drive(0, 0, 0, false);
-        Logger.recordOutput("TurnRelative/FinalErrorDeg", requestedDegrees - accumulatedDegrees);
+        double accumulated = rotation.getAccumulatedDegrees();
+        Logger.recordOutput("TurnRelative/FinalErrorDeg", requestedDegrees - accumulated);
         System.out.printf("TurnRelative: requested %+.1f deg, achieved %+.1f deg (err %+.2f)%n",
-                requestedDegrees, accumulatedDegrees, requestedDegrees - accumulatedDegrees);
+                requestedDegrees, accumulated, requestedDegrees - accumulated);
     }
 
     /** @return total rotation accumulated so far, in degrees. */
     public double getAccumulatedDegrees() {
-        return accumulatedDegrees;
+        return rotation.getAccumulatedDegrees();
     }
 
-    /** Shortest signed angular difference, in degrees. */
-    private static double shortestDelta(double fromDegrees, double toDegrees) {
-        double delta = (toDegrees - fromDegrees) % 360.0;
-        if (delta > 180) {
-            delta -= 360;
-        } else if (delta < -180) {
-            delta += 360;
-        }
-        return delta;
+    /** @return the rotation this command was asked to perform, in degrees. */
+    public double getRequestedDegrees() {
+        return requestedDegrees;
     }
 }
