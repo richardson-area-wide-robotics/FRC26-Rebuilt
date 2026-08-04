@@ -9,6 +9,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import frc.robot.rebuilt.states.RobotStateMachine.State;
 import frc.robot.rebuilt.states.RobotStateMachine.StateOutput;
+import frc.robot.rebuilt.subsystems.smart.ScoringLocationLookup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -271,6 +272,41 @@ class RobotStateMachineTest {
       assertEquals(2900, ShooterRangeModel.rpmForDistance(3.40), 1.0);
       assertEquals(3250, ShooterRangeModel.rpmForDistance(4.13), 1.0);
       assertEquals(4500, ShooterRangeModel.rpmForDistance(6.10), 1.0);
+    }
+
+    @Test
+    @DisplayName("Table distances actually match the scoring-location geometry they claim to")
+    void tableDistancesMatchFieldGeometry() {
+      // The test above is circular on its own: 4.13 is one of the table's own keys, so it
+      // proves interpolation works, not that the distance is right. This couples the table to
+      // the geometry it was derived from, so moving a scoring-location pose fails a test rather
+      // than silently invalidating the whole speed curve.
+      ScoringLocationLookup.buildScoringLocations();
+      ScoringLocationLookup.setRedAlliance(true);
+
+      Pose2d hub = ScoringLocationLookup.findHub();
+
+      // Probing at each location's own coordinates returns that location, so these read the
+      // real table without needing new accessors.
+      record Expected(String name, Pose2d probe, double tableDistance) { }
+      var cases = new Expected[] {
+          new Expected("hub", new Pose2d(13.0, 4.0, new Rotation2d()), 2.00),
+          new Expected("right_trench", new Pose2d(13.2, 7.5, new Rotation2d()), 4.13),
+          new Expected("right_corner", new Pose2d(16.0, 7.5, new Rotation2d()), 6.10)
+      };
+
+      for (Expected expected : cases) {
+        Pose2d location = ScoringLocationLookup.findClosest(expected.probe());
+        double actual = ShooterRangeModel.distanceToHub(location, hub);
+
+        assertEquals(expected.tableDistance(), actual, 0.02,
+            "ShooterRangeModel's table says " + expected.tableDistance() + " m for "
+                + expected.name() + ", but its actual distance to the hub is " + actual
+                + " m. Either the table or the scoring-location pose has moved, and the speed "
+                + "curve is now wrong for that range.");
+      }
+
+      ScoringLocationLookup.clearAlliance();
     }
 
     @Test

@@ -21,9 +21,12 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.CommonConstants;
 import frc.robot.CommonConstants.HIDConstants;
+import frc.robot.CommonConstants.ModuleConstants;
 import frc.robot.common.annotations.Robot;
 import frc.robot.common.components.RobotUtils;
 import frc.robot.common.components.diagnostics.CalibrationManeuvers;
+import frc.robot.common.components.diagnostics.CalibrationStore;
+import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
 import frc.robot.common.components.diagnostics.ManeuverRunner;
@@ -99,6 +102,15 @@ public class RebuiltContainer implements IRobotContainer {
   /** Manoeuvre suite runner, run from Test mode. */
   public static final ManeuverRunner MANEUVER_RUNNER = new ManeuverRunner(DRIVE_SUBSYSTEM);
 
+  /**
+   * Watches live estimates against the constants in use, so break-in is noticed rather than
+   * silently absorbed into gain tuning.
+   *
+   * <p>Observes only. Promotion is {@link #getPromoteCalibrationCommand(String)}, run
+   * deliberately.
+   */
+  public static final DriftMonitor DRIFT_MONITOR = new DriftMonitor();
+
   public static IRobotContainer createContainer() {
     // Split in two so the half that does not need PathPlanner can be exercised by a test.
     // The composition error that once killed the robot program at boot lived in
@@ -138,6 +150,51 @@ public class RebuiltContainer implements IRobotContainer {
     ScoringLocationLookup.buildScoringLocations();
 
     registerExpectations();
+    registerDriftWatches();
+  }
+
+  /**
+   * Registers the quantities worth watching for break-in.
+   *
+   * <p>Idempotent, like the other wiring steps. Thresholds are chosen so that normal noise stays
+   * quiet: a monitor that reports every half-percent wobble trains everyone to ignore it, and then
+   * the real drift goes unnoticed too.
+   */
+  static void registerDriftWatches() {
+    DRIFT_MONITOR.clear();
+
+    var calibration = VISION_SUBSYSTEM.getCalibration();
+
+    // Wheel diameter. The live estimate is the AprilTag-derived wheel scale applied to the
+    // constant currently in use. 1% over 10 ft is 30 mm — more than the whole accuracy budget —
+    // so 1% is the right threshold, and 200 samples keeps it honest.
+    DRIFT_MONITOR.watch(
+        "drive.wheelDiameter", "m",
+        () -> ModuleConstants.kWheelDiameterMeters,
+        () -> ModuleConstants.kWheelDiameterMeters * calibration.getWheelScaleEstimate(),
+        calibration::getSampleCount,
+        0.01,
+        200);
+
+    // Vision translational noise. Wider threshold because the measurement itself is noisy, and it
+    // is the one value here that may be adopted without a human — see CalibrationStore.mayAutoAdopt.
+    DRIFT_MONITOR.watch(
+        "vision.noise.xyStdDev", "m",
+        () -> VisionConstants.SINGLE_TAG_XY_STD_DEV_BASE,
+        calibration::getMeasuredXyStdDevMeters,
+        calibration::getSampleCount,
+        0.25,
+        300);
+
+    // Gyro scale. A 1% scale error is 3.6 degrees per revolution, which compounds through every
+    // turn in an autonomous path.
+    DRIFT_MONITOR.watch(
+        "gyro.scale", "ratio",
+        () -> 1.0,
+        () -> 1.0 + calibration.getGyroYawError().getMean() / 360.0,
+        () -> calibration.getGyroYawError().getCount(),
+        0.01,
+        200);
   }
 
   /**
@@ -197,6 +254,12 @@ public class RebuiltContainer implements IRobotContainer {
    */
   static void registerExpectations() {
     ExpectationMonitor monitor = ExpectationMonitor.getInstance();
+
+    // Idempotent, matching configureBindings(). The monitor is a singleton, so calling this
+    // twice would otherwise register every invariant again — and since expectation names are
+    // AdvantageKit log keys, the duplicates would collide silently. Only one container is ever
+    // built on a robot, so clearing first is safe and makes re-wiring harmless.
+    monitor.clear();
 
     monitor.register(
         "DriveRespondsToStick",
@@ -488,6 +551,11 @@ public class RebuiltContainer implements IRobotContainer {
     Logger.recordOutput("States/HeadingAssistActive", DRIVE_SUBSYSTEM.isHeadingAssistActive());
     Logger.recordOutput("States/HeadingAssistErrorDeg",
         DRIVE_SUBSYSTEM.getHeadingAssistErrorDegrees());
+
+    // Observes only; never changes a constant. Runs in every mode so evidence accumulates during
+    // ordinary driving rather than only during a dedicated calibration session.
+    DRIFT_MONITOR.update();
+    CalibrationStore.getInstance().log();
   }
 
   /** @return the state selected on the most recent loop. */
@@ -580,5 +648,64 @@ public class RebuiltContainer implements IRobotContainer {
   /** @return just the out-and-back manoeuvres that return by a different route. */
   public static Command getDifferentPathReturnCommand() {
     return MANEUVER_RUNNER.runAll(CalibrationManeuvers.outAndBackDifferentPath());
+  }
+
+  /**
+   * Prints what has drifted, without changing anything.
+   *
+   * <p>Safe to run any time, including between matches. Start here rather than with the promotion
+   * command: read what the robot thinks has changed before accepting it.
+   *
+   * @return a reporting command.
+   */
+  public static Command getDriftReportCommand() {
+    return Commands.runOnce(() -> {
+      CalibrationStore.getInstance().printReport();
+      DRIFT_MONITOR.printReport();
+    }).ignoringDisable(true).withName("DriftReport");
+  }
+
+  /**
+   * Writes the current live estimates into the persistent store.
+   *
+   * <p><b>Deliberate act, human present.</b> Only values with enough evidence and genuine drift are
+   * promoted, and each is recorded with the date and sample count behind it so it can be judged
+   * later. Values that cannot be measured independently of themselves — wheel diameter, gyro scale,
+   * any gain — are still written here, but only because a person asked; nothing adopts them on its
+   * own. See {@code CalibrationStore.mayAutoAdopt} for why that distinction exists.
+   *
+   * <p>Run {@link #getDriftReportCommand()} first, and take the robot's word for nothing that the
+   * report does not back with samples.
+   *
+   * @param today Date stamp for the audit trail, e.g. "2026-08-04".
+   * @return a promotion command.
+   */
+  public static Command getPromoteCalibrationCommand(String today) {
+    return Commands.runOnce(() -> {
+      CalibrationStore store = CalibrationStore.getInstance();
+      var drifted = DRIFT_MONITOR.getDrifted();
+
+      if (drifted.isEmpty()) {
+        System.out.println("[calibration] nothing has drifted past its threshold with enough "
+            + "evidence — nothing to promote");
+        return;
+      }
+
+      for (var watch : drifted) {
+        store.promote(
+            watch.getName(),
+            watch.getLiveEstimate(),
+            watch.getSamples(),
+            today,
+            watch.mayAutoAdopt() ? "auto-adoptable" : "accepted by operator");
+      }
+
+      if (store.save()) {
+        System.out.println("[calibration] promoted " + drifted.size()
+            + " value(s). They take effect on the next reboot; verify with a 10 ft acceptance run "
+            + "before trusting them in a match.");
+      }
+      store.printReport();
+    }).ignoringDisable(true).withName("PromoteCalibration");
   }
 }

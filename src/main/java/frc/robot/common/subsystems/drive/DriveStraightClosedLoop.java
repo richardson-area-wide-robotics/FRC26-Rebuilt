@@ -41,8 +41,8 @@ public class DriveStraightClosedLoop extends Command {
     /** Tolerance for declaring the run finished, in metres. */
     private static final double POSITION_TOLERANCE_METERS = 0.01;
 
-    /** How long the robot must sit inside tolerance before finishing, in seconds. */
-    private static final double SETTLE_LOOPS = 10;
+    /** How many consecutive loops the robot must sit inside tolerance before finishing. */
+    private static final int SETTLE_LOOPS = 10;
 
     /** Cruise speed as a fraction of maximum. Slow enough that slip stays small. */
     private static final double CRUISE_FRACTION = 0.25;
