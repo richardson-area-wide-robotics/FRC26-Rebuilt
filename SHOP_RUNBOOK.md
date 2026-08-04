@@ -45,7 +45,12 @@ first — step 8 needs only a wall and step 9 only blocks.
 The calibrators print paste-ready blocks; keep all of them. Also worth recording:
 `Calibration/Auto/WheelScale`, `Calibration/Auto/SteerOffsetDeg`,
 `Calibration/Auto/ModuleKvSpreadPercent`, both `Acceptance/*/TotalErrorMm` figures,
-`Calibration/Maneuvers/Summary/*`, `TractionCalibration/*` and `LoadCalibration/*/*`.
+`Calibration/Maneuvers/Summary/*`, `TractionCalibration/*`, `LoadCalibration/*/*`,
+`SysId/Mean/*` and `SysId/WorstRunMeters`.
+
+**`SysId/WorstRunMeters` is worth a note of its own.** It says how much of your 28 ft each run
+actually needed. If it comes back near the 6.0 m abort, the drivetrain is faster than the nominal
+constants predict and the ramp wants shortening before the next session.
 
 **Also grab `Shooter/Sensors/AnalogRPM`.** It should read 0 — that channel was being used as
 the flywheel's velocity source and there is no analog sensor on either shooter motor. If it
@@ -193,6 +198,10 @@ calibration figure without vision moving the robot.
 ---
 
 ## 5. Drivetrain auto-calibration
+
+> **This step cannot produce kA.** Its feedforward sweep waits for steady state, where acceleration
+> is zero, so the data contains no information about it. Step 10 is the only source of kA. Both fit
+> kS and kV, and comparing them is a real cross-check — see step 10.
 
 **Needs ~4 m clear ahead and tags in view.** Schedule `getCalibrationCommand()`.
 
@@ -463,6 +472,14 @@ Highest-value targets, in order:
    measured `Calibration/VisionNoise/MeasuredXyStdDevMeters` from a stationary run.
 4. **Wheel diameter.** Multiply `kWheelDiameterMeters` by `Calibration/Auto/WheelScale`. Remember to
    update `driveWheelRadius` in `settings.json` to match.
+5. **Drive feedforward.** Paste kS/kV/kA from step 10 into `DriveFeedforwardConstants`. Note that
+   `Configs.java` currently derives its velocity feedforward from free speed as
+   `12 V / kDriveWheelFreeSpeedRps` — a theoretical kV, correct only for a datasheet-perfect motor
+   on a fresh battery. A measured kV should replace that derivation.
+
+**kA has nowhere it is used yet**, and that is deliberate rather than an oversight. It is what
+second-order kinematics needs, so it is measured and stored first; wiring it into a controller is a
+separate change that should be made against a measured number rather than a guessed one.
 
 **Turn tuning off before competition.**
 
@@ -513,6 +530,13 @@ verify them** — this list is the honest measure of how much of this code has m
 - That `Shooter/Sensors/AnalogRPM` reads 0. The flywheel's velocity source was reading an analog
   sensor that is almost certainly not fitted; it now reads the encoder, but the old channel is
   still logged so this can be confirmed rather than assumed
+- **kS, kV and kA** — the SysId routine and its regression are tested against synthetic data with
+  known answers, but no real drivetrain has been characterised (step 10)
+- **Whether the SysId runs actually fit in 28 ft.** The distances are computed from the nominal kV,
+  and measured kV is what step 10 produces, so the prediction is circular. A 6.0 m abort covers it,
+  but the first run is the one that finds out
+- Whether the auto-calibrator's kV and SysId's kV agree. They use different excitations and
+  different regressions, so agreement is evidence and disagreement means one run was bad
 
 ---
 
