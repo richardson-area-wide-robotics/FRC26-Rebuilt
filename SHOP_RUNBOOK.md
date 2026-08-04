@@ -29,7 +29,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 1 | Deploy | Laptop | 5 min |
 | 2 | **On blocks** — 14-check self-test | Blocks, wheels clear | 10 min |
 | 3 | **Verify drive directions** | ~3 m clear floor | 10 min |
-| 4 | Vision commissioning | Practice field, tags visible | 20 min |
+| 4 | **Camera calibration (PhotonVision)** then vision commissioning | ChArUco board, practice field | 45 min |
 | 5 | Auto-calibration | ~4 m clear, tags visible | 20 min |
 | 6 | Manoeuvre suite | Large clear space | 20–60 min |
 | 7 | Localisation states | Practice field | 20 min |
@@ -40,6 +40,10 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 
 Steps 8 and 9 are independent of everything above them. If the field is busy, do them
 first — step 8 needs only a wall and step 9 only blocks.
+
+**Step 4a is not optional and cannot be reordered.** Step 6 measures wheel scale against AprilTag
+ground truth, so an uncalibrated camera puts a systematic error straight into the wheel scale. A 5%
+intrinsics error becomes a 5% wheel-scale error against a total budget of 0.833%.
 
 ### Bring to the shop
 
@@ -53,6 +57,12 @@ first — step 8 needs only a wall and step 9 only blocks.
 - **~20 game pieces** for step 9, and **a second person** to feed them
 - **A good battery** for step 8 — a sagging pack under-reports the traction limit
 - **The full 28 ft of carpet clear** for step 10, robot starting at one end
+- **The 9×11″ 8×8 ChArUco board**, taped flat to something rigid, plus a laptop on the robot's
+  network for PhotonVision. Measure the square and marker sizes across several squares rather than
+  trusting the nominal figures
+- **Decide the match camera resolution before calibrating** — the calibration only applies to the
+  resolution it was taken at
+- **wpical** on the laptop as well, if you want the optional field-layout calibration in 4c
 - **A notebook**, or willingness to pull the WPILOG off the USB stick afterwards
 
 ### Data to capture before you leave
@@ -66,6 +76,10 @@ The calibrators print paste-ready blocks; keep all of them. Also worth recording
 **`SysId/WorstRunMeters` is worth a note of its own.** It says how much of your 28 ft each run
 actually needed. If it comes back near the 6.0 m abort, the drivetrain is faster than the nominal
 constants predict and the ramp wants shortening before the next session.
+
+**Also grab `Vision/Layout/Provenance`.** It says whether the robot is using the official layout or
+a wpical-calibrated one. A calibrated practice-field layout is wrong at an event, and nothing else
+will tell you it is active.
 
 **Also grab `Shooter/Sensors/AnalogRPM`.** It should read 0 — that channel was being used as
 the flywheel's velocity source and there is no analog sensor on either shooter motor. If it
@@ -409,25 +423,173 @@ not reaching the modules.
 
 ---
 
-## 4. Vision commissioning
+## 4. Vision commissioning — camera calibration first
+
+> ### Do 4a before step 6. This is an ordering constraint, not a suggestion.
+>
+> Step 6 measures wheel scale by comparing odometry against **AprilTag ground truth**. If the camera
+> is not intrinsically calibrated, that ground truth carries a systematic distance error — and the
+> wheel scale silently absorbs it.
+>
+> The arithmetic is unforgiving. A focal-length error scales estimated distance almost linearly, so a
+> 5% intrinsics error becomes a 5% wheel-scale error. **The whole 10 ft / 1 inch budget is 0.833%.** An
+> uncalibrated camera can therefore blow the entire budget six times over, while producing a
+> perfectly plausible-looking number that sends someone hunting a mechanical fault that does not
+> exist.
+>
+> This is the same trap as the wrong drive free speed: a real measurement of the wrong thing.
+
+Two different jobs, two different tools:
+
+| Job | Tool | Required? |
+| --- | --- | --- |
+| **Camera intrinsics** — lens distortion and optics | **PhotonVision**, Cameras → Calibration | **Yes.** 4a |
+| **Field layout** — where your tags actually are | [wpical](https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/wpical/index.html) | Optional. 4c |
+
+The intrinsics go in PhotonVision, so calibrate them there — that is where they have to live and it
+saves moving a file between tools. wpical does something PhotonVision does not: measure the *field*.
+
+---
+
+### 4a. Camera intrinsics in PhotonVision — required
+
+Corrects for lens distortion and optics so that distances in the image mean something. Done in
+**PhotonVision's own calibration tool** (Cameras tab → Calibration), which is where the intrinsics
+have to end up anyway — see the
+[PhotonVision calibration docs](https://docs.photonvision.org/en/latest/docs/calibration/calibration.html).
+
+Your **9×11″ 8×8 ChArUco target** looks like PhotonVision's own default board: an 8×8 grid of 1″
+squares with 0.75″ ArUco markers. That is convenient but **verify rather than assume** — a wrong
+square size scales every distance the camera reports.
+
+#### Board parameters
+
+1. **Board type: ChArUco.** Not chessboard. The docs are explicit that chessboards give bad results
+   when several similar images get taken, and ChArUco is more robust because each marker is uniquely
+   identifiable.
+2. **Squares across and down: 8 and 8.** Count them on the board to be sure.
+3. **Square size:** measure it. Put a ruler across **several squares and divide** rather than
+   measuring one — that averages out both your reading error and any print scaling. Should come out
+   at 1.000″.
+4. **Marker size:** measure one ArUco marker the same way. Expect 0.75″.
+5. **ArUco dictionary:** must match what the board was generated with. Try PhotonVision's default
+   first; detection either works or it does not, so this is seconds to test rather than something to
+   agonise over.
+6. **Legacy OpenCV pattern:** leave off initially. **If the board is not detected at all, this is the
+   first thing to toggle** — targets generated before OpenCV 4.6.0 use a different marker layout and
+   an Etsy board could be either vintage. Total failure to detect is the symptom; it is not a
+   gradual degradation.
+
+#### Taking the snapshots
+
+7. **Set the resolution you will actually run in a match, and calibrate at that resolution.**
+   Calibration is specific to each camera *and each resolution* — a model taken at 1280×720 is wrong
+   at 640×480. If you switch resolution later you must recalibrate.
+8. Mount the board **flat on something rigid**. Tape it to hardboard or a clipboard. A board with any
+   bow in it calibrates the bow into your camera model, permanently.
+9. Take **at least 12 snapshots**, and more is better. Vary:
+   - **Distance** — near and far
+   - **Angle** — tilt the board, up to about **45°**. Do not leave it parallel to the lens; parallel
+     views carry almost no information about distortion
+   - **Position in frame** — get the board into the **corners**, not just the middle. Corner coverage
+     is what pins down distortion, and it is the thing people skip
+10. **Your board is on the small side at 9×11″.** The docs recommend the largest target you can
+    manage, so compensate: work closer to the camera, and take extra snapshots to get proper corner
+    coverage. A small board held at distance sits in the middle of the frame and tells you nothing
+    about the edges.
+
+#### Checking it worked
+
+11. **Mean reprojection error should be under 1 pixel.** Above that, take more and better-varied
+    snapshots — usually the fix is more tilt and more corner coverage.
+12. **Check the computed FOV against the camera's spec sheet.** Within about ±10° is fine. Wildly off
+    means the board parameters are wrong — most often the square size.
+13. **Independent sanity check, worth the two minutes:** put a tag at a measured distance, say 3.00 m
+    from the lens, and compare what PhotonVision reports. Within a couple of centimetres is good.
+    Consistently 5% out means the calibration did not take, and everything downstream inherits it.
+
+> **The intrinsics live in PhotonVision, not in this repo.** No test here can detect a missing or bad
+> calibration, because the robot code never sees the camera model — it only sees the poses that come
+> out of it. That is exactly why this is called out so loudly rather than left to the build to catch.
+
+---
+
+### 4b. Verify the pipeline
 
 Practice field, tags in view. Schedule `getVisionValidationCommand()`.
 
-Five checks: camera connected, field layout loaded, a tag sighting accepted within 5 s, fused
-pose agrees with wheel-only pose to within half a metre, latency under 200 ms.
+Five checks: camera connected, field layout loaded, a tag sighting accepted within 5 s, fused pose
+agrees with wheel-only pose to within half a metre, latency under 200 ms.
 
-- If `Rejected` is climbing fast, suspect `ROBOT_TO_CAMERA` or the field layout — the gates are
-  probably throwing out poses that land off the field
-- `SwerveDrive/VisionCorrectionMeters` shows how hard vision is pulling. Large and sustained
-  means one of the two is wrong
+- If `Rejected` is climbing fast, suspect `ROBOT_TO_CAMERA` or the field layout — the plausibility
+  gates are probably throwing out poses that land off the field. With the camera 90° off (step 0c),
+  a wrong yaw sign is the first thing to check.
+- `SwerveDrive/VisionCorrectionMeters` shows how hard vision is pulling. Large and sustained means
+  one of the two is wrong.
 
 While commissioning, `VISION_SUBSYSTEM.setFuseIntoPoseEstimate(false)` lets you gather every
 calibration figure without vision moving the robot.
 
 ---
 
+### 4c. Field layout calibration — optional, and it cuts both ways
+
+wpical's second job is measuring where your field's tags **actually are**, rather than where the
+official layout says they should be, and writing a corrected layout.
+
+Worth doing on a practice field: the welded and AndyMark official layouts already differ by up to
+**3.6 cm**, and a hand-assembled practice field can be further out than either.
+
+1. Finish 4a first. Field calibration consumes a camera model, so a bad one produces a bad field.
+2. **wpical wants its own `cameracalibration.json`.** Whether PhotonVision's calibration can be
+   exported into a form wpical accepts, or whether you have to run wpical's camera calibration
+   separately on the same board, is something to establish at the laptop — I have not verified the
+   formats are interchangeable. If in doubt, run wpical's own camera step with the same board; it
+   costs one more video and removes the question.
+3. Record video of the field's tags from several angles.
+4. Supply the ideal field map as the starting reference. wpical **refines** a layout that is already
+   roughly right; it cannot fix a tag that is grossly misplaced.
+5. Pin one tag as the reference. Every other tag is measured relative to it, so the pinned tag's own
+   position is inherited by the whole layout — pick one you are confident about.
+6. **With only half a field of carpet**, calibrate the half you have. wpical supports combining
+   calibrations from sectioned fields if you get access to the rest later.
+7. Deploy the output as **`src/main/deploy/calibrated_field_layout.json`**. `FieldLayoutLoader` picks
+   it up automatically and prints which layout is active at startup.
+
+#### What the loader does with it
+
+| Situation | Behaviour |
+| --- | --- |
+| No file deployed | Uses the compiled-in official layout. Normal, not an error |
+| File present, tags within 30 cm of official | **Accepted.** Logs max and mean deviation |
+| File present, any tag past 30 cm | **Rejected**, official layout used, worst tag named. A correction that large means the calibration failed rather than that your field is unusual |
+| File malformed, or shares no tag IDs with official | Rejected, official layout used. It will not stop the robot booting |
+
+Check `Vision/Layout/Provenance` and the `[vision]` line at startup.
+
+> ### A calibrated practice-field layout is WRONG at competition
+>
+> The point of calibrating is to describe *your* field, including its assembly errors. An official
+> event field does not have your field's errors — it has its own. Taking a practice-calibrated layout
+> to an event makes vision **worse** than the official layout would have been, by exactly the amount
+> your practice field is out of spec.
+>
+> And it fails silently: the file just sits in the deploy directory. **Delete
+> `calibrated_field_layout.json` before an event**, or knowingly accept the error. The startup log
+> line says `THIS IS YOUR PRACTICE FIELD` for this reason.
+>
+> Also remember `VisionConstants.FIELD_LAYOUT` is set to **AndyMark**, and official events are
+> normally **welded**. Two separate things to change when you travel.
+
+---
+
 ## 5. Drivetrain auto-calibration
 
+> **Prerequisite: step 4a.** This step measures wheel scale against AprilTag ground truth, so it
+> inherits any error in the camera's intrinsic calibration. Doing it with an uncalibrated camera
+> yields a plausible number that is wrong by however much the camera is, which is the most expensive
+> possible outcome — it looks like a measurement.
+>
 > **This step cannot produce kA.** Its feedforward sweep waits for steady state, where acceleration
 > is zero, so the data contains no information about it. Step 10 is the only source of kA. Both fit
 > kS and kV, and comparing them is a real cross-check — see step 10.
@@ -764,6 +926,10 @@ separate change that should be made against a measured number rather than a gues
 - [ ] `DriveFeedforwardConstants` kS/kV/kA pasted from the SysId report
 - [ ] SysId kS/kV cross-checked against the auto-calibrator's figures
 - [ ] `Shooter/Sensors/AnalogRPM` confirmed reading 0
+- [ ] Camera intrinsics calibrated in PhotonVision, at match resolution, mean reprojection error
+      under 1 px (step 4a)
+- [ ] `Vision/Layout/Provenance` noted — and if it says CALIBRATED, a reminder set to delete
+      `calibrated_field_layout.json` before travelling to an event
 - [ ] Decisions 1 and 2 resolved, or at least measured
 - [ ] `settings.json` and `CommonConstants` reconciled — then tighten the two
       `KNOWN_*_DIVERGENCE` constants in `PathPlannerSettingsConsistencyTest` to zero
@@ -801,6 +967,8 @@ verify them** — this list is the honest measure of how much of this code has m
 - That `Shooter/Sensors/AnalogRPM` reads 0. The flywheel's velocity source was reading an analog
   sensor that is almost certainly not fitted; it now reads the encoder, but the old channel is
   still logged so this can be confirmed rather than assumed
+- **Camera intrinsic calibration** — nothing in this repo can detect whether it has been done, since
+  the intrinsics live in PhotonVision. Every distance-derived figure inherits it (step 4a)
 - **kS, kV and kA** — the SysId routine and its regression are tested against synthetic data with
   known answers, but no real drivetrain has been characterised (step 10)
 - **Whether the SysId runs actually fit in 28 ft.** The distances are computed from the nominal kV,

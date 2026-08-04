@@ -56,6 +56,9 @@ public class VisionSubsystem extends SubsystemBase {
     private final PhotonPoseEstimator poseEstimator;
     private final AprilTagFieldLayout fieldLayout;
 
+    /** Where the active layout came from, kept so validation and telemetry can report it. */
+    private final FieldLayoutLoader.Result layoutResult;
+
     private final VisionConsumer visionConsumer;
     private final Supplier<Pose2d> fusedPoseSupplier;
     private final Supplier<Pose2d> odometryOnlyPoseSupplier;
@@ -95,7 +98,14 @@ public class VisionSubsystem extends SubsystemBase {
         this.chassisSpeedSupplier = chassisSpeedSupplier;
 
         this.camera = new PhotonCamera(cameraName);
-        this.fieldLayout = AprilTagFieldLayout.loadField(VisionConstants.FIELD_LAYOUT);
+
+        // Prefer a wpical-calibrated layout if one has been deployed, otherwise the compiled-in one.
+        // Which is active is logged at startup, because a practice-calibrated layout is wrong at an
+        // official event and nothing else would tell you.
+        this.layoutResult = FieldLayoutLoader.load();
+        FieldLayoutLoader.report(layoutResult);
+        this.fieldLayout = layoutResult.layout();
+
         this.poseEstimator =
                 new PhotonPoseEstimator(fieldLayout, VisionConstants.ROBOT_TO_CAMERA);
     }
@@ -293,6 +303,16 @@ public class VisionSubsystem extends SubsystemBase {
     }
 
     /** @return the field layout in use, for tests and diagnostics. */
+    /**
+     * @return where the active field layout came from.
+     *
+     *     <p>Worth asserting on before an event: {@code isCalibrated()} being true means the robot is
+     *     using measurements of the practice field, which an official field does not share.
+     */
+    public FieldLayoutLoader.Result getLayoutResult() {
+        return layoutResult;
+    }
+
     public AprilTagFieldLayout getFieldLayout() {
         return fieldLayout;
     }
