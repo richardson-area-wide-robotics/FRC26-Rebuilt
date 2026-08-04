@@ -149,8 +149,12 @@ public class Feeder extends DashboardSubsystem {
     /**
      * Detects pieces and jams in the feeder.
      *
-     * <p>The feeder is the vertical run up to the flywheel, which is the mechanism usually referred
-     * to as the tower. If a separate tower motor is ever added it needs its own monitor.
+     * <p>The feeder is the vertical run up to the flywheel. <b>This is the motor the team calls the
+     * tower motor</b> — confirmed, not inferred. There is no separate tower mechanism, and the name
+     * kept here is {@code feeder}.
+     *
+     * <p>Beware the collision: {@code ShooterPosition.TOWER} and {@code SectorType.TOWER} are a shot
+     * preset and a field region respectively. Neither has anything to do with this motor.
      */
     private final MotorLoadMonitor feederLoad = new MotorLoadMonitor(
         "Feeder/Feeder",

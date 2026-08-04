@@ -31,6 +31,7 @@ public final class RebuiltConstants {
    *   CAN 10,11     shooter           NEO Vortex   + SPARK Flex   (MotorKind.NEO_VORTEX in code)
    *   CAN 13,15     intake rollers    SPARK Flex                  CONFIRM motor
    *   CAN 18        feeder            SPARK Flex                  CONFIRM motor
+   *                 (aka "tower motor" — same thing, confirmed; no separate tower exists)
    *   CAN 12        intake deploy     SPARK MAX                   CONFIRM motor
    *   CAN 14        spindexer         SPARK MAX                   CONFIRM motor
    * </pre>

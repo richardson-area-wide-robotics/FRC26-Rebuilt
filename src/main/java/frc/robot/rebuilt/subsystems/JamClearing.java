@@ -115,9 +115,8 @@ public final class JamClearing {
     /**
      * Clears a feeder jam by reversing and re-advancing it.
      *
-     * <p>The feeder is the vertical run up to the flywheel — the mechanism referred to as the tower.
-     * If a separate tower motor is ever added, this needs its own routine rather than reusing this
-     * one.
+     * <p>The feeder is the vertical run up to the flywheel, and is the motor the team calls the tower
+     * motor — confirmed. There is no separate tower mechanism to clear.
      *
      * @param feeder      Feeder to jostle.
      * @param stillJammed Supplies whether the jam persists.
