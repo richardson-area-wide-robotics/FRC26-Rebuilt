@@ -565,7 +565,19 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     return DriveConstants.kDriveKinematics.toChassisSpeeds(getModuleStates());
   }
 
+  /**
+   * Hands the drivetrain to PathPlanner's {@code AutoBuilder}.
+   *
+   * <p>Guarded because {@code AutoBuilder} is a global singleton that refuses to be configured
+   * twice — a second call logs "Auto builder has already been configured. This is likely in
+   * error." Returning early makes this safe to call more than once, which matters both for tests
+   * and for any future code path that re-runs container setup.
+   */
   public void configureAutoBuilder() {
+    if (AutoBuilder.isConfigured()) {
+      return;
+    }
+
     AutoBuilder.configure(
             this::getPose, // Robot pose supplier
             this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)

@@ -40,19 +40,43 @@ public class RobotUtils  {
   }
 
    /**
-   * Load the robot config used for pathplanner, 
+   * Load the robot config used for pathplanner.
+   *
+   * <p>Falls back to {@link PathPlannerConfig#fallbackConfig()} rather than throwing. This used
+   * to raise a {@code RuntimeException} from {@code robotInit()}, so a missing or malformed
+   * settings file in the deploy directory did not merely degrade autonomous — it stopped the
+   * robot booting. It also discarded the original exception, leaving the console saying only
+   * that loading had failed and never why.
+   *
+   * <p>A robot that boots with an approximate autonomous configuration is far more useful than
+   * one that does not boot, and the real cause is now printed.
    *
    * @author Alan Trinh
    * @since 2025
    */
   public static void loadRobotConfig() {
     try {
-        robotConfig = RobotConfig.fromGUISettings();
-      } 
-      catch (Exception e) {
-        throw new RuntimeException("Failed to load robot config from GUI settings");
-      }
+      robotConfig = RobotConfig.fromGUISettings();
+      usingFallbackConfig = false;
+    } catch (Exception e) {
+      // Print the actual cause; the previous version swallowed it entirely.
+      System.err.println("PathPlanner GUI settings could not be read ("
+          + e.getClass().getSimpleName() + ": " + e.getMessage()
+          + "). Falling back to the config defined in PathPlannerConfig. Autonomous will run, "
+          + "but check the MEASURE values there before trusting path accuracy.");
+      robotConfig = PathPlannerConfig.fallbackConfig();
+      usingFallbackConfig = true;
+    }
   }
+
+  /**
+   * Whether the fallback configuration is in use.
+   *
+   * <p>Worth surfacing on the dashboard: paths will follow noticeably worse on the fallback, and
+   * knowing that is the difference between debugging the right thing and the wrong one.
+   */
+  @Getter
+  private boolean usingFallbackConfig;
 
 
   /**

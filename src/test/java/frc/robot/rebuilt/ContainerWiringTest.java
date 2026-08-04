@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.common.components.RobotUtils;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
 import frc.robot.testutil.HalFixture;
 import org.junit.jupiter.api.BeforeAll;
@@ -192,9 +193,67 @@ class ContainerWiringTest {
   @Order(10)
   @DisplayName("Autonomous command getter is null-safe before PathPlanner has run")
   void autonomousCommandIsNullSafe() {
-    // configurePathPlanner has deliberately not been called, so the chooser is null. The getter
-    // must cope: Robot.autonomousInit calls it unconditionally.
+    // configurePathPlanner has deliberately not been called yet, so the chooser is null. The
+    // getter must cope: Robot.autonomousInit calls it unconditionally.
     RebuiltContainer container = new RebuiltContainer();
     assertDoesNotThrow(container::getAutonomousCommand);
+  }
+
+  @Test
+  @Order(11)
+  @DisplayName("Config loading always yields a usable config and never throws")
+  void configLoadingNeverThrows() {
+    // This used to raise a RuntimeException straight out of robotInit(), so a missing or
+    // malformed settings file stopped the robot booting rather than merely degrading autonomous.
+    assertDoesNotThrow(RobotUtils::loadRobotConfig,
+        "Loading the robot config must degrade, not kill the robot program");
+
+    assertNotNull(RobotUtils.getRobotConfig(), "A config must be available either way");
+    assertEquals(4, RobotUtils.getRobotConfig().numModules);
+
+    // This repo does ship src/main/deploy/pathplanner/settings.json, and Gradle runs tests from
+    // the project root, so the real settings parse successfully here and the fallback is not
+    // needed. That is worth asserting: it means the GUI settings are valid and readable, and it
+    // is also why PathPlanner wiring is testable at all.
+    //
+    // Delete or corrupt that file and this flips to true while the robot still boots — which is
+    // the behaviour the fallback exists to provide. PathPlannerConfigTest covers the fallback
+    // config itself directly.
+    assertFalse(RobotUtils.isUsingFallbackConfig(),
+        "settings.json is present and should have parsed; if this is true, the file has become "
+            + "unreadable and paths will follow worse until it is fixed");
+  }
+
+  @Test
+  @Order(12)
+  @DisplayName("PathPlanner wiring completes — the gap this suite previously had to document")
+  void pathPlannerWiringCompletes() {
+    // Only reachable because the config no longer requires a filesystem. Previously this whole
+    // path was simulation-only, which is how a boot-killing fault reached main once already.
+    RobotUtils.loadRobotConfig();
+
+    assertDoesNotThrow(RebuiltContainer::configurePathPlanner,
+        "AutoBuilder configuration and chooser construction must both succeed");
+  }
+
+  @Test
+  @Order(13)
+  @DisplayName("Autonomous command getter still safe once the chooser exists")
+  void autonomousCommandAfterPathPlanner() {
+    RebuiltContainer container = new RebuiltContainer();
+    // Nothing is selected, so null is the correct answer — but it must not throw, and
+    // Robot.autonomousInit must be able to handle the null.
+    assertDoesNotThrow(container::getAutonomousCommand);
+  }
+
+  @Test
+  @Order(14)
+  @DisplayName("Full createContainer path runs end to end")
+  void fullCreateContainerRuns() {
+    // The real entry point, exercised for the first time. Everything above builds up to this.
+    assertDoesNotThrow(() -> {
+      var container = RebuiltContainer.createContainer();
+      assertNotNull(container);
+    });
   }
 }

@@ -26,6 +26,28 @@ than your 1″ budget.
 Also check `FieldRegions.BUMP_NEAR_EDGE_METERS` / `BUMP_FAR_EDGE_METERS` — currently a
 placeholder mid-field band. The bump-reverse state fires off these.
 
+### Two decisions: PathPlanner settings disagree with the code
+
+PathPlanner *plans* using `src/main/deploy/pathplanner/settings.json`; the robot *executes* using
+`CommonConstants`. Two properties disagree, so PathPlanner is planning for a slightly different
+robot than the one that runs. Both are pinned by `PathPlannerSettingsConsistencyTest` so they
+cannot grow, but both need a human decision:
+
+| Property | PathPlanner | Code | Decision |
+| --- | --- | --- | --- |
+| Module offset | ±0.343 m (27.01″ spacing) | ±0.3366 m (26.50″) | **Measure the frame.** 6.5 mm per side skews the kinematics, so commanded rotation and translation bleed into each other |
+| Drive current limit | 60 A | 50 A applied in `Configs.java` | **Electrical call.** PathPlanner plans acceleration assuming 20% more torque than the drivetrain will deliver, so the robot falls behind on hard acceleration |
+
+Whichever value is right in each row, change the other to match. Once they agree, tighten the two
+`KNOWN_*_DIVERGENCE` constants in that test to zero — a test in the suite will tell you to.
+
+Two things that *do* agree and are worth knowing: wheel radius (0.038 vs 0.0381, a 0.26% difference
+that does not matter) and the motor type, recorded as `vortex`, which independently confirms the
+drive free-speed fix.
+
+Also note `settings.json` already carries **measured** mass (47.6272 kg) and MOI (3.733 kg·m²).
+Those are now used by the code fallback rather than guessed at.
+
 ---
 
 ## 1. Deploy
@@ -38,10 +60,18 @@ cd ~/FRC/FRC26-Rebuilt-worktrees/StuartRevisions
 Expect `startup complete` in the console.
 
 Boot-killing wiring faults are now caught by `ContainerWiringTest` rather than only by the
-simulator, and that test is proven to catch them — reintroducing the original illegal
-composition makes it fail with the exact WPILib message. One gap remains: PathPlanner setup
-needs a deploy directory, so `configurePathPlanner()` is still simulation-only. **Run
-`./gradlew simulateJava` before any deploy** — it is the only thing covering that path.
+simulator, and that test is proven to catch them — reintroducing the original illegal composition
+makes it fail with the exact WPILib message. The PathPlanner half is covered too, so the full
+`createContainer()` path now runs in tests.
+
+A missing or malformed `settings.json` no longer stops the robot booting. It used to throw a
+`RuntimeException` out of `robotInit()` *and* discard the original exception, so the console said
+only that loading had failed. It now prints the real cause and falls back to `PathPlannerConfig`.
+Check `RobotUtils.isUsingFallbackConfig()` if paths follow unexpectedly badly — the fallback works
+but is less accurate than the tuned settings.
+
+Running `./gradlew simulateJava` before a deploy is still worth it as a whole-program smoke test,
+but it is no longer the *only* thing covering container wiring.
 
 ---
 
@@ -232,6 +262,8 @@ Everything below is reasoned or measured in simulation, never on hardware:
 - Camera transform and camera name (step 0)
 - Bump band position (`FieldRegions`)
 - Module angular offsets — never measured, and worth ±1″ over 10 ft on their own
+- Module spacing — PathPlanner says 27.01″, code says 26.50″; measure the frame (section 0)
+- Drive current limit — PathPlanner assumes 60 A, code applies 50 A; pick one (section 0)
 - PathPlanner gains — never run against correct velocities
 - Whether the intake deploy soft limits (0–11 rotations) match real travel
 - All calibration figures — the routines are tested against synthetic data with known answers,
