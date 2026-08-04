@@ -460,6 +460,33 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     return sum / positions.length;
   }
 
+  /**
+   * Drives every module at a fixed voltage, wheels pointed straight ahead.
+   *
+   * <p>For SysId. Voltage rather than duty cycle on purpose: duty cycle is a fraction of whatever
+   * the bus happens to be, so a duty-cycle sweep quietly rescales its own input as the pack sags and
+   * the fit is against a moving target. {@code setVoltage} compensates, so 6 V means 6 V throughout.
+   *
+   * @param volts Output voltage, positive forward.
+   */
+  public void driveVoltage(double volts) {
+    Rotation2d straight = new Rotation2d();
+    m_frontLeft.setDriveVoltage(volts, straight);
+    m_frontRight.setDriveVoltage(volts, straight);
+    m_rearLeft.setDriveVoltage(volts, straight);
+    m_rearRight.setDriveVoltage(volts, straight);
+  }
+
+  /** @return drive position per module in metres, in FL, FR, RL, RR order. */
+  public double[] getModuleDrivePositions() {
+    return new double[] {
+      m_frontLeft.getDrivePositionMeters(),
+      m_frontRight.getDrivePositionMeters(),
+      m_rearLeft.getDrivePositionMeters(),
+      m_rearRight.getDrivePositionMeters()
+    };
+  }
+
   /** @return drive output current per module in amps, in FL, FR, RL, RR order. */
   public double[] getModuleDriveCurrents() {
     return new double[] {

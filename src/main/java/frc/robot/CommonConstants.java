@@ -124,6 +124,57 @@ public final class CommonConstants {
         / kDrivingMotorReduction;
   }
 
+  /**
+   * Measured drive feedforward, in the form {@code V = kS*sgn(v) + kV*v + kA*a}.
+   *
+   * <p><b>All three are MEASURE.</b> Produced by {@code DriveSysId}, which runs WPILib SysId and
+   * fits them on the robot. Paste the MEAN line from its report here.
+   *
+   * <p>Note what currently uses what. {@link frc.robot.common.swerve.Configs} derives its velocity
+   * feedforward from free speed as {@code 12 V / kDriveWheelFreeSpeedRps}, which is a theoretical kV
+   * — correct only for a motor exactly matching its datasheet, driving a wheel of exactly its nominal
+   * diameter, on a fresh battery. It is a reasonable starting point and it is not a measurement.
+   * Once {@link #kV} here is measured it should replace that derivation.
+   *
+   * <p><b>{@link #kA} has no theoretical stand-in at all</b>, which is why it is currently unused
+   * rather than approximated. It converts a commanded acceleration into volts, so it is what
+   * second-order kinematics needs: first-order kinematics turns a chassis velocity into module
+   * velocities, second-order also turns a chassis <em>acceleration</em> into module accelerations,
+   * and without kA there is nothing to turn those into an output with.
+   */
+  public static final class DriveFeedforwardConstants {
+
+    /** MEASURE — volts to overcome static friction. Expect roughly 0.1 to 0.3 V. */
+    public static final double kS = 0.0;
+
+    /**
+     * MEASURE — volts per metre per second.
+     *
+     * <p>Theory says {@code 12 / kDriveWheelFreeSpeedRps} = about 2.09 for this drivetrain. A
+     * measured value materially above that means the drivetrain is losing speed somewhere theory
+     * does not model: drag, tread compression, or a battery that was not fresh.
+     */
+    public static final double kV = 0.0;
+
+    /**
+     * MEASURE — volts per metre per second squared.
+     *
+     * <p>No theoretical default is offered on purpose. kA depends on the rotational inertia of the
+     * whole drivetrain reflected through the gearing, which is not derivable from the constants in
+     * this file, and a guessed kA in a feedforward is worse than none — it commands voltage
+     * proportional to a number nobody measured.
+     */
+    public static final double kA = 0.0;
+
+    /** @return true once the feedforward has actually been measured. */
+    public static boolean isMeasured() {
+      return kV > 0;
+    }
+
+    private DriveFeedforwardConstants() {
+    }
+  }
+
   public static final class DriveConstants {
     // Driving Parameters - Note that these are not the maximum capable speeds of
     // the robot, rather the allowed maximum speeds

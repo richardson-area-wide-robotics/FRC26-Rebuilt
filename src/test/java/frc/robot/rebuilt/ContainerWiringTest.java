@@ -171,7 +171,21 @@ class ContainerWiringTest {
       assertNotNull(RebuiltContainer.getLoadCalibrationCommand());
       assertNotNull(RebuiltContainer.getIntakeLoadCalibrationCommand());
       assertNotNull(RebuiltContainer.getTractionCalibrationCommand());
+      assertNotNull(RebuiltContainer.getSysIdCommand());
+      assertNotNull(RebuiltContainer.getBumpDiagnosticCommand());
     });
+  }
+
+  @Test
+  @Order(9)
+  @DisplayName("The SysId sweep owns the drivetrain, so the default command cannot fight it")
+  void sysIdOwnsTheDrivetrain() {
+    // SysId commands voltage directly. Without the requirement the default drive command keeps
+    // writing closed-loop velocity setpoints over the top every loop, so the characterisation
+    // measures a drivetrain being fought rather than one being swept — and still reports gains.
+    assertTrue(RebuiltContainer.getSysIdCommand().getRequirements()
+        .contains(RebuiltContainer.DRIVE_SUBSYSTEM),
+        "SysId must own the drivetrain or the fit is against a contested input");
   }
 
   @Test

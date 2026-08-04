@@ -176,6 +176,28 @@ public class MAXSwerveModule {
         config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
   }
 
+  /**
+   * Drives the module at a fixed <b>voltage</b>, wheel held at the given angle.
+   *
+   * <p>For SysId, which commands volts rather than duty cycle. The distinction matters: duty cycle
+   * is a fraction of whatever the bus happens to be, so a duty-cycle sweep silently rescales itself
+   * as the battery sags and the resulting fit is against a moving input. {@code setVoltage}
+   * compensates for bus voltage, so 6 V means 6 V at the start of the run and at the end of it.
+   *
+   * @param volts Output voltage.
+   * @param angle Chassis-relative angle to hold the module at.
+   */
+  public void setDriveVoltage(double volts, Rotation2d angle) {
+    Rotation2d corrected = angle.plus(Rotation2d.fromRadians(m_chassisAngularOffset));
+    m_turningClosedLoopController.setSetpoint(corrected.getRadians(), ControlType.kPosition);
+    m_drivingSpark.setVoltage(volts);
+  }
+
+  /** @return the drive wheel's measured position in metres. */
+  public double getDrivePositionMeters() {
+    return m_drivingEncoder.getPosition();
+  }
+
   /** @return the drive motor's output current in amps. */
   public double getDriveCurrent() {
     return m_drivingSpark.getOutputCurrent();

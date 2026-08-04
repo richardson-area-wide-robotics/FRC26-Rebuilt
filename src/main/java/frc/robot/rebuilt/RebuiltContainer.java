@@ -28,6 +28,7 @@ import frc.robot.common.components.diagnostics.CalibrationManeuvers;
 import frc.robot.common.components.diagnostics.CalibrationStore;
 import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
+import frc.robot.common.components.diagnostics.DriveSysId;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
 import frc.robot.common.components.diagnostics.BumpCrossingDiagnostic;
 import frc.robot.common.components.diagnostics.LoadCalibrationRoutine;
@@ -113,6 +114,9 @@ public class RebuiltContainer implements IRobotContainer {
   /** Drive current limit calibration, run against a wall on carpet. */
   public static final TractionCalibrator TRACTION_CALIBRATOR =
       new TractionCalibrator(DRIVE_SUBSYSTEM);
+
+  /** WPILib SysId, chained and self-analysing. The only source of kA. */
+  public static final DriveSysId SYSID = new DriveSysId(DRIVE_SUBSYSTEM);
 
   /** Diagnoses why the chassis bogs down on the field ramps. */
   public static final BumpCrossingDiagnostic BUMP_DIAGNOSTIC =
@@ -720,6 +724,27 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getTractionCalibrationCommand() {
     return TRACTION_CALIBRATOR.sweep();
+  }
+
+  /**
+   * WPILib SysId across all four tests, fitted on the robot.
+   *
+   * <p><b>Needs about 10 m of clear runway</b> — more than anything else in the suite. Runs
+   * quasistatic forward and reverse, then dynamic forward and reverse, with rests between, then
+   * prints kS, kV and kA per module plus the mean. No log transfer and no desktop analyser: the
+   * regression the analyser performs is done here.
+   *
+   * <p>This is the only source of <b>kA</b>, which second-order kinematics needs. The
+   * auto-calibrator's sweep waits for steady state, so acceleration is zero in its data by
+   * construction and kA is not merely unmeasured there but unmeasurable.
+   *
+   * <p>The log is still a standard SysId log, so the desktop analyser remains available if the
+   * on-robot fit ever looks wrong and the residual plots are wanted.
+   *
+   * @return the SysId characterisation command.
+   */
+  public static Command getSysIdCommand() {
+    return SYSID.full();
   }
 
   /**
