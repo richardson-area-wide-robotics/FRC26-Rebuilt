@@ -25,26 +25,35 @@ public final class RebuiltConstants {
    * exactly what let a wrong free-speed constant survive review: 5676 RPM is a real figure for
    * a motor that <em>is</em> on this robot — the feeder on CAN 18 — just not on the drive shaft.
    *
+   * <p><b>Team rule:</b> a SPARK Flex always has a NEO Vortex on it — nothing else is ever
+   * connected to a SPARK Flex on this robot. Controller types below are read straight from the
+   * code and are certain, so that rule fixes the motor for every SPARK Flex mechanism.
+   *
    * <pre>
    *   CAN 1,3,5,7   swerve drive      NEO Vortex   + SPARK Flex   6784 RPM free
    *   CAN 2,4,6,8   swerve steering   NEO 550      + SPARK MAX    + Through Bore V2 absolute
    *   CAN 10,11     shooter           NEO Vortex   + SPARK Flex   (MotorKind.NEO_VORTEX in code)
-   *   CAN 13,15     intake rollers    SPARK Flex                  CONFIRM motor
-   *   CAN 18        feeder            NEO 2.0      + SPARK Flex   5676 RPM free
-   *                 (aka "tower motor" — same thing, confirmed; no separate tower exists)
+   *   CAN 13,15     intake rollers    NEO Vortex   + SPARK Flex   6784 RPM free (per team rule)
+   *   CAN 18        feeder            *** CONFLICT ***  + SPARK Flex
+   *                 (aka "tower motor" — same mechanism, confirmed; no separate tower exists)
    *   CAN 12        intake deploy     SPARK MAX                   CONFIRM motor
    *   CAN 14        spindexer         SPARK MAX                   CONFIRM motor
    * </pre>
    *
-   * <p>The controller types above are read straight from the code and are certain. The
-   * superstructure <em>motors</em> are a mix of NEO Vortex, NEO 2.0 and NEO 550 — fill in the
-   * three still marked CONFIRM rather than assuming, since free speed and current limits both
-   * depend on it and both matter.
+   * <p><b>CAN 18 is unresolved and must not be assumed.</b> It was stated to be a NEO 2.0, and
+   * separately the rule above says every SPARK Flex carries a Vortex. Both cannot be true of the
+   * same motor. The two candidates are <b>5676 RPM</b> (NEO 2.0) and <b>6784 RPM</b> (Vortex),
+   * 19.5% apart — the exact magnitude and the exact failure mode of the drive free-speed bug this
+   * inventory exists to prevent. Picking one to make the table look finished is how that bug
+   * happened the first time.
    *
-   * <p>Note that CAN 18 is a <b>NEO 2.0 driven by a SPARK Flex</b>. That is a legitimate pairing,
-   * but it means SPARK Flex in the controller column does <em>not</em> imply a Vortex on the end
-   * of it — which is precisely the inference that would reintroduce the drive free-speed bug on
-   * the next mechanism someone documents from the controller type alone.
+   * <p>Two ways to settle it, either of which takes seconds: read the label on the motor, or look
+   * at {@code LoadCalibration/FEEDER/FreeSpeed} after the load calibration, which measures
+   * unloaded speed directly. 5676 and 6784 are not close enough to confuse.
+   *
+   * <p>The two SPARK MAX mechanisms are still open. The team rule covers SPARK Flex only, and says
+   * nothing about what hangs off a SPARK MAX — steering uses NEO 550 there, but that is the
+   * steering module, not evidence about the superstructure.
    *
    * <p>Free speeds for reference: NEO Vortex 6784 RPM, NEO 2.0 and NEO 1.1 both 5676 RPM,
    * NEO 550 11000 RPM.
@@ -170,12 +179,17 @@ public final class RebuiltConstants {
     /**
      * MEASURE — unloaded feeder speed, in motor RPM.
      *
-     * <p>The feeder is a <b>NEO 2.0</b>, free speed 5676 RPM, run at {@code FEEDER_SPEED = 1.0}.
-     * So expect something a little under 5676 unloaded — 5000 is 88% of free speed, which is a
-     * plausible figure for a roller with belt drag on it, but it is still a guess.
+     * <p>Deliberately left at a value that suits <em>neither</em> candidate motor, because which
+     * motor CAN 18 carries is unresolved — see the CONFLICT note in {@link CanIds}. Free speed is
+     * either 5676 RPM (NEO 2.0) or 6784 RPM (Vortex), and at {@code FEEDER_SPEED = 1.0} the
+     * unloaded figure lands a little under whichever it is.
      *
-     * <p>If the measured value comes out well below this, the feeder is dragging even with nothing
-     * in it, and the jam threshold derived from it will be correspondingly wrong.
+     * <p>So this one measurement resolves the motor as a side effect. If
+     * {@code LoadCalibration/FEEDER/FreeSpeed} comes back near 5,400 it is a NEO 2.0; near 6,500 it
+     * is a Vortex. Update the inventory at the same time as this constant.
+     *
+     * <p>A value well below both means the feeder is dragging with nothing in it, and the jam
+     * threshold derived from it will be wrong in the same proportion.
      */
     public static final double FEEDER_EXPECTED_RPM = 5000.0;
 

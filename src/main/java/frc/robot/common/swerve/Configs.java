@@ -1,5 +1,6 @@
 package frc.robot.common.swerve;
 
+import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.AbsoluteEncoderConfig;
@@ -10,7 +11,19 @@ import frc.robot.CommonConstants.SwerveConstants;
 
 public final class Configs {
     public static final class MAXSwerveModule {
-        public static final SparkMaxConfig drivingConfig = new SparkMaxConfig();
+        /**
+         * Drive configuration.
+         *
+         * <p>A {@code SparkFlexConfig}, because the drive controllers are SPARK Flex
+         * ({@code MAXSwerveModule} line 43). This was a {@code SparkMaxConfig}, which is
+         * functionally identical here — both are {@code SparkBaseConfig} and only common
+         * parameters are set — but it documented the wrong hardware. On this robot the
+         * controller type is how you tell which motor is fitted, so a config naming the wrong
+         * controller is a trap rather than a cosmetic issue.
+         */
+        public static final SparkFlexConfig drivingConfig = new SparkFlexConfig();
+
+        /** Steering configuration. SPARK MAX, correctly typed. */
         public static final SparkMaxConfig turningConfig = new SparkMaxConfig();
 
         static {

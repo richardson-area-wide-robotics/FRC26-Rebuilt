@@ -88,15 +88,13 @@ public final class CommonConstants {
      *
      * <p>This robot's drivetrain runs <b>NEO Vortex</b> on SPARK Flex, free speed
      * <b>6784 RPM</b> per REV's datasheet. The turning modules run NEO 550 on SPARK MAX, and
-     * the superstructure runs a mix including a NEO 2.0 on the feeder — but only the drive
-     * motor's free speed belongs here.
+     * the superstructure is a mix — but only the drive motor's free speed belongs here.
      *
      * <p>It previously read {@code 5676 / 60}. That is the free speed of the <b>NEO 2.0</b>
      * (and of the NEO 1.1 — both are 5676 RPM), and it is the default in WPILib's MAXSwerve
-     * template. The trap is that 5676 is a perfectly real number <em>for a motor that is on
-     * this robot</em>: the feeder on CAN 18 is a NEO 2.0, confirmed. Just not on the drive
-     * shaft. So it looked plausible on inspection while
-     * being 19.5% wrong for the drivetrain, and the error went straight into the velocity
+     * template. The trap is that 5676 is a real free speed for a real REV motor, so nothing about
+     * it looks wrong on inspection — it was only wrong for <em>this</em> shaft. So it looked
+     * plausible while being 19.5% wrong for the drivetrain, and the error went into the velocity
      * feedforward: {@code kV = 12 V / kDriveWheelFreeSpeedRps} came out at 2.50 instead of
      * 2.09, so the feedforward over-commanded voltage on every drive request and the closed
      * loop had to fight it continuously.

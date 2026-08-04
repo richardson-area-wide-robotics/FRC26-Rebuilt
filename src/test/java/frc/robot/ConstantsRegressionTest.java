@@ -17,6 +17,7 @@ import frc.robot.CommonConstants.ModuleConstants;
 import frc.robot.CommonConstants.SwerveConstants;
 import frc.robot.rebuilt.RebuiltConstants.CanIds;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
+import frc.robot.rebuilt.RebuiltConstants.LoadConstants;
 import frc.robot.rebuilt.RebuiltConstants.ShooterConstants;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,14 +36,37 @@ class ConstantsRegressionTest {
     // The drivetrain runs NEO Vortex on SPARK Flex: 6784 RPM per REV's datasheet.
     //
     // This previously read `5676 / 60`, integer-divided. 5676 RPM is the free speed of the
-    // NEO 2.0 and NEO 1.1, and it is WPILib's MAXSwerve template default. This robot does
-    // have NEO 2.0s on it — just not driving the wheels — which is precisely why the wrong
-    // value survived review: it is a real number for a real motor here, and only wrong
-    // because it names the wrong one. 19.5% of error went into the velocity feedforward.
+    // NEO 2.0 and NEO 1.1, and it is WPILib's MAXSwerve template default. That is precisely why
+    // the wrong value survived review: it is a real free speed for a real REV motor, so nothing
+    // about it looks wrong on inspection — it was only wrong for this shaft. 19.5% of error went
+    // into the velocity feedforward.
     assertEquals(6784 / 60.0, ModuleConstants.kDrivingMotorFreeSpeedRps, 1e-9);
     assertNotEquals(94.0, ModuleConstants.kDrivingMotorFreeSpeedRps, "integer division");
     assertNotEquals(5676 / 60.0, ModuleConstants.kDrivingMotorFreeSpeedRps,
         "5676 RPM is the NEO 2.0 / NEO 1.1 free speed, not the Vortex's");
+  }
+
+  @Test
+  @DisplayName("Feeder expected RPM is valid whichever motor CAN 18 turns out to be")
+  void feederExpectedRpmSurvivesTheUnresolvedMotor() {
+    // CAN 18 is either a NEO 2.0 (5676 RPM) or a NEO Vortex (6784 RPM) — see the CONFLICT note
+    // in RebuiltConstants.CanIds. Rather than block on that, pin the one property that has to
+    // hold either way: the expected unloaded speed must sit below the LOWER candidate's free
+    // speed. If it were above, the jam detector would think a healthy feeder was always slow and
+    // would jostle the robot mid-match, and it would do so only if the motor turned out to be
+    // the slower of the two — a bug that appears when a fact is discovered rather than when code
+    // is changed.
+    double neo20FreeSpeedRpm = 5676;
+
+    assertTrue(LoadConstants.FEEDER_EXPECTED_RPM < neo20FreeSpeedRpm,
+        "FEEDER_EXPECTED_RPM=" + LoadConstants.FEEDER_EXPECTED_RPM
+            + " must stay below the slower candidate motor's free speed of " + neo20FreeSpeedRpm
+            + " so it is valid whichever motor CAN 18 is");
+
+    // And the jam threshold has to leave room below a working feeder, or clearing fires on
+    // healthy operation.
+    assertTrue(LoadConstants.JAM_SPEED_FRACTION > 0 && LoadConstants.JAM_SPEED_FRACTION < 1.0,
+        "jam fraction must be a fraction of expected speed");
   }
 
   @Test

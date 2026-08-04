@@ -420,8 +420,10 @@ Highest-value targets, in order:
 - [ ] `settings.json` and `CommonConstants` reconciled — then tighten the two
       `KNOWN_*_DIVERGENCE` constants in `PathPlannerSettingsConsistencyTest` to zero
 - [ ] Bump band measured and entered in `FieldRegions`
-- [ ] The three remaining `CONFIRM` motors in `RebuiltConstants.CanIds` filled in
-      (CAN 18 is settled: NEO 2.0, and it is the motor called the tower motor)
+- [ ] **CAN 18 motor resolved** — stated as a NEO 2.0, but the team rule says every SPARK Flex
+      carries a Vortex, and CAN 18 is a SPARK Flex. Read the label, or read
+      `LoadCalibration/FEEDER/FreeSpeed` from step 9: ~5,400 means NEO 2.0, ~6,500 means Vortex
+- [ ] The two `CONFIRM` SPARK MAX motors (intake deploy, spindexer) filled in
 - [ ] `TunableNumber.TUNING_ENABLED` back to `false`
 - [ ] `./gradlew build` still green after any constant changes
 - [ ] Update the known-unverified list below — cross off what you verified
@@ -447,7 +449,7 @@ verify them** — this list is the honest measure of how much of this code has m
 - Whether a game piece is visible in current at all on each mechanism. It is assumed, and step 9
   is what proves or disproves it per mechanism
 - The traction limit, and therefore whether the applied 50 A can already break traction (step 8)
-- The three remaining `CONFIRM` motors in `RebuiltConstants.CanIds` — controller types are read from code and
+- Which motor is on CAN 18, and the two `CONFIRM` SPARK MAX motors — controller types are read from code and
   certain, the motors behind them are not
 - That `Shooter/Sensors/AnalogRPM` reads 0. The flywheel's velocity source was reading an analog
   sensor that is almost certainly not fitted; it now reads the encoder, but the old channel is
