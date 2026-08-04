@@ -23,14 +23,14 @@ public final class RebuiltConstants {
    *
    * <p><b>Motor inventory.</b> Recorded here because not knowing which motor sits where is
    * exactly what let a wrong free-speed constant survive review: 5676 RPM is a real figure for
-   * a motor that <em>is</em> on this robot, just not on the drive shaft.
+   * a motor that <em>is</em> on this robot — the feeder on CAN 18 — just not on the drive shaft.
    *
    * <pre>
    *   CAN 1,3,5,7   swerve drive      NEO Vortex   + SPARK Flex   6784 RPM free
    *   CAN 2,4,6,8   swerve steering   NEO 550      + SPARK MAX    + Through Bore V2 absolute
    *   CAN 10,11     shooter           NEO Vortex   + SPARK Flex   (MotorKind.NEO_VORTEX in code)
    *   CAN 13,15     intake rollers    SPARK Flex                  CONFIRM motor
-   *   CAN 18        feeder            SPARK Flex                  CONFIRM motor
+   *   CAN 18        feeder            NEO 2.0      + SPARK Flex   5676 RPM free
    *                 (aka "tower motor" — same thing, confirmed; no separate tower exists)
    *   CAN 12        intake deploy     SPARK MAX                   CONFIRM motor
    *   CAN 14        spindexer         SPARK MAX                   CONFIRM motor
@@ -38,10 +38,16 @@ public final class RebuiltConstants {
    *
    * <p>The controller types above are read straight from the code and are certain. The
    * superstructure <em>motors</em> are a mix of NEO Vortex, NEO 2.0 and NEO 550 — fill in the
-   * four marked CONFIRM rather than assuming, since only free speed and current limits depend
-   * on it and both matter.
+   * three still marked CONFIRM rather than assuming, since free speed and current limits both
+   * depend on it and both matter.
    *
-   * <p>Free speeds for reference: NEO Vortex 6784 RPM, NEO 2.0 and NEO 1.1 both 5676 RPM.
+   * <p>Note that CAN 18 is a <b>NEO 2.0 driven by a SPARK Flex</b>. That is a legitimate pairing,
+   * but it means SPARK Flex in the controller column does <em>not</em> imply a Vortex on the end
+   * of it — which is precisely the inference that would reintroduce the drive free-speed bug on
+   * the next mechanism someone documents from the controller type alone.
+   *
+   * <p>Free speeds for reference: NEO Vortex 6784 RPM, NEO 2.0 and NEO 1.1 both 5676 RPM,
+   * NEO 550 11000 RPM.
    */
   public static final class CanIds {
     public static final int SHOOTER_LEADER = 10;
@@ -161,7 +167,16 @@ public final class RebuiltConstants {
     /** MEASURE — amps above idle indicating a piece moving through the feeder. */
     public static final double FEEDER_WORK_EXCESS_AMPS = 10.0;
 
-    /** MEASURE — unloaded feeder speed, in motor RPM. */
+    /**
+     * MEASURE — unloaded feeder speed, in motor RPM.
+     *
+     * <p>The feeder is a <b>NEO 2.0</b>, free speed 5676 RPM, run at {@code FEEDER_SPEED = 1.0}.
+     * So expect something a little under 5676 unloaded — 5000 is 88% of free speed, which is a
+     * plausible figure for a roller with belt drag on it, but it is still a guess.
+     *
+     * <p>If the measured value comes out well below this, the feeder is dragging even with nothing
+     * in it, and the jam threshold derived from it will be correspondingly wrong.
+     */
     public static final double FEEDER_EXPECTED_RPM = 5000.0;
 
     /**

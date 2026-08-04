@@ -99,7 +99,10 @@ motor's free speed, so roughly 19% of top speed is unused. **The cap was deliber
 raising it is a driveability decision, not a correctness one.
 
 There is now a motor inventory beside the CAN IDs in `RebuiltConstants` so this cannot recur. Four
-superstructure motors are marked `CONFIRM` rather than guessed.
+superstructure motors are marked `CONFIRM` rather than guessed. CAN 18 is now settled: a **NEO 2.0
+on a SPARK Flex**, and it is the motor the team calls the tower motor. Note that pairing — SPARK
+Flex in the controller column does *not* imply a Vortex, which is exactly the inference that
+produced the drive free-speed bug.
 
 ---
 
@@ -219,7 +222,7 @@ form of the defect that started all this. `ValidationSuite` + `RebuiltValidation
 | 3 | **Camera name + `ROBOT_TO_CAMERA`** | Vision is untrustworthy until measured. A wrong transform produces confidently wrong poses |
 | 4 | **Bump band position** (`FieldRegions`) | Currently a placeholder mid-field band; `BUMP_REVERSE` fires off it |
 | 5 | **Max speed cap** — 4.8 m/s vs ~5.74 physical | ~19% of top speed unused. Left alone deliberately |
-| 6 | **Four superstructure motors** marked `CONFIRM` in `RebuiltConstants` | Free speed and current limits depend on knowing which motor is where |
+| 6 | **Three superstructure motors** still marked `CONFIRM` in `RebuiltConstants` | Free speed and current limits depend on knowing which motor is where. CAN 18 resolved to a NEO 2.0 |
 | 7 | **`docs/` tracked** — 49 generated files rewritten every build | Dirties the tree on every build. Untracking loses GitHub SVG previews; your call |
 
 Decisions 1 and 2 are pinned by `PathPlannerSettingsConsistencyTest` as named allowances so they
