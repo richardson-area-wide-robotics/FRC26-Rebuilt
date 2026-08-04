@@ -254,6 +254,40 @@ Highest-value targets, in order:
 
 ---
 
+## Simulation: no drivetrain physics
+
+Worth knowing before you rely on the simulator: **the robot cannot be driven in simulation.**
+Commanding a module does nothing, encoders stay at zero, and the closed loops are never exercised.
+
+That is not a misconfiguration and there is no setting for it. WPILib simulation models nothing
+unless you write the model — physics is opt-in code, per
+[the WPILib physics-simulation docs](https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html).
+So `simulateJava` validates wiring, bindings, container construction and telemetry, but not motion.
+
+An attempt to add it was reverted. REVLib does ship the pieces (`SparkFlexSim`, `SparkMaxSim`,
+`DCMotorSim`, and the NavX exposes a sim device for yaw), but three iterations produced velocities
+49x, 10x and then roughly half the correct value, plus a gyro reading that disagreed with the model
+in both sign and magnitude. A physics model that looks plausible and is wrong is worse than none —
+a calibration dry-run against it would "measure" a wheel scale of about 0.44 and send someone
+chasing a mechanical fault that does not exist.
+
+`RevSimUnitContractTest` records what was established by measurement, so a future attempt starts
+from fact rather than from method names:
+
+- Encoder sim setters take **converted units** (m/s and metres here), not RPM
+- `SparkSim.iterate(velocity, vbus, dt)` also takes **converted units**, not motor RPM — position
+  advances by exactly `velocity * dt`. This was the main error: `DCMotorSim` reports RPM, and
+  passing that straight through is wrong by the conversion factor
+- Velocity readback is **stateful and filtered** — observed at 30.6 and 635.6 after a single
+  `iterate(100)` depending on prior state. Trust position, not immediate velocity
+- Conversion factors round-trip only to float precision, about 1.2e-9 of error
+- Correct target for a working model: full throttle should approach **5.74 m/s**, matching
+  `kDriveWheelFreeSpeedRps`
+
+Still outstanding for a working model: the NavX sim yaw sign and scale, and the velocity filter's
+transient. If drivetrain sim becomes a priority, `maple-sim` is purpose-built for swerve and worth
+evaluating against finishing this by hand.
+
 ## Known-unverified list
 
 Everything below is reasoned or measured in simulation, never on hardware:
