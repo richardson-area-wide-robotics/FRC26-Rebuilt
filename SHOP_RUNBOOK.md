@@ -15,7 +15,7 @@ marked `MEASURE`. Vision cannot be trusted until they are right, and a wrong cam
 produces *confidently wrong* poses, which is worse than none.
 
 | Constant | What it is | How to get it |
-|---|---|---|
+| --- | --- | --- |
 | `CAMERA_NAME` | Camera name exactly as PhotonVision shows it | PhotonVision web UI. A mismatch fails **silently** — no error, vision just never contributes |
 | `ROBOT_TO_CAMERA` | Lens position and angle relative to robot centre on the floor | Tape measure. +x forward, +y left, +z up. Pitch is negative when tilted **up** |
 
@@ -30,13 +30,18 @@ placeholder mid-field band. The bump-reverse state fires off these.
 
 ## 1. Deploy
 
-```
+```bash
 cd ~/FRC/FRC26-Rebuilt-worktrees/StuartRevisions
 ./gradlew deploy
 ```
 
-Expect `startup complete` in the console. If the program dies at boot, read the stack trace —
-a binding composition error kills it before teleop and is the most likely cause.
+Expect `startup complete` in the console.
+
+Boot-killing wiring faults are now caught by `ContainerWiringTest` rather than only by the
+simulator, and that test is proven to catch them — reintroducing the original illegal
+composition makes it fail with the exact WPILib message. One gap remains: PathPlanner setup
+needs a deploy directory, so `configurePathPlanner()` is still simulation-only. **Run
+`./gradlew simulateJava` before any deploy** — it is the only thing covering that path.
 
 ---
 
@@ -69,7 +74,8 @@ Enable teleop and check, gently, in this order:
 2. Push stick left → robot drives **left**
 3. Right stick left → robot rotates **counter-clockwise**
 
-If any is inverted, flip the sign of the matching lambda in `RebuiltContainer.createContainer()`.
+If any is inverted, flip the sign of the matching lambda in
+`RebuiltContainer.setDriveDefaultCommand()`.
 
 Then watch `Expectations/AllOK` while driving. `DriveRespondsToStick` trips if the sticks are
 not reaching the modules.
@@ -103,7 +109,7 @@ anything without ground truth.
 Runs in dependency order:
 
 | Routine | Measures | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Straight run, open loop | **Wheel scale**, **steering misalignment** | Open loop deliberately — closed loop would correct the error being measured |
 | Spin in place | **Gyro scale**, **effective drive radius** | Several turns, so scale error beats tag noise |
 | Stepped duty-cycle sweep | **kS**, **kV** — *per module* | Watch `R²`; a poor fit means wheel slip or not enough run-up |
@@ -117,7 +123,7 @@ Ends with a paste-ready report. **Nothing is written to source** — you paste w
 From the datasheets, the budget is 0.833%, and two terms dominate:
 
 | Source | Spec | Over 10 ft |
-|---|---|---|
+| --- | --- | --- |
 | Wheel diameter, uncalibrated | 1–3% tread compression | **30–91 mm (1.2–3.6″)** |
 | Steering offset | ±0.5° (Through Bore V2) | **26.6 mm (1.05″)** |
 | Gyro drift during run | 0.5°/min → 0.017° in 2 s | 0.9 mm |
@@ -158,7 +164,7 @@ being right, which is why step 4 gates this one.
 Space permitting, run in increasing order of appetite:
 
 | Command | Contents | Space |
-|---|---|---|
+| --- | --- | --- |
 | `getPermutationManeuversCommand()` | 16 drive-turn-drive permutations: {10 ft, 5 ft} × {90°, 270°} × {left, right} × {fwd, rev} | Large |
 | `getSamePathReturnCommand()` | 4 out-and-back retracing the outbound path | Moderate |
 | `getDifferentPathReturnCommand()` | 5 loops home by a different route: squares both ways, rectangle, mixed turns, triangle | Large |

@@ -49,7 +49,10 @@ import lombok.NoArgsConstructor;
 import org.littletonrobotics.junction.Logger;
 
 
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+// Package-private rather than private so ContainerWiringTest can instantiate it and exercise the
+// instance methods Robot calls every loop — robotPeriodic in particular. Still not public: only
+// createContainer() and same-package tests can build one.
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
 @Robot(team = 1745)
 public class RebuiltContainer implements IRobotContainer {
 
@@ -97,53 +100,84 @@ public class RebuiltContainer implements IRobotContainer {
   public static final ManeuverRunner MANEUVER_RUNNER = new ManeuverRunner(DRIVE_SUBSYSTEM);
 
   public static IRobotContainer createContainer() {
-        // Set drive command.
-        //
-        // These MUST be method references, not evaluated values: passing
-        // controller.getLeftX() directly captured a single reading taken at class-load
-        // time, so the drivetrain was commanded to a frozen zero for the whole match.
-        //
-        // LeftY drives the x request and LeftX the y request because the field frame has
-        // +x forward and +y left, while the stick reports +y backward and +x right — hence
-        // the negations.
-        // Heading assist comes from the localisation state machine: aim at the hub on our own
-        // side during our shift, and turn to cross the bump backwards. Translation always stays
-        // with the driver, and touching the rotation stick overrides the assist instantly.
-        DRIVE_SUBSYSTEM.setDefaultCommand(
-          DRIVE_SUBSYSTEM.driveCommandWithHeadingAssist(
-            () -> -HIDConstants.DRIVER_CONTROLLER.getLeftY(),
-            () -> -HIDConstants.DRIVER_CONTROLLER.getLeftX(),
-            () -> -HIDConstants.DRIVER_CONTROLLER.getRightX(),
-            () -> stateOutput.headingTarget(),
-            true)
-        );
-
-    // Set up the auto builder
-    DRIVE_SUBSYSTEM.configureAutoBuilder();
-
-      // Bind buttons and triggers
-      configureBindings();
-
-      // Register named commands
-      registerNamedCommands();
-
-      // Set up the auto chooser
-      automodeChooser = AutoBuilder.buildAutoChooser();
-      SmartDashboard.putData(CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
-
-      // TODO: these four sectors are placeholder test data — all BLUE/TOWER in a 1x1 grid
-      // near the origin. Replace with real field geometry before competition.
-      SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER, new Pose2d(1., 1., new Rotation2d()), 1, 1);
-      SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER, new Pose2d(3., 1., new Rotation2d()), 1, 1);
-      SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER, new Pose2d(1., 3., new Rotation2d()), 1, 1);
-      SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER, new Pose2d(3., 3., new Rotation2d()), 1, 1);
-
-      // Set up scoring location lookup
-      ScoringLocationLookup.buildScoringLocations();
-
-      registerExpectations();
+    // Split in two so the half that does not need PathPlanner can be exercised by a test.
+    // The composition error that once killed the robot program at boot lived in
+    // configureBindings(), and it was invisible to every test because none of this was
+    // reachable without a deploy directory.
+    wireRobot();
+    configurePathPlanner();
 
     return new RebuiltContainer();
+  }
+
+  /**
+   * All wiring that does not depend on PathPlanner: the drive default command, control
+   * bindings, field geometry and the expectation set.
+   *
+   * <p>Package-private so {@code ContainerWiringTest} can call it in a JVM with no deploy
+   * directory. Everything here throws at construction time if it is malformed, which is
+   * precisely the class of fault worth catching before a robot is switched on.
+   */
+  static void wireRobot() {
+    setDriveDefaultCommand();
+
+    // Bind buttons and triggers
+    configureBindings();
+
+    // Register named commands
+    registerNamedCommands();
+
+    // TODO: these four sectors are placeholder test data — all BLUE/TOWER in a 1x1 grid
+    // near the origin. Replace with real field geometry before competition.
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER, new Pose2d(1., 1., new Rotation2d()), 1, 1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER, new Pose2d(3., 1., new Rotation2d()), 1, 1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER, new Pose2d(1., 3., new Rotation2d()), 1, 1);
+    SECTOR_EVALUATOR.createSector(RobotSector.BaseSector.BLUE, RobotSector.SectorType.TOWER, new Pose2d(3., 3., new Rotation2d()), 1, 1);
+
+    // Set up scoring location lookup
+    ScoringLocationLookup.buildScoringLocations();
+
+    registerExpectations();
+  }
+
+  /**
+   * Sets the drivetrain's default command.
+   *
+   * <p>The suppliers MUST be method references, not evaluated values: passing
+   * {@code controller.getLeftX()} directly captured a single reading taken at class-load time,
+   * so the drivetrain was commanded to a frozen zero for the whole match.
+   *
+   * <p>LeftY drives the x request and LeftX the y request because the field frame has +x forward
+   * and +y left, while the stick reports +y backward and +x right — hence the negations.
+   *
+   * <p>Heading assist comes from the localisation state machine: aim at the hub on our own side
+   * during our shift, and turn to cross the bump backwards. Translation always stays with the
+   * driver, and touching the rotation stick overrides the assist instantly.
+   */
+  static void setDriveDefaultCommand() {
+    DRIVE_SUBSYSTEM.setDefaultCommand(
+      DRIVE_SUBSYSTEM.driveCommandWithHeadingAssist(
+        () -> -HIDConstants.DRIVER_CONTROLLER.getLeftY(),
+        () -> -HIDConstants.DRIVER_CONTROLLER.getLeftX(),
+        () -> -HIDConstants.DRIVER_CONTROLLER.getRightX(),
+        () -> stateOutput.headingTarget(),
+        true)
+    );
+  }
+
+  /**
+   * PathPlanner setup, which needs settings from the deploy directory.
+   *
+   * <p>Separated out because {@code RobotConfig.fromGUISettings()} has nothing to read in a unit
+   * test JVM, and that single dependency is what previously made the whole of
+   * {@link #createContainer()} untestable.
+   */
+  static void configurePathPlanner() {
+    DRIVE_SUBSYSTEM.configureAutoBuilder();
+
+    automodeChooser = AutoBuilder.buildAutoChooser();
+    SmartDashboard.putData(
+        CommonConstants.SmartDashboardConstants.SMARTDASHBOARD_AUTO_MODE, automodeChooser);
   }
 
   /**
@@ -154,7 +188,14 @@ public class RebuiltContainer implements IRobotContainer {
    * because the most serious bug in this codebase — a drivetrain that ignored the sticks —
    * was invisible without them.
    */
-  private static void registerExpectations() {
+  /**
+   * Registers the invariants that say "this robot is working".
+   *
+   * <p>Package-private so a test can confirm the set registers cleanly and that each predicate
+   * is safe to evaluate — a throwing expectation would otherwise only be discovered on the
+   * field, inside {@code robotPeriodic()}.
+   */
+  static void registerExpectations() {
     ExpectationMonitor monitor = ExpectationMonitor.getInstance();
 
     monitor.register(
@@ -248,7 +289,20 @@ public class RebuiltContainer implements IRobotContainer {
   }
 
 
-  private static void configureBindings() {
+  /**
+   * Binds every driver and operator control.
+   *
+   * <p>Package-private rather than private specifically so a test can call it. WPILib rejects an
+   * illegal command composition at <em>construction</em> time, and because this runs inside a
+   * static initialiser that exception kills the robot program before teleop is ever reached —
+   * which is exactly what happened when the intake commands gained subsystem requirements and
+   * two of them ended up in one parallel composition. Every unit test passed; only simulation
+   * caught it.
+   *
+   * <p>Deliberately free of PathPlanner, so it can be exercised in a test JVM that has no deploy
+   * directory. {@link #configurePathPlanner()} holds that part.
+   */
+  static void configureBindings() {
     Profiler bindingProfiler = new Profiler("bindings");
     bindingProfiler.start();
 
