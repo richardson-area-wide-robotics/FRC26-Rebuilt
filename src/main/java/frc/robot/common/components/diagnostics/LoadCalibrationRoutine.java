@@ -2,6 +2,7 @@ package frc.robot.common.components.diagnostics;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.rebuilt.subsystems.Feeder;
 import frc.robot.rebuilt.subsystems.Intake;
 import frc.robot.rebuilt.subsystems.Shooter;
@@ -95,6 +96,7 @@ public class LoadCalibrationRoutine {
      * on.
      *
      * @param cal      Accumulator for this mechanism.
+     * @param owner    The subsystem being measured, declared as a requirement by every phase.
      * @param run      Starts the mechanism.
      * @param stop     Stops the mechanism.
      * @param amps     Supplies motor current.
@@ -102,27 +104,32 @@ public class LoadCalibrationRoutine {
      * @param captureJam Whether to run the obstructed phase.
      * @return the sequence.
      */
-    private Command calibrate(LoadCalibrator cal, Runnable run, Runnable stop,
+    private Command calibrate(LoadCalibrator cal, Subsystem owner, Runnable run, Runnable stop,
             DoubleSupplier amps, DoubleSupplier speed, boolean captureJam) {
 
+        // Every phase requires the mechanism it is measuring. Only the drivetrain has a default
+        // command today, so nothing currently competes for these — but an operator holding the
+        // intake button during a run would otherwise change what is being measured while the
+        // routine carried on reporting as though it had not. With the requirement declared, a
+        // button press interrupts the calibration visibly instead of corrupting it invisibly.
         Command empty = Commands.run(() -> {
             cal.addEmptySample(amps.getAsDouble(), speed.getAsDouble());
             cal.log();
-        }).withTimeout(EMPTY_SECONDS);
+        }, owner).withTimeout(EMPTY_SECONDS);
 
         Command loaded = Commands.run(() -> {
             cal.addLoadedSample(amps.getAsDouble(), speed.getAsDouble());
             cal.log();
-        }).withTimeout(LOADED_SECONDS);
+        }, owner).withTimeout(LOADED_SECONDS);
 
         Command jam = Commands.run(() -> {
             cal.addJamSample(amps.getAsDouble(), speed.getAsDouble());
             cal.log();
-        }).withTimeout(JAM_SECONDS);
+        }, owner).withTimeout(JAM_SECONDS);
 
         List<Command> phases = new ArrayList<>();
         phases.add(announce(cal.getMechanism() + ": starting. Keep clear."));
-        phases.add(Commands.runOnce(run));
+        phases.add(Commands.runOnce(run, owner));
         phases.add(Commands.waitSeconds(SPIN_UP_SECONDS));
         phases.add(announce(cal.getMechanism() + ": EMPTY phase, " + EMPTY_SECONDS
                 + "s. Nothing in the mechanism."));
@@ -137,7 +144,7 @@ public class LoadCalibrationRoutine {
             phases.add(jam);
         }
 
-        phases.add(Commands.runOnce(stop));
+        phases.add(Commands.runOnce(stop, owner));
         phases.add(Commands.runOnce(() -> System.out.println(
                 "  -> " + cal.recommend().describe())));
 
@@ -155,7 +162,7 @@ public class LoadCalibrationRoutine {
         if (intake == null) {
             return announce("INTAKE: skipped, no subsystem.");
         }
-        return calibrate(intakeCal, intake::intake, intake::stopRollers,
+        return calibrate(intakeCal, intake, intake::intake, intake::stopRollers,
                 intake::getRollerCurrent, intake::getRollerVelocity, true)
                 .beforeStarting(Commands.runOnce(() -> intake.getRollerLoad().reset()));
     }
@@ -165,7 +172,7 @@ public class LoadCalibrationRoutine {
         if (feeder == null) {
             return announce("SPINDEXER: skipped, no subsystem.");
         }
-        return calibrate(spindexerCal, feeder::cycle, feeder::stopCycle,
+        return calibrate(spindexerCal, feeder, feeder::cycle, feeder::stopCycle,
                 feeder::getSpindexerCurrent, feeder::getSpindexerVelocity, true)
                 .beforeStarting(Commands.runOnce(() -> feeder.getSpindexerLoad().reset()));
     }
@@ -175,7 +182,7 @@ public class LoadCalibrationRoutine {
         if (feeder == null) {
             return announce("FEEDER: skipped, no subsystem.");
         }
-        return calibrate(feederCal, feeder::load, feeder::stopLoad,
+        return calibrate(feederCal, feeder, feeder::load, feeder::stopLoad,
                 feeder::getFeederCurrent, feeder::getFeederVelocity, true)
                 .beforeStarting(Commands.runOnce(() -> feeder.getFeederLoad().reset()));
     }
@@ -197,7 +204,7 @@ public class LoadCalibrationRoutine {
         }
 
         return Commands.either(
-                calibrate(shooterCal, shooter::runShooter, shooter::stopShooter,
+                calibrate(shooterCal, shooter, shooter::runShooter, shooter::stopShooter,
                         shooter::getShooterCurrent, shooter::getMeasuredRPM, false)
                         .beforeStarting(Commands.runOnce(() -> shooter.getFlywheelLoad().reset())),
                 announce("SHOOTER: skipped, hub interlock inactive so the flywheel will not spin. "

@@ -199,7 +199,28 @@ class ContainerWiringTest {
       assertNotNull(RebuiltContainer.LOAD_CALIBRATOR.calibrateSpindexer());
       assertNotNull(RebuiltContainer.LOAD_CALIBRATOR.calibrateFeeder());
       assertNotNull(RebuiltContainer.LOAD_CALIBRATOR.calibrateShooter());
+      assertNotNull(RebuiltContainer.LOAD_CALIBRATOR.full());
     });
+  }
+
+  @Test
+  @Order(9)
+  @DisplayName("Each load calibration owns the mechanism it is measuring")
+  void loadCalibrationOwnsItsMechanism() {
+    // A phase that does not require its subsystem still runs and still reports numbers, but an
+    // operator holding a button changes what is being measured without the routine noticing. The
+    // requirement makes that an interruption rather than silent corruption.
+    assertTrue(RebuiltContainer.LOAD_CALIBRATOR.calibrateIntake().getRequirements()
+        .contains(RebuiltContainer.INTAKE), "intake calibration must own the intake");
+
+    assertTrue(RebuiltContainer.LOAD_CALIBRATOR.calibrateSpindexer().getRequirements()
+        .contains(RebuiltContainer.FEEDER), "spindexer calibration must own the feeder subsystem");
+
+    assertTrue(RebuiltContainer.LOAD_CALIBRATOR.calibrateFeeder().getRequirements()
+        .contains(RebuiltContainer.FEEDER), "feeder calibration must own the feeder subsystem");
+
+    assertTrue(RebuiltContainer.LOAD_CALIBRATOR.calibrateShooter().getRequirements()
+        .contains(RebuiltContainer.SHOOTER), "shooter calibration must own the shooter");
   }
 
   @Test

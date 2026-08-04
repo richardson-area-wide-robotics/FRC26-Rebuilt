@@ -22,21 +22,32 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 5 | Auto-calibration | ~4 m clear, tags visible | 20 min |
 | 6 | Manoeuvre suite | Large clear space | 20–60 min |
 | 7 | Localisation states | Practice field | 20 min |
-| 8 | Tuning | Time and patience | open-ended |
+| 8 | **Traction / drive current limit** | Wall, carpet, good battery | 10 min |
+| 9 | **Load thresholds** — piece and jam detection | Blocks, ~20 game pieces, a helper | 15 min |
+| 10 | Tuning | Time and patience | open-ended |
+
+Steps 8 and 9 are independent of everything above them. If the field is busy, do them
+first — step 8 needs only a wall and step 9 only blocks.
 
 ### Bring to the shop
 
 - **Tape measure** — module spacing (decision 1), camera position, bump band edges
 - **Scale** if you want to re-check the 47.6272 kg in `settings.json`
-- **Blocks** — step 2 will not be skipped
+- **Blocks** — steps 2 and 9 will not be skipped
+- **~20 game pieces** for step 9, and **a second person** to feed them
+- **A good battery** for step 8 — a sagging pack under-reports the traction limit
 - **A notebook**, or willingness to pull the WPILOG off the USB stick afterwards
 
 ### Data to capture before you leave
 
-The calibrator prints a paste-ready block; keep it. Also worth recording:
+The calibrators print paste-ready blocks; keep all of them. Also worth recording:
 `Calibration/Auto/WheelScale`, `Calibration/Auto/SteerOffsetDeg`,
-`Calibration/Auto/ModuleKvSpreadPercent`, both `Acceptance/*/TotalErrorMm` figures, and
-`Calibration/Maneuvers/Summary/*`.
+`Calibration/Auto/ModuleKvSpreadPercent`, both `Acceptance/*/TotalErrorMm` figures,
+`Calibration/Maneuvers/Summary/*`, `TractionCalibration/*` and `LoadCalibration/*/*`.
+
+**Also grab `Shooter/Sensors/AnalogRPM`.** It should read 0 — that channel was being used as
+the flywheel's velocity source and there is no analog sensor on either shooter motor. If it
+reads anything but 0, someone fitted one and that needs knowing.
 
 ---
 
@@ -282,7 +293,102 @@ Both fall back to `MANUAL` if the pose is untrustworthy, so if neither ever enga
 
 ---
 
-## 8. Tuning
+## 8. Traction — the drive current limit
+
+**Robot square against a wall, on carpet, on a good battery.** Schedule
+`RebuiltContainer.getTractionCalibrationCommand()`.
+
+It pushes at full output while stepping the drive current limit from 20 A upward in 5 A steps,
+stopping the moment the wheels break loose. Each step is 0.75 s of pushing with 2.5 s of
+cooldown, so about a minute in total.
+
+**What it is measuring.** Against a wall the robot cannot move, so the wheels either grip and
+stay still or slip and spin. Wheels turning while the chassis stays put is slip. That second
+half matters: without it, driving away from the wall would read as the most convincing slip in
+the sweep, which is why the run **aborts and reports no number** if the pose moves more than
+10 cm.
+
+**Why the limit belongs below the traction limit.** Not only to protect motors. Below it the
+wheels physically cannot slip under their own torque, so encoder distance always corresponds to
+ground travelled — which is the same error budget as the 1″ / 10 ft spec in step 5, arriving
+through the throttle instead of through the wheel diameter. Above it, hard acceleration spins
+the wheels and the pose estimate gains error nothing knows to expect.
+
+Paste the recommendation into `SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT`. The limits applied
+during the run **do not persist** — a power cycle restores whatever the code says, so an
+interrupted run cannot leave the robot on a limit nobody chose.
+
+### Reading the report
+
+| Line says | Meaning |
+| --- | --- |
+| `gripped` | Limit was binding, wheels held. Keep going |
+| `SLIPPED` | Traction limit found. Sweep stops here |
+| `gripped, but limit not binding` | Current never reached the limit that was set, so the limit is not what held it down. **Check the battery** |
+| `INVALID, robot moved …` | Not against the wall. Reposition and re-run |
+
+**Watch the breaker warning.** The recommendation is *per motor* and there are four of them.
+70 A per motor is 280 A against a 120 A main breaker. The breaker is thermal so short pushes
+survive, but it is not a limit the drivetrain can hold — if the robot browns out in pushing
+matches, this is the first number to lower.
+
+**Expect a low-ish number.** On carpet with 3″ wheels and this robot's weight, traction is
+likely to break somewhere in the 35–55 A range. If it never slips up to 80 A, the report says
+so and recommends the cap.
+
+---
+
+## 9. Load thresholds — piece and jam detection
+
+**Robot on blocks, ~20 game pieces, and a second person.** Schedule
+`RebuiltContainer.getLoadCalibrationCommand()` for all four mechanisms, or
+`getIntakeLoadCalibrationCommand()` for just the intake.
+
+Every value in `RebuiltConstants.LoadConstants` is currently reasoned, not measured. This
+replaces them with numbers off the actual robot. Each mechanism runs three phases, announced on
+the console as they start:
+
+| Phase | Duration | What you do |
+| --- | --- | --- |
+| Empty | 4 s | Nothing. Keep hands and pieces clear |
+| Loaded | 8 s | **Feed pieces through continuously.** Gaps are fine and expected |
+| Obstructed | 2 s | Hold the mechanism so it cannot move product |
+
+Order is intake → spindexer → feeder → shooter, which is the order pieces travel, so a piece
+fed for one phase is roughly where it needs to be for the next.
+
+**The shooter has no obstructed phase.** Obstructing a flywheel by hand is how people lose
+fingers, and a wheel carrying that much momentum will throw or shear whatever holds it. Its jam
+threshold is inferred from the loaded phase instead, and the report says `INFERRED` rather than
+implying it was measured.
+
+### Reading the report
+
+Each mechanism gets one line. The verdicts that matter:
+
+- **A pasteable line** — `WORK_EXCESS_AMPS = …; EXPECTED_RPM = …; jam fraction …`. Paste all
+  three into `LoadConstants`.
+- **`NOT VIABLE`** — a piece does not load that mechanism enough to see in current. **Do not
+  paste anything.** No threshold exists that separates loaded from empty, and one invented
+  anyway would misfire all match. This is a real possibility for a lightly-loaded roller, and
+  it is much better to learn it here.
+- **`INCOMPLETE`** — not enough samples, usually because too few pieces went through. Re-run
+  that mechanism and feed harder.
+
+The report also states whether each jam threshold was **measured** (obstructed phase run,
+threshold sits between two measured populations) or **inferred** (derived only from how far a
+working mechanism slows, which says nothing about how far a stuck one does).
+
+### While you are there
+
+`JamClearing` automates the jostling that is currently done by hand — Back clears the whole
+path, Start jostles the intake. Both are bounded and escalating: three attempts at increasing
+amplitude, then it gives up rather than pumping a mechanism that is not going to free. Try each
+with a piece deliberately wedged and confirm it stops on its own.
+
+---
+
+## 10. Tuning
 
 Set `TunableNumber.TUNING_ENABLED = true`, redeploy. Shooter `kP`/`kI`/`kD` appear under `Tuning/`
 and reconfigure only on change — no flash wear, no CAN flood.
@@ -306,7 +412,10 @@ Highest-value targets, in order:
 
 ## Before you pack up
 
-- [ ] Paste-ready calibration report saved somewhere
+- [ ] Paste-ready calibration reports saved somewhere — drivetrain, traction, and load
+- [ ] `LoadConstants` updated, or the NOT VIABLE mechanisms noted as such
+- [ ] `SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT` updated from the traction sweep
+- [ ] `Shooter/Sensors/AnalogRPM` confirmed reading 0
 - [ ] Decisions 1 and 2 resolved, or at least measured
 - [ ] `settings.json` and `CommonConstants` reconciled — then tighten the two
       `KNOWN_*_DIVERGENCE` constants in `PathPlannerSettingsConsistencyTest` to zero
@@ -333,6 +442,15 @@ verify them** — this list is the honest measure of how much of this code has m
 - Whether the intake deploy soft limits (0–11 rotations) match real travel
 - All calibration figures — the routines are tested against synthetic data with known answers,
   but have never seen a real robot
+- Every value in `LoadConstants` — reasoned, not measured (step 9)
+- Whether a game piece is visible in current at all on each mechanism. It is assumed, and step 9
+  is what proves or disproves it per mechanism
+- The traction limit, and therefore whether the applied 50 A can already break traction (step 8)
+- The four `CONFIRM` motors in `RebuiltConstants.CanIds` — controller types are read from code and
+  certain, the motors behind them are not
+- That `Shooter/Sensors/AnalogRPM` reads 0. The flywheel's velocity source was reading an analog
+  sensor that is almost certainly not fitted; it now reads the encoder, but the old channel is
+  still logged so this can be confirmed rather than assumed
 
 ---
 

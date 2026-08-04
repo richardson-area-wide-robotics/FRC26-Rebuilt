@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-04
 **Author:** Claude (with Stuart Rampy)
-**Branch:** `StuartRevisions` @ `404cbe2` — 10 commits off `main` (`23bf8b1`)
+**Branch:** `StuartRevisions` @ `840b2c5` — 14 commits off `main` (`23bf8b1`)
 **Worktree:** `~/FRC/FRC26-Rebuilt-worktrees/StuartRevisions`
 **Status:** Not pushed. `main` untouched. Nothing has run on hardware.
 
@@ -16,15 +16,17 @@ telemetry was discarded, and every autonomous path ran at full throttle regardle
 velocity profile. All 25 are fixed. On top of that: AprilTag localisation is wired up, an
 AprilTag-driven drivetrain auto-calibrator was built around the 10 ft / 1 inch accuracy
 requirement, a 25-manoeuvre validation catalogue was added, and two localisation-driven robot
-states were implemented. Test count went from 3 to 286. **No part of it has touched a robot** —
-that is tomorrow's job, and `SHOP_RUNBOOK.md` is the script for it.
+states were implemented. Then game piece and jam detection from motor current, with calibration
+routines for both those thresholds and for the drive current limit. Test count went from 3 to
+365. **No part of it has touched a robot** — that is tomorrow's job, and `SHOP_RUNBOOK.md` is the
+script for it.
 
 | | |
 | --- | --- |
-| Commits | 10 |
-| Files changed | 63 (+11,133 / −597) |
-| Source | 62 files / 7,598 lines |
-| Tests | 24 files / 4,175 lines / **286 tests, 0 failing** |
+| Commits | 14 |
+| Files changed | 78 (+15,790 / −659) |
+| Source | 70 files |
+| Tests | 29 files / **365 tests, 0 failing** |
 | Build | clean, zero warnings |
 | Simulation | reaches `startup complete` |
 | Hardware verification | **none** |
@@ -52,6 +54,24 @@ feedback never described the robot.
 The rest — string identity on the FMS message, integer division in the feedforward, a 0.6
 deadband that was never applied, `stop()` methods that didn't stop, commented-out soft limits,
 duplicate CAN ID declarations — are all in the artifact and the commit messages.
+
+### A fourth, found later while wiring up shooter current
+
+**The flywheel's velocity source was a sensor that isn't installed.**
+`Shooter.getMeasuredRPM()` read `motor1.getInputs().analogVelocity`. In PurpleLib that field is
+populated from `SparkBase.getAnalog().getVelocity()` — the analog sensor on the SPARK's **data
+port**, not the motor encoder. There is no analog sensor on either shooter motor, so on the real
+robot it returned 0.
+
+The flywheel still span correctly: the SPARK runs its velocity loop against its own primary
+encoder internally and never consults that field. What broke was everything built on top of it.
+`isAtTargetRPM()` compared the target against 0, so it could never be true, and any
+wait-until-up-to-speed gate would have hung forever. `Shooter/Activity/RPMError` logged the full
+setpoint as error for the whole match.
+
+Now reads `encoderVelocity`. **Both fields are still logged** under `Shooter/Sensors/` so the
+shop session can confirm the analog channel really is dead rather than take this write-up's word
+for it — the claim rests on reading decompiled library bytecode, not on measuring the robot.
 
 ---
 
@@ -149,6 +169,40 @@ committing ~1 m early. Bump outranks aiming. Both supply **heading and shooter s
 translation always stays with the driver, and touching the rotation stick overrides instantly. Both
 fall back to `MANUAL` when the pose is untrustworthy.
 
+**Game piece and jam detection from current.** The robot has no game piece sensor —
+`EasyBreakBeam` exists in the framework and is never instantiated — so current is the sensor
+already fitted. `MotorLoadMonitor` covers intake rollers, spindexer, feeder and flywheel.
+
+The central point: **current alone is ambiguous.** A roller drawing 25 A might be ingesting a
+piece, might be jammed, or might just be on a fresh battery. Two things make it work — a baseline
+learned continuously while running *unloaded*, so what is measured is the excess; and velocity to
+disambiguate, because high current with healthy speed is work while high current with collapsed
+speed is a jam. No amount of current filtering achieves that second distinction alone.
+
+`GamePieceCounter` adds sustain and refractory guards so one piece counts once. `JamClearing`
+automates the jostling currently done by hand: three attempts at escalating amplitude, re-checking
+between each, then giving up rather than pumping a mechanism that is not going to free.
+`Intake.jiggleItALittleCommand()` was an unbounded `repeatingSequence` — acceptable behind a held
+button, wrong for anything a sensor can trigger, so it is bounded now.
+
+**Three calibrators for the thresholds**, because every one of them was reasoned rather than
+measured and shipping guesses in a detector is how a piece count drifts mid-match:
+
+- `LoadCalibrator` / `LoadCalibrationRoutine` — empty phase, loaded phase, obstructed phase, per
+  mechanism. The interesting problem is knowing which loaded samples had a piece in them without
+  the sensor being calibrated; samples above the empty phase's noise floor are attributed to a
+  piece. That bootstrap guarantees the selected population clears the floor, so **viability is
+  judged on the unselected phase mean instead** — otherwise every mechanism would report as
+  viable, including one where pieces are invisible. A mechanism that cannot be detected is
+  reported `NOT VIABLE` rather than given a number.
+- `TractionCalibrator` — pushes into a wall, steps the drive current limit up until the wheels
+  break loose, caps at 80 A. Slip is wheels turning while the chassis stays put; without that
+  second half, driving away from the wall would read as slip, so a run where the pose moves
+  aborts with **no recommendation at all**. The limit belongs below the traction limit not only
+  for the motors: below it the wheels cannot slip under their own torque, so encoder distance
+  always corresponds to ground travelled. Same error budget as the 1″ / 10 ft spec, arriving
+  through the throttle instead of the wheel diameter.
+
 **Diagnostics.** `ExpectationMonitor` evaluates six invariants every loop under `Expectations/` —
 including one that fails if the driver commands motion and no module moves, which is the automated
 form of the defect that started all this. `ValidationSuite` + `RebuiltValidation` provide a
@@ -208,10 +262,18 @@ to be tightened to zero rather than left tolerating a regression.
 4. **`ManeuverRunner` scoring** — expected-pose maths is tested, the along/cross decomposition of
    the result is not.
 5. **Drivetrain physics simulation** — see above.
+6. **`applyDriveGains` / `applyTurnGains` are wired to nothing.** Known-open since review #3. The
+   new `applyDriveCurrentLimit` alongside them *is* used, by the traction sweep, so the pattern is
+   now proven — connecting the gain setters to `TunableNumber` is a small job someone should do.
+7. **`LoadCalibrationRoutine` phase routing** — the analysis is well covered, and composition and
+   subsystem ownership are both asserted, but nothing verifies that each phase's samples land in the
+   right accumulator, or that a mechanism's own current supplier is the one wired to it. A
+   copy-paste of `feeder::getFeederCurrent` into the spindexer calibrator would pass every test
+   here. Closing it needs a fake subsystem returning scripted currents.
 
 ---
 
-## Two mistakes I made, for the record
+## Three mistakes I made, for the record
 
 **A boot-killing regression.** Adding subsystem requirements to the intake commands put two
 commands requiring `INTAKE` into one parallel composition, which WPILib rejects at construction —
@@ -225,8 +287,16 @@ tests missed it because they injected noise-free synthetic samples. Now noise-co
 measured standard deviation, with the raw ratio still exposed for comparison, and a test that
 injects real noise.
 
-Both are the same lesson: a test that cannot fail proves nothing, and synthetic data hides the
-errors that only appear in real data.
+**A baseline that lied during warm-up.** `MotorLoadMonitor` learned its idle current with a
+`LinearFilter.movingAverage(100)`. That ramps up from zero, so for its first window the baseline
+reads far too low — measured at 4.6 A against a true 8 A idle after 60 samples. Excess is
+baseline-relative, so an artificially low baseline inflates it and the monitor reports game pieces
+that are not there for the first seconds of every run. Replaced with an exponential average seeded
+from the first raw reading, which starts at the right value and has no warm-up artefact. My own
+tests caught this one before it left the branch.
+
+All three are the same lesson: a test that cannot fail proves nothing, and synthetic or
+zero-initialised data hides the errors that only appear in real data.
 
 ---
 
