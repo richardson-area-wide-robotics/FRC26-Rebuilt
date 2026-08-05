@@ -80,12 +80,17 @@ public final class VisionConstants {
    */
   public static final Transform3d ROBOT_TO_CAMERA = new Transform3d(
       new Translation3d(
-          Units.inchesToMeters(12.0),
-          Units.inchesToMeters(0.0),
-          Units.inchesToMeters(8.0)),
+          // From CAD, measured from the centre of the four wheel contact patches at floor level.
+          Units.inchesToMeters(2.808),
+          Units.inchesToMeters(6.267),
+          Units.inchesToMeters(25.271)),
       new Rotation3d(
           0.0,
-          Units.degreesToRadians(-15.0),
+          // -5.5 deg = tilted UP by 5.5. CAD gave the magnitude; the sign is inferred from optics and
+          // is worth the 30-second check in step 0d. At 4 m a downward 5.5 puts the optical axis
+          // 0.26 m off the floor, which is carpet, not AprilTags. Upward puts it at 1.03 m, climbing
+          // toward tag height. Down is not a plausible aim for this camera.
+          Units.degreesToRadians(-5.5),
           Units.degreesToRadians(CAMERA_YAW_DEGREES)));
 
   /**

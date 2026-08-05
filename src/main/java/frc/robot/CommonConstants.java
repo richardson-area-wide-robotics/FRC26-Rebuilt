@@ -181,11 +181,26 @@ public final class CommonConstants {
     public static final double kMaxSpeedMetersPerSecond = 4.8;
     public static final double kMaxAngularSpeed = 2 * Math.PI; // radians per second
 
-    // Chassis configuration
-    public static final double kTrackWidth = edu.wpi.first.math.util.Units.inchesToMeters(26.5);
-    // Distance between centers of right and left wheels on robot
-    public static final double kWheelBase = Units.inchesToMeters(26.5);
-    // Distance between front and back wheels on robot
+    /**
+     * Distance between the left and right <b>module rotation axes</b>, in metres.
+     *
+     * <p><b>23.5 in, measured in CAD.</b> This read 26.5 in, which is the <b>frame perimeter</b>, not
+     * the module spacing — the modules sit 1.5 in inboard of each rail, so 26.5 &minus; 2&times;1.5 =
+     * 23.5. The two numbers differ by exactly the inset, which is why the wrong one looked right.
+     *
+     * <p>That was a <b>12.8% kinematics error</b>, and it is not a subtle one. The kinematics converts
+     * chassis motion into module motion using this radius, so an over-large value makes the robot
+     * rotate faster than commanded and mixes rotation into translation whenever both are asked for at
+     * once. It reads as a tuning problem and no gain change fixes it.
+     *
+     * <p>Note this is not the same error as the PathPlanner disagreement that was being chased — that
+     * was 6.5 mm per side between 26.5 and 27.01 in. Both of those were describing the frame. CAD says
+     * neither was the module spacing.
+     */
+    public static final double kTrackWidth = Units.inchesToMeters(23.5);
+
+    /** Distance between the front and rear module rotation axes. Square chassis, so identical. */
+    public static final double kWheelBase = Units.inchesToMeters(23.5);
     public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
         new Translation2d(kWheelBase / 2, kTrackWidth / 2),
         new Translation2d(kWheelBase / 2, -kTrackWidth / 2),

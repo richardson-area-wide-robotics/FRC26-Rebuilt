@@ -249,12 +249,15 @@ class DriveCharacterizationTest {
     }
 
     @Test
-    @DisplayName("Geometric radius matches the 26.5 inch square frame")
+    @DisplayName("Geometric radius matches the 23.5 inch module square")
     void geometricRadiusMatchesFrame() {
-      double side = 0.6731; // 26.5 in
+      double side = 23.5 * 0.0254; // module axes, from CAD — not the 26.5 in frame perimeter
       double expected = Math.hypot(side / 2, side / 2);
       assertEquals(expected, DriveCharacterization.geometricDriveRadius(side, side), 1e-9);
-      assertEquals(0.4759, expected, 1e-4);
+      // 0.4221 m. Was 0.4759, which was the radius of the 26.5 in FRAME — a 12.8% over-estimate of
+      // the drive radius, and the figure the gyro-scale and effective-radius checks are measured
+      // against.
+      assertEquals(0.4221, expected, 1e-4);
     }
   }
 

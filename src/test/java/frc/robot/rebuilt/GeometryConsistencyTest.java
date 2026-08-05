@@ -1,6 +1,7 @@
 package frc.robot.rebuilt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.math.util.Units;
@@ -59,26 +60,47 @@ class GeometryConsistencyTest {
   }
 
   @Test
-  @DisplayName("Camera translation is still a placeholder, and says so")
-  void cameraTranslationIsUnmeasured() {
-    // Not a failure — a reminder with teeth. Once the real numbers are in, this test should be
-    // deleted rather than loosened, because at that point it has nothing left to protect.
+  @DisplayName("The camera transform holds the CAD numbers, not the old placeholder")
+  void cameraTransformIsFromCad() {
     double x = VisionConstants.ROBOT_TO_CAMERA.getX();
+    double y = VisionConstants.ROBOT_TO_CAMERA.getY();
     double z = VisionConstants.ROBOT_TO_CAMERA.getZ();
 
-    boolean stillPlaceholder =
-        Math.abs(x - Units.inchesToMeters(12.0)) < 1e-9
-            && Math.abs(z - Units.inchesToMeters(8.0)) < 1e-9;
+    // From CAD, relative to the centre of the four wheel contact patches at floor level.
+    assertEquals(Units.inchesToMeters(2.808), x, 1e-6);
+    assertEquals(Units.inchesToMeters(6.267), y, 1e-6);
+    assertEquals(Units.inchesToMeters(25.271), z, 1e-6);
 
-    if (stillPlaceholder) {
-      System.out.println(
-          "[geometry] ROBOT_TO_CAMERA translation is still the 12in/8in placeholder. "
-              + "Step 0c of SHOP_RUNBOOK.md is the procedure for measuring it.");
-    }
+    // The old placeholder, kept as an explicit negative so a revert is caught rather than merely
+    // being invisible.
+    assertNotEquals(Units.inchesToMeters(12.0), x, "12 in x was the placeholder");
+    assertNotEquals(Units.inchesToMeters(8.0), z, "8 in z was the placeholder");
 
-    // What must hold either way: the camera is somewhere physically possible on a 26.5in robot.
-    assertTrue(Math.abs(x) < 0.6 && Math.abs(VisionConstants.ROBOT_TO_CAMERA.getY()) < 0.6,
-        "camera cannot be further than 0.6 m from centre on a 26.5 in frame");
+    // A positive y means the camera sits to the robot's LEFT, which is the same side the +90 yaw
+    // says it looks out of. Not proof of the sign, but the two agreeing is worth asserting: a
+    // camera on the left looking right would be unusual enough to want deliberate confirmation.
+    assertTrue(y > 0, "CAD puts the camera left of centre");
+    assertTrue(GeometryConstants.CAMERA_YAW_OFFSET_DEGREES > 0,
+        "camera is left of centre and should be looking out that side; if the yaw is actually -90 "
+            + "then the camera looks across the robot, which wants confirming rather than assuming");
+
+    // Physically possible on this robot at all.
+    assertTrue(Math.hypot(x, y) < 0.5,
+        "camera cannot be further than 0.5 m from centre on a 26.5 in frame");
     assertTrue(z > 0 && z < 1.4, "camera height must be above the floor and under the height limit");
+  }
+
+  @Test
+  @DisplayName("Camera pitch is negative, i.e. aimed up toward where tags live")
+  void cameraPitchAimsUp() {
+    double pitchDegrees =
+        Units.radiansToDegrees(VisionConstants.ROBOT_TO_CAMERA.getRotation().getY());
+
+    // CAD gave 5.5 degrees as a magnitude; the sign was inferred. Down would put the optical axis
+    // 0.26 m off the floor at 4 m, which is carpet — tags sit around 1.2 to 1.5 m. Asserted so that
+    // if someone flips it, they do so deliberately.
+    assertTrue(pitchDegrees < 0,
+        "pitch must be negative (aimed up). Positive aims at the floor, got " + pitchDegrees);
+    assertEquals(-5.5, pitchDegrees, 0.01);
   }
 }

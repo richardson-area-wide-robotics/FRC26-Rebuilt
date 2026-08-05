@@ -143,8 +143,9 @@ public class DriveSysId {
     /**
      * Metres reserved for the robot's own length plus stopping distance.
      *
-     * <p>The robot is a 26.5 in frame, so about 0.7 m, and it needs somewhere to stop after a run
-     * ends. 2.0 m of the carpet is therefore not runway.
+     * <p>The robot is a 26.5 in frame plus bumpers, which it is always tested with, so about 33 in or
+     * 0.84 m of footprint — and it needs somewhere to stop after a run ends. 2.0 m of the carpet is
+     * therefore not runway.
      */
     public static final double RESERVED_METERS = 2.0;
 

@@ -220,10 +220,16 @@ class ConstantsRegressionTest {
   }
 
   @Test
-  @DisplayName("Chassis is square, matching the measured 26.5 inch frame")
+  @DisplayName("Chassis is square, matching the CAD module spacing — not the frame perimeter")
   void chassisGeometryIsSquare() {
-    assertEquals(Units.inchesToMeters(26.5), DriveConstants.kTrackWidth, 1e-9);
-    assertEquals(Units.inchesToMeters(26.5), DriveConstants.kWheelBase, 1e-9);
+    // 23.5 in between MODULE ROTATION AXES, from CAD. This asserted 26.5 in, which is the frame
+    // perimeter — the modules sit 1.5 in inboard of each rail. Asserting the frame size here is what
+    // let a 12.8% kinematics error look verified.
+    assertEquals(Units.inchesToMeters(23.5), DriveConstants.kTrackWidth, 1e-9);
+    assertEquals(Units.inchesToMeters(23.5), DriveConstants.kWheelBase, 1e-9);
+
+    assertNotEquals(Units.inchesToMeters(26.5), DriveConstants.kTrackWidth,
+        "26.5 in is the frame perimeter, not the module spacing");
   }
 
   @Test

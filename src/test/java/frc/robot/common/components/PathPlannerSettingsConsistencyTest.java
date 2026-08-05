@@ -38,15 +38,21 @@ class PathPlannerSettingsConsistencyTest {
   /**
    * Known divergence in module location, in metres.
    *
-   * <p>PathPlanner has the modules at ±0.343 m, implying 0.686 m (27.01 in) between centres. The
-   * code has 26.5 in (0.6731 m). That is 6.5 mm per side.
+   * <p><b>Zero, and it should stay zero.</b> Both sources now carry the CAD figure of 23.5 in
+   * between module rotation axes, so ±0.29845 m.
+   *
+   * <p>The history is worth keeping, because both of the old values were wrong in the same way. The
+   * code said 26.5 in and PathPlanner implied 27.01 in, and the 6.5 mm per side between them was
+   * being chased as the discrepancy. CAD showed <b>neither described the module spacing</b> — 26.5 in
+   * is the frame perimeter and the modules sit 1.5 in inboard of each rail. The real error was 12.8%,
+   * not 1.9%, and it was hidden by two sources agreeing closely on the wrong quantity.
    *
    * <p><b>Decision needed:</b> measure the frame and make both match. 6.5 mm of module position
    * error skews the kinematics slightly, so commanded rotation and translation bleed into each
    * other — small, but it is exactly the sort of term that eats a 1 inch budget alongside the
    * others. Whichever figure is right, the other must change.
    */
-  private static final double KNOWN_MODULE_LOCATION_DIVERGENCE = 0.0065;
+  private static final double KNOWN_MODULE_LOCATION_DIVERGENCE = 0.0;
 
   /**
    * Known divergence in drive current limit, in amps.
