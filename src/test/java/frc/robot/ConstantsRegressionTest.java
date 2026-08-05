@@ -18,6 +18,7 @@ import frc.robot.CommonConstants.SwerveConstants;
 import frc.robot.rebuilt.RebuiltConstants.CanIds;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
 import frc.robot.rebuilt.RebuiltConstants.LoadConstants;
+import frc.robot.rebuilt.RebuiltConstants.MechanismRatios;
 import frc.robot.rebuilt.RebuiltConstants.ShooterConstants;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -110,6 +111,68 @@ class ConstantsRegressionTest {
             / ModuleConstants.kDrivingMotorReduction;
     assertEquals(expected, ModuleConstants.kDriveWheelFreeSpeedRps, 1e-9);
     assertTrue(ModuleConstants.kDriveWheelFreeSpeedRps > 0);
+  }
+
+  @Test
+  @DisplayName("The drive pinion tooth count is the single source of truth for the reduction")
+  void pinionToothCountIsNotDuplicated() {
+    // Two places name the pinion: ModuleConstants uses it to compute the reduction, and
+    // MechanismRatios carries it as the CAD-confirmable figure. If they disagree, one of them is
+    // describing a robot that does not exist — and the failure mode is identical to the wrong-motor
+    // free speed bug: a plausible number, a wrong feedforward, and a closed loop fighting it.
+    assertEquals(ModuleConstants.kDrivingMotorPinionTeeth,
+        MechanismRatios.DRIVE_PINION_TEETH,
+        "the pinion tooth count must agree between ModuleConstants and MechanismRatios");
+  }
+
+  @Test
+  @DisplayName("A different pinion would move the free speed enough to matter")
+  void pinionChoiceIsWorthConfirming() {
+    // Documents why DRIVE_PINION_TEETH is marked CONFIRM rather than assumed. REV ships 12T, 13T and
+    // 14T, and they are not close: swapping 14T for 12T changes free speed by 17%, which is the same
+    // order as the wrong-motor bug and fails the same way.
+    double circumference = ModuleConstants.kWheelCircumferenceMeters;
+    double motorRps = ModuleConstants.kDrivingMotorFreeSpeedRps;
+
+    double with12 = motorRps * circumference / ((45.0 * 22) / (12 * 15));
+    double with14 = motorRps * circumference / ((45.0 * 22) / (14 * 15));
+
+    assertTrue(with14 / with12 > 1.14,
+        "12T vs 14T should differ by more than 14%, got " + (with14 / with12));
+    assertEquals(with14, ModuleConstants.kDriveWheelFreeSpeedRps, 1e-9,
+        "the code is currently built on the 14T assumption");
+  }
+
+  @Test
+  @DisplayName("Expected mechanism speeds are derived from demand, not typed in")
+  void expectedSpeedsTrackTheirDemand() {
+    // These used to be a flat 5000 for all three, which was 26% low for the feeder. Deriving them
+    // means changing a roller speed cannot leave the jam threshold calibrated for the old demand.
+    // A mechanism commanded harder must expect more speed — if this ever fails, someone has pinned a
+    // literal back in.
+    assertTrue(LoadConstants.FEEDER_EXPECTED_RPM > LoadConstants.INTAKE_EXPECTED_RPM,
+        "the feeder runs at full demand and the intake at 0.75, so the feeder must expect more; "
+            + "feeder=" + LoadConstants.FEEDER_EXPECTED_RPM
+            + " intake=" + LoadConstants.INTAKE_EXPECTED_RPM);
+
+    // The spindexer runs at full demand too but on the slower motor, so it must sit between them.
+    assertTrue(LoadConstants.SPINDEXER_EXPECTED_RPM < LoadConstants.FEEDER_EXPECTED_RPM,
+        "a NEO 2.0 at full demand cannot outrun a Vortex at full demand");
+    assertTrue(LoadConstants.SPINDEXER_EXPECTED_RPM > LoadConstants.INTAKE_EXPECTED_RPM,
+        "a NEO 2.0 at full demand should beat a Vortex at 0.75 demand");
+  }
+
+  @Test
+  @DisplayName("Deploy rotations convert to arm degrees, and round-trip")
+  void deployConversionRoundTrips() {
+    // The conversion is the identity until the reduction is read off CAD, which is deliberate: it
+    // changes no behaviour, it just makes the arm's travel expressible in a unit a human can check
+    // against a drawing instead of opaque motor rotations.
+    double rotations = IntakeConstants.DEPLOY_POSITION_ROTATIONS;
+    double degrees = MechanismRatios.deployRotationsToDegrees(rotations);
+
+    assertEquals(rotations, MechanismRatios.deployDegreesToRotations(degrees), 1e-9);
+    assertTrue(degrees > 0, "deployed position must be a positive travel from stowed");
   }
 
   @Test

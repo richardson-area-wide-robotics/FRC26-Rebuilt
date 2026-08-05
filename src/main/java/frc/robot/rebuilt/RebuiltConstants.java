@@ -135,6 +135,99 @@ public final class RebuiltConstants {
     }
   }
 
+  /**
+   * Gear and pulley reductions, from CAD or a tooth count on the robot.
+   *
+   * <p>These are the numbers that turn a motor into a mechanism, and they are the one category where
+   * <b>CAD is authoritative and a tape measure is useless</b> — you cannot measure a reduction, you
+   * count teeth. Everything here should come off the CAD or the BOM.
+   *
+   * <p>Two of them are load-bearing rather than documentation: the drive reduction feeds the
+   * feedforward, and the deploy reduction is what turns opaque motor rotations into arm degrees.
+   */
+  public static final class MechanismRatios {
+
+    /**
+     * CONFIRM FROM CAD — teeth on the MAXSwerve driving pinion.
+     *
+     * <p>REV ships 12T, 13T and 14T. The code assumes <b>14T</b>, and this is the single highest-risk
+     * unconfirmed number left on the robot, because it scales the drive reduction and therefore the
+     * feedforward and the top speed:
+     *
+     * <pre>
+     *   12T -> reduction 5.500, free speed 4.92 m/s
+     *   13T -> reduction 5.077, free speed 5.33 m/s
+     *   14T -> reduction 4.714, free speed 5.74 m/s   (assumed)
+     * </pre>
+     *
+     * <p>That is a 17% spread, which is the same order as the wrong-motor free speed bug and would
+     * fail in exactly the same way: plausible numbers, wrong feedforward, closed loop fighting it.
+     * <b>Count the teeth.</b> It lives in {@code CommonConstants.ModuleConstants} as
+     * {@code kDrivingMotorPinionTeeth} and a test pins the two together.
+     */
+    public static final int DRIVE_PINION_TEETH = 14;
+
+    /**
+     * FROM CAD — total reduction from the intake deploy motor to the arm, motor turns per arm turn.
+     *
+     * <p>Set this and {@code IntakeConstants} stops speaking in opaque motor rotations. The deploy
+     * target of 10 rotations and the soft limits of 0 to 11 currently mean nothing to a human, and
+     * "whether they match real travel" has been on the unverified list since the first review. With a
+     * reduction they convert to arm degrees and can simply be checked against the CAD travel.
+     *
+     * <p>Left at 1.0 until read off CAD, which makes {@link #deployRotationsToDegrees} the identity
+     * and changes no behaviour — the conversion is offered, not imposed.
+     */
+    public static final double INTAKE_DEPLOY_REDUCTION = 1.0;
+
+    /**
+     * FROM CAD — reduction from shooter motor to flywheel. Greater than 1 means geared down.
+     *
+     * <p>Does not affect the closed loop, which runs on the motor encoder, so the RPM presets in
+     * {@link ShooterConstants} are motor RPM either way and the range model is empirical. What it does
+     * give is a sanity check: motor RPM, this reduction and the flywheel diameter together predict the
+     * ball's exit speed, and if that comes out implausible for the shot distances the team actually
+     * makes then one of the three is wrong.
+     */
+    public static final double SHOOTER_REDUCTION = 1.0;
+
+    /** FROM CAD — flywheel diameter in metres. Used only for the exit-speed sanity check. */
+    public static final double SHOOTER_FLYWHEEL_DIAMETER_METERS = 0.1016;
+
+    /**
+     * @param motorRotations Deploy motor rotations.
+     * @return arm travel in degrees.
+     */
+    public static double deployRotationsToDegrees(double motorRotations) {
+      return motorRotations / INTAKE_DEPLOY_REDUCTION * 360.0;
+    }
+
+    /**
+     * @param armDegrees Desired arm travel in degrees.
+     * @return the motor rotations that produces it.
+     */
+    public static double deployDegreesToRotations(double armDegrees) {
+      return armDegrees / 360.0 * INTAKE_DEPLOY_REDUCTION;
+    }
+
+    /**
+     * @param motorRpm Shooter motor RPM.
+     * @return the ball's approximate exit speed in m/s.
+     *
+     *     <p>Surface speed of the flywheel, halved. A ball squeezed between a flywheel and a static
+     *     hood leaves at roughly half the wheel's surface speed, because the contact patch has the
+     *     wheel moving on one side and nothing moving on the other. Rough, but enough to tell a
+     *     plausible shooter from an impossible one.
+     */
+    public static double approximateExitSpeed(double motorRpm) {
+      double flywheelRps = motorRpm / SHOOTER_REDUCTION / 60.0;
+      return flywheelRps * Math.PI * SHOOTER_FLYWHEEL_DIAMETER_METERS / 2.0;
+    }
+
+    private MechanismRatios() {
+    }
+  }
+
   public static final class ShooterConstants {
     /** Closed-loop velocity gains for the flywheel leader. */
     public static final double kP = 0.00035;
@@ -218,51 +311,69 @@ public final class RebuiltConstants {
    * starts jostling itself mid-match.
    */
   public static final class LoadConstants {
+
+    /** Free speed of a NEO Vortex, RPM. Intake rollers, feeder and shooter. */
+    private static final double VORTEX_FREE_RPM = 6784.0;
+
+    /** Free speed of a NEO 2.0, RPM. Intake deploy and spindexer. */
+    private static final double NEO_2_0_FREE_RPM = 5676.0;
+
+    /**
+     * Fraction of free speed a mechanism actually reaches unloaded.
+     *
+     * <p>Gearing and belt drag, bearing friction, air resistance and bus voltage all take a cut, so
+     * nothing reaches its datasheet figure. 0.90 is a reasonable opening bid.
+     *
+     * <p><b>Erring low is the safe direction and that is why this is 0.90 rather than 0.95.</b> The
+     * jam threshold is a fraction of expected speed, so too low means jams take marginally longer to
+     * catch, while too high means a healthy mechanism reads as permanently slow and the robot starts
+     * clearing a jam that does not exist mid-match.
+     *
+     * <p>{@code MotorLoadMonitor} learns the real ratio at runtime anyway, so this only has to be
+     * close enough to behave sensibly before it has learned anything.
+     */
+    private static final double UNLOADED_SPEED_FRACTION = 0.90;
     /** MEASURE — amps above idle indicating a piece is moving through the intake rollers. */
     public static final double INTAKE_WORK_EXCESS_AMPS = 10.0;
 
     /**
-     * MEASURE — unloaded intake roller speed, in motor RPM.
+     * Expected unloaded intake roller speed, in motor RPM. <b>Derived, not guessed.</b>
      *
-     * <p>NEO Vortex, free speed 6784 RPM, run at {@code ROLLER_SPEED = 0.75}. So expect roughly
-     * 5,100 unloaded before drag, and this placeholder is about right by coincidence rather than
-     * by measurement.
+     * <p>NEO Vortex on a SPARK Flex, commanded at {@code ROLLER_SPEED}. Duty cycle scales speed
+     * roughly linearly, so free speed times demand times the drag allowance is the estimate. Works
+     * out near 4,580.
      *
-     * <p>Erring low is the safe direction: the jam threshold is a fraction of this, so too low
-     * means jams are detected less readily, while too high means a healthy roller reads as stuck
-     * and the robot jostles itself mid-match.
+     * <p>Derived rather than typed so that changing {@code ROLLER_SPEED} cannot silently leave the
+     * jam threshold calibrated for the old demand — which is exactly the kind of coupling that
+     * survives review because both numbers look individually reasonable.
      */
-    public static final double INTAKE_EXPECTED_RPM = 5000.0;
+    public static final double INTAKE_EXPECTED_RPM =
+        VORTEX_FREE_RPM * IntakeConstants.ROLLER_SPEED * UNLOADED_SPEED_FRACTION;
 
     /** MEASURE — amps above idle indicating a piece moving through the spindexer. */
     public static final double SPINDEXER_WORK_EXCESS_AMPS = 8.0;
 
     /**
-     * MEASURE — unloaded spindexer speed, in motor RPM.
+     * Expected unloaded spindexer speed, in motor RPM. <b>Derived, not guessed.</b>
      *
-     * <p>NEO 2.0 on a SPARK MAX, free speed 5676 RPM, run at {@code SPINDEXER_SPEED = 1.0}. So
-     * expect something a little under 5676 — this is 88% of free speed, plausible for a plate with
-     * drag on it.
-     *
-     * <p>This is one of only two NEO 2.0s on the robot; the other is the intake deploy.
+     * <p>NEO 2.0 on a SPARK MAX — one of only two on the robot, the other being the intake deploy —
+     * commanded at {@code SPINDEXER_SPEED}. Works out near 5,110.
      */
-    public static final double SPINDEXER_EXPECTED_RPM = 5000.0;
+    public static final double SPINDEXER_EXPECTED_RPM =
+        NEO_2_0_FREE_RPM * FeederConstants.SPINDEXER_SPEED * UNLOADED_SPEED_FRACTION;
 
     /** MEASURE — amps above idle indicating a piece moving through the feeder. */
     public static final double FEEDER_WORK_EXCESS_AMPS = 10.0;
 
     /**
-     * MEASURE — unloaded feeder speed, in motor RPM.
+     * Expected unloaded feeder speed, in motor RPM. <b>Derived, not guessed.</b>
      *
-     * <p>NEO Vortex, free speed 6784 RPM, run at {@code FEEDER_SPEED = 1.0}. So expect something a
-     * little under 6784; 5000 is only 74% of that, which is conservative rather than accurate.
-     *
-     * <p>Left conservative on purpose until measured, because the error directions are not
-     * symmetric. Too low and the jam threshold sits lower than it should, so jams take longer to
-     * catch. Too high and a healthy feeder reads as permanently slow, and the robot starts clearing
-     * a jam that does not exist during a match.
+     * <p>NEO Vortex on a SPARK Flex, commanded at {@code FEEDER_SPEED}. Works out near 6,110 — a
+     * long way from the flat 5,000 this used to carry, which was 26% low and would have put the jam
+     * threshold correspondingly low.
      */
-    public static final double FEEDER_EXPECTED_RPM = 5000.0;
+    public static final double FEEDER_EXPECTED_RPM =
+        VORTEX_FREE_RPM * FeederConstants.FEEDER_SPEED * UNLOADED_SPEED_FRACTION;
 
     /**
      * MEASURE — amps above idle indicating a game piece is passing through the flywheel.

@@ -11,8 +11,11 @@ Console tab without AdvantageScope: `[validate]`, `[calib]`, `[maneuver]`, `[sta
 each measurement is taken *from* and *to* — a wrong datum there produces confidently wrong poses,
 which is worse than no vision at all.
 
-**Start with 0c.** It takes two minutes, needs no tools, and the camera measurement in 0d depends on
-its answer.
+**Read 0-CAD first.** With the CAD you can skip 0a, 0b and 0d entirely — and CAD does the camera
+better than a tape measure can. 0-CAD also lists what CAD *cannot* give, which is what is left of the
+session, and includes the largest single term in the 10 ft error budget.
+
+**Then start with 0c.** Two minutes, no tools, and it is a convention question CAD cannot settle.
 
 **Every measurement assumes bumpers on**, since that is how this robot is always tested. Step 0b
 explains why that changes nothing about the numbers and everything about where you take them from.
@@ -25,7 +28,8 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 
 | Step | What | Needs | Rough time |
 | --- | --- | --- | --- |
-| 0 | **Five measurements** — origin, module spacing, shooter side, camera, bump | Tape, square, angle finder, PhotonVision UI | 45 min |
+| 0-CAD | **Pull what you can from CAD first** | Onshape | 20 min |
+| 0 | Whatever CAD cannot give — see 0-CAD | Tape, square, angle finder, PhotonVision UI | 10–45 min |
 | 1 | Deploy | Laptop | 5 min |
 | 2 | **On blocks** — 14-check self-test | Blocks, wheels clear | 10 min |
 | 3 | **Verify drive directions** | ~3 m clear floor | 10 min |
@@ -33,7 +37,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 5 | Auto-calibration | ~4 m clear, tags visible | 20 min |
 | 6 | Manoeuvre suite | Large clear space | 20–60 min |
 | 7 | Localisation states | Practice field | 20 min |
-| 8 | **Traction / drive current limit** | Wall, carpet, good battery | 10 min |
+| 8 | **Traction limit** and **ramp bog-down diagnosis** | Wall, carpet, good battery, a ramp, a tag | 20 min |
 | 9 | **Load thresholds** — piece and jam detection | Blocks, ~20 game pieces, a helper | 15 min |
 | 10 | **SysId feedforward** — the only source of kA | 28 ft of carpet, robot at one end | 10 min |
 | 11 | Tuning | Time and patience | open-ended |
@@ -47,8 +51,9 @@ intrinsics error becomes a 5% wheel-scale error against a total budget of 0.833%
 
 ### Bring to the shop
 
+- **The CAD open on a laptop.** See 0-CAD; it removes most of step 0
 - **Tape measure**, **masking tape**, a **carpenter's square**, a **marker**, and **string or a
-  chalk line** — step 0 needs all of them
+  chalk line** — for whatever CAD does not cover, and for the diagonal squareness check
 - A **digital angle finder or phone inclinometer** for camera pitch
 - **Bumpers on**, as always. Step 0b explains why that changes nothing about the numbers but
   everything about where you measure them from
@@ -84,6 +89,87 @@ will tell you it is active.
 **Also grab `Shooter/Sensors/AnalogRPM`.** It should read 0 — that channel was being used as
 the flywheel's velocity source and there is no analog sensor on either shooter motor. If it
 reads anything but 0, someone fitted one and that needs knowing.
+
+---
+
+## 0-CAD. What to take from CAD instead of measuring
+
+Having the CAD removes most of step 0 and does a **better** job of the hardest parts — nobody measures
+a lens pitch with a tape measure as well as a model does. But it is not a clean substitute, because
+**CAD describes the design and the robot is the build.** Three categories, and the third is the one
+worth reading carefully.
+
+### CAD replaces these outright
+
+| Number | Where it goes | How to get it |
+| --- | --- | --- |
+| Module positions | `DriveConstants.kTrackWidth` / `kWheelBase`, `settings.json` module offsets | Distance between the four module rotation axes. Settles the 26.50″ vs 27.01″ disagreement outright |
+| **Camera position and angle** | `VisionConstants.ROBOT_TO_CAMERA` | See the coordinate-frame note below. This is where CAD wins hardest |
+| **Moment of inertia about Z** | `settings.json` `robotMOI` | Mass properties tool. You essentially cannot measure this any other way |
+| Centre of gravity height | *(not in code, but worth knowing)* | Mass properties. Governs weight transfer on the ramp |
+| Bumper perimeter | `settings.json` `robotWidth` / `robotLength` | Currently 0.838 m = 33.0″, consistent with a 26.5″ frame plus 3.25″ bumpers each side |
+| **All gear and pulley reductions** | `MechanismRatios` | Count teeth. See below — this is the other place CAD is authoritative and a tape measure is useless |
+| Nominal wheel diameter | `ModuleConstants.kWheelDiameterMeters` | 3.00″ = 0.0762 m. Note *nominal*, see category three |
+
+Skip **0a, 0b and 0d** if you take these from CAD. 0a only existed as a datum for measuring the
+camera, so if the camera comes from CAD the floor marks are unnecessary.
+
+### The coordinate frame is where CAD numbers go wrong
+
+CAD gives exact numbers in **CAD's** frame. The code wants them in **WPILib's**, and the conversion is
+the step that quietly ruins otherwise perfect data.
+
+1. The robot origin is the **centre of the four wheel contact patches, at floor level**. An Onshape
+   assembly origin is wherever the first part landed — almost certainly not that.
+2. WPILib is **+x forward, +y LEFT, +z up**. CAD may well be +y right, or z along the length. Check,
+   do not assume.
+3. Measure to the **lens**, not the camera body origin or the mount face. Find the lens in the model.
+4. **Pitch is positive downward**, so a camera tilted up is negative. Asserted by
+   `PitchConventionTest` so it cannot drift.
+
+> **Do one physical cross-check even with perfect CAD.** Measure lens height above the floor with a
+> tape and compare it against the model's z. It takes thirty seconds and it catches every
+> frame-conversion error at once — a sign flip, a wrong origin, a mm/inch slip. If z agrees, the frame
+> conversion is probably right; if it does not, none of the other five numbers are trustworthy either.
+
+### CAD gives these, but check the build anyway
+
+| Number | Why CAD is not the last word |
+| --- | --- |
+| Module spacing | CAD gives the design. **Measure both diagonals on the floor** — equal diagonals mean the frame is square, unequal means it is racked and the kinematics' rectangle assumption is already violated. That is a build check, not a measurement |
+| **Drive pinion teeth** | The BOM says what was ordered; the robot has what was fitted. 12T, 13T and 14T all bolt on, and they differ by **17% in free speed** — the same magnitude and the same failure mode as the wrong-motor bug. **Count the teeth on the robot** |
+| Robot mass | CAD mass is design mass and is usually optimistic — wire, tape, zip ties and bumpers all go missing. `settings.json` has 47.6272 kg which looks weighed. **A scale beats CAD here** |
+| Shooter and camera side | CAD shows the geometry, but which face is +x is a *convention* tied to how the module CAN IDs were assigned. Take it from CAD, then do the two-minute check in 0c |
+
+### CAD cannot give you these at all
+
+This is the list that matters, because it is what remains of the shop session — and it includes the
+single largest term in the 10 ft error budget.
+
+- **Effective wheel diameter.** CAD gives the nominal 3.00″. Under load the tread compresses and the
+  rolling diameter is *smaller*, by 1–3%. That is **30–91 mm over 10 ft**, against a budget of 25 mm.
+  It is the largest single error term and only the AprilTag wheel-scale run in step 6 measures it.
+  CAD is confidently wrong here in a way that looks right.
+- **Steering angular offsets.** The absolute encoder zero for each module is a calibration, not a
+  dimension. ±0.5° of misalignment is worth 26.6 mm over 10 ft on its own.
+- **Camera intrinsics.** Focal length, principal point and distortion are properties of the lens as
+  manufactured. Step 4a, and everything distance-derived inherits it.
+- **kS, kV, kA.** Friction, and inertia reflected through gearing. CAD's MOI helps a simulation; it
+  does not give you the feedforward. Step 10.
+- **Traction limit and `wheelCOF`.** A property of the carpet as much as the robot. Step 8.
+- **Current thresholds for piece and jam detection.** Step 9.
+- **The bump band.** A fact about the field, not the robot. Robot CAD says nothing; use the field
+  drawings.
+
+### Three inconsistencies in `settings.json` that CAD settles
+
+Reading the file turned these up. All three are PathPlanner disagreeing with the code or with itself.
+
+| Field | Value | Problem |
+| --- | --- | --- |
+| `flModuleX` etc. | ±0.343 m | Implies 27.01″ spacing; the code says 26.50″. **CAD settles it** |
+| `robotTrackwidth` | 0.546 m | 21.50″ — a *third* value, agreeing with neither. Probably unused in `holonomicMode: true`, since PathPlanner uses the module offsets for holonomic kinematics, but it should not be left describing a robot that does not exist |
+| `maxDriveSpeed` | 4.879 m/s | The constants give a physical **5.741 m/s**, so this is 15% low. PathPlanner will plan conservatively — not dangerous, but it is leaving speed unused and it is not a number anything derived |
 
 ---
 
@@ -695,7 +781,9 @@ Both fall back to `MANUAL` if the pose is untrustworthy, so if neither ever enga
 
 ---
 
-## 8. Traction — the drive current limit
+## 8. Traction and the ramp bog-down — the drive current limit
+
+### 8a. Traction — find the limit
 
 1. Pick a **solid wall** — the field perimeter or a shop wall that will not move. Not a door, not
    shelving.
@@ -746,9 +834,74 @@ interrupted run cannot leave the robot on a limit nobody chose.
 survive, but it is not a limit the drivetrain can hold — if the robot browns out in pushing
 matches, this is the first number to lower.
 
-**Expect a low-ish number.** On carpet with 3″ wheels and this robot's weight, traction is
-likely to break somewhere in the 35–55 A range. If it never slips up to 80 A, the report says
-so and recommends the cap.
+**Predicted result, so you have something to check against.** A NEO Vortex makes 3.60 N·m at its
+211 A stall, so about 0.0171 N·m per amp. Through the 4.714 reduction onto a 0.0381 m wheel radius,
+four modules give:
+
+| Per-motor limit | Total push force | Coefficient of friction it demands |
+| --- | --- | --- |
+| 40 A | 338 N | 0.72 |
+| **50 A** *(current setting)* | **422 N** | **0.90** |
+| 55 A | 464 N | 0.99 |
+| 60 A | 507 N | 1.08 |
+| 80 A | 676 N | 1.45 |
+
+At 47.6 kg the robot weighs 467 N, so **if `wheelCOF: 1.0` in `settings.json` is right, traction
+should break at about 55 A.** That makes the current 50 A setting sit at 0.90 — only 10% below the
+traction limit, with almost no margin.
+
+If the sweep breaks traction well below 55 A, the real coefficient is lower than 1.0 and `wheelCOF`
+wants updating too. If it holds past 60 A, the carpet grips better than assumed and there is real
+headroom to take.
+
+---
+
+### 8b. The ramp bog-down — find out what is actually limiting you
+
+At competition the chassis slowed crossing the field ramps and sometimes failed to get over, despite
+having far more motor power than the job needs. Three candidates, and **they need opposite fixes**, so
+guessing is expensive. `BumpCrossingDiagnostic` measures which it is.
+
+1. **Run it where an AprilTag is visible.** Slip is wheel speed against chassis speed, and the only
+   chassis speed on this robot that is independent of the wheels comes from the tags. Without one the
+   run reports `TRACTION_NOT_MEASURABLE` rather than a false all-clear.
+2. Schedule `RebuiltContainer.getBumpDiagnosticCommand()`. It **watches rather than driving**, so it
+   measures the crossing as you actually take it.
+3. Drive over the ramp normally, within the 6 s window.
+4. Read the verdict from the console.
+
+| Verdict | Fix |
+| --- | --- |
+| `CURRENT_LIMITED` | **Raise** the limit — run 8a first to find out whether headroom exists |
+| `TRACTION_LIMITED` | **Lower** it. More current makes slip worse |
+| `VOLTAGE_LIMITED` | Battery first. Current headroom is academic until then |
+| `NOT_LIMITED` | Look at geometry — see below |
+| `TRACTION_NOT_MEASURABLE` | No tag was in view. Re-run somewhere it is |
+
+#### Why 3″ wheels make this hard, and why `NOT_LIMITED` may still fail to climb
+
+A smooth incline is easy. A **sharp lip** is not, and the difference is dramatic. Taking moments about
+the lip edge, a wheel of radius *r* meeting a step of height *h* needs a horizontal force of
+`N × √(2rh − h²) / (r − h)`, which grows without bound as *h* approaches *r*. With 0.0381 m
+(1.5″) wheels:
+
+| Lip height | Force needed | vs 422 N at 50 A | vs 676 N at 80 A |
+| --- | --- | --- | --- |
+| 0.50″ | 1.12× load = 261 N | fine | fine |
+| 0.75″ | 1.73× load = 405 N | **marginal** | fine |
+| 1.00″ | 2.83× load = 661 N | **not enough** | just enough |
+| 1.25″ | 5.92× load = 1382 N | no | no |
+
+Compare a smooth ramp: a 15° incline needs only **121 N**. So the ramp's *slope* is nothing and its
+*lip* is everything.
+
+**This is the quantitative case for the current-limited prior.** A 1″ lip needs 661 N and 50 A
+delivers 422 N — so the robot would bog exactly as described, while the motors sit at their limit and
+the wheels grip. Measure the lip height on the field and read off the table.
+
+It also means **more current may not be the answer**: if the lip is 1.25″, no per-motor limit inside
+the 80 A cap gets you over it and the fix is larger wheels or a different approach angle. That is what
+`NOT_LIMITED` is telling you when it appears.
 
 ---
 
@@ -934,6 +1087,10 @@ separate change that should be made against a measured number rather than a gues
 - [ ] `settings.json` and `CommonConstants` reconciled — then tighten the two
       `KNOWN_*_DIVERGENCE` constants in `PathPlannerSettingsConsistencyTest` to zero
 - [ ] Bump band measured and entered in `FieldRegions`
+- [ ] **Field ramp lip height measured** — it is what decides whether 8b's verdict can be fixed with
+      current at all (see the table in 8b)
+- [ ] `MechanismRatios` filled in from CAD, especially `DRIVE_PINION_TEETH` counted on the robot
+- [ ] `settings.json` `robotTrackwidth` and `maxDriveSpeed` reconciled — see 0-CAD
 - [ ] Motor inventory spot-checked against step 9's measured free speeds — ~6,500 for the four
       Vortex mechanisms, ~5,400 for the spindexer. A mechanism near the wrong figure means the
       controller-to-motor rule has an exception nobody has mentioned
@@ -969,6 +1126,11 @@ verify them** — this list is the honest measure of how much of this code has m
   still logged so this can be confirmed rather than assumed
 - **Camera intrinsic calibration** — nothing in this repo can detect whether it has been done, since
   the intrinsics live in PhotonVision. Every distance-derived figure inherits it (step 4a)
+- **The drive pinion tooth count.** 14T is assumed. 12T would change free speed by 17%, which is the
+  same magnitude and the same failure mode as the wrong-motor bug. Count it (0-CAD)
+- **Every reduction in `MechanismRatios`** — placeholders of 1.0, which makes the conversions the
+  identity and changes no behaviour, but means the intake deploy's travel is still expressed in opaque
+  motor rotations rather than arm degrees
 - **kS, kV and kA** — the SysId routine and its regression are tested against synthetic data with
   known answers, but no real drivetrain has been characterised (step 10)
 - **Whether the SysId runs actually fit in 28 ft.** The distances are computed from the nominal kV,
