@@ -128,6 +128,53 @@ class IntakeTest {
   class ProfiledDeploy {
 
     @Test
+    @DisplayName("The profile does not run away while the robot is disabled")
+    void profileDoesNotAdvanceWhileDisabled() {
+      // A trapezoid profile only protects the mechanism if its setpoint stays near the mechanism.
+      // ProfiledPIDController advances its setpoint on every calculate() call, and subsystem
+      // periodic() runs in EVERY mode including disabled — so if the profile is followed while
+      // disabled, the setpoint marches all the way to the goal while the arm cannot move.
+      //
+      // Then on enable the setpoint is already at the goal, the error is the full travel, and the
+      // controller commands maximum output. That is precisely the slam the profile exists to prevent,
+      // reintroduced by the profile itself.
+      HalFixture.disable();
+
+      intake.stopDeploy();
+      intake.deployToGoal(10.0);
+
+      for (int i = 0; i < 60; i++) {
+        intake.periodic();
+      }
+
+      // The arm has not moved — nothing simulates motion — so the setpoint must not have either.
+      double setpoint = intake.getDeploySetpointPosition();
+      assertTrue(Math.abs(setpoint - intake.getDeployPosition()) < 1.0,
+          "while disabled the setpoint must stay with the arm, but it advanced to " + setpoint
+              + " with the arm at " + intake.getDeployPosition()
+              + " — on enable that becomes a full-travel error and maximum output");
+
+      HalFixture.enableTeleop(true);
+    }
+
+    @Test
+    @DisplayName("Enabling after a disabled period restarts the profile from the arm")
+    void enablingResetsTheProfile() {
+      HalFixture.disable();
+      intake.deployToGoal(10.0);
+      for (int i = 0; i < 30; i++) {
+        intake.periodic();
+      }
+
+      HalFixture.enableTeleop(true);
+      intake.periodic();
+
+      // The first enabled loop must find the setpoint next to the arm, not at the goal.
+      assertTrue(Math.abs(intake.getDeploySetpointPosition() - intake.getDeployPosition()) < 1.0,
+          "the profile should resume from where the arm actually is");
+    }
+
+    @Test
     @DisplayName("periodic() never enters profiled mode on its own")
     void periodicDoesNotStartProfiling() {
       // The property that actually matters, and it is order-independent — unlike asserting the

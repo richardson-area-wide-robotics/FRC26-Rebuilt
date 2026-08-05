@@ -167,6 +167,30 @@ class ConstantsRegressionTest {
   }
 
   @Test
+  @DisplayName("The deploy feedforward can actually reach the profile's velocity limit")
+  void deployFeedforwardCoversTheProfile() {
+    // The bug this guards against: the profiled controller commands VOLTS, and the position gain was
+    // inherited from the SPARK's duty-cycle closed loop. 0.05 duty per rotation is 0.6 V; 0.05 volts
+    // per rotation is not. With no velocity feedforward, the gain had to supply the whole voltage for
+    // every move and needed 76 rotations of error on a mechanism with about 10 rotations of travel.
+    // The arm would barely have moved, and it would have looked mechanical.
+    double feedforwardAtLimit =
+        IntakeConstants.DEPLOY_kV * IntakeConstants.DEPLOY_MAX_VELOCITY_RPS;
+
+    assertTrue(feedforwardAtLimit > 1.0,
+        "the velocity feedforward must supply a real share of the voltage at the profile limit, "
+            + "or the position gain has to do it alone; got " + feedforwardAtLimit + " V");
+    assertTrue(feedforwardAtLimit < 12.0,
+        "the feedforward alone must not saturate the bus at the profile limit; got "
+            + feedforwardAtLimit + " V");
+
+    // And the position gain has to be a voltage-scale number, not a duty-cycle one.
+    assertTrue(IntakeConstants.DEPLOY_kP >= 0.5,
+        "DEPLOY_kP is in volts per rotation now. A duty-cycle-era value like 0.05 cannot move the "
+            + "arm: got " + IntakeConstants.DEPLOY_kP);
+  }
+
+  @Test
   @DisplayName("Deploy rotations convert to arm degrees, and round-trip")
   void deployConversionRoundTrips() {
     // The conversion is the identity until the reduction is read off CAD, which is deliberate: it

@@ -24,6 +24,7 @@ import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.common.components.EasyMotor;
@@ -64,8 +65,16 @@ public class Intake extends DashboardSubsystem {
         deployEncoder = deployMotor.getEncoder();
 
         SparkMaxConfig deployConfig = new SparkMaxConfig();
-        deployConfig.closedLoop.pid(IntakeConstants.DEPLOY_kP, 0, 0);
-        deployConfig.closedLoop.outputRange(-1, 1);
+
+        // No closed-loop gains configured on the controller any more. Position control moved to the
+        // roboRIO-side ProfiledPIDController, which commands voltage — so a kP here would be dead
+        // configuration that reads as though the SPARK were still doing position control. Worse, it
+        // would share IntakeConstants.DEPLOY_kP, whose units are now volts per rotation rather than
+        // duty cycle per rotation, so the same number would mean two different things.
+        //
+        // The smart current limit and the soft limits below still apply: both are enforced by the
+        // controller regardless of control mode, which is exactly why they are worth having there
+        // rather than in robot code.
         deployConfig.smartCurrentLimit(CommonConstants.SUPERSTRUCTURE_CURRENT_LIMIT);
 
         // Soft limits enforced by the controller itself, so they also bound open-loop
@@ -300,6 +309,9 @@ public class Intake extends DashboardSubsystem {
 
     private DeployMode deployMode = DeployMode.MANUAL;
 
+    /** Enable state last loop, so the disabled-to-enabled transition can be caught. */
+    private boolean wasEnabled;
+
     /**
      * Trapezoid profile plus PID for the deploy arm.
      *
@@ -479,6 +491,11 @@ public class Intake extends DashboardSubsystem {
         return deployController.getGoal().position;
     }
 
+    /** @return the profile's current position setpoint, in motor rotations. */
+    public double getDeploySetpointPosition() {
+        return deployController.getSetpoint().position;
+    }
+
     /** @return true when the profile has reached its goal within tolerance. */
     public boolean isDeployAtGoal() {
         return deployMode == DeployMode.PROFILED && deployController.atGoal();
@@ -567,9 +584,26 @@ public class Intake extends DashboardSubsystem {
         tunableMaxAccel.ifChanged(a -> deployController.setConstraints(
             new TrapezoidProfile.Constraints(tunableMaxVel.get(), a)));
 
+        // Only follow the profile while enabled, and restart it from the arm on the way back.
+        //
+        // ProfiledPIDController advances its setpoint on every calculate() call, and subsystem
+        // periodic() runs in EVERY mode including disabled. Following it while disabled therefore
+        // marched the setpoint all the way to the goal while the arm could not move — and on enable
+        // the error was the full travel and the controller commanded maximum output. That is exactly
+        // the slam the profile exists to prevent, reintroduced by the profile itself.
+        boolean enabled = DriverStation.isEnabled();
         if (deployMode == DeployMode.PROFILED) {
-            followDeployProfile();
+            if (!enabled) {
+                // Hold the setpoint against the stationary arm rather than letting it run ahead.
+                deployController.reset(getDeployPosition(), 0.0);
+            } else if (!wasEnabled) {
+                // First loop after enabling. Reseed from reality before computing any output.
+                deployController.reset(getDeployPosition(), getDeployVelocity() / 60.0);
+            } else {
+                followDeployProfile();
+            }
         }
+        wasEnabled = enabled;
 
         deployStops.update(getDeployPosition(), getDeployCurrent(), deployDemand);
         Logger.recordOutput(getName() + "/Deploy/Mode", deployMode.name());

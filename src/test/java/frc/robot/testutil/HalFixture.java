@@ -3,6 +3,7 @@ package frc.robot.testutil;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -39,6 +40,22 @@ public final class HalFixture {
             : edu.wpi.first.hal.AllianceStationID.Blue1);
     DriverStationSim.setEnabled(true);
     DriverStationSim.notifyNewData();
+    DriverStation.refreshData();
+  }
+
+  /**
+   * Disables the robot, leaving the driver station attached.
+   *
+   * <p>Distinct from {@link #clearAlliance()}, which detaches entirely. This is the state a robot sits
+   * in between matches: connected, alliance known, outputs dead. Worth having its own helper because
+   * {@link #enableTeleop(boolean)} takes an <em>alliance colour</em>, not an enable flag — it always
+   * enables, which is easy to misread as {@code enableTeleop(false)} meaning disabled.
+   */
+  public static void disable() {
+    DriverStationSim.setDsAttached(true);
+    DriverStationSim.setEnabled(false);
+    DriverStationSim.notifyNewData();
+    DriverStation.refreshData();
   }
 
   /** Detaches the driver station so no alliance is reported. */

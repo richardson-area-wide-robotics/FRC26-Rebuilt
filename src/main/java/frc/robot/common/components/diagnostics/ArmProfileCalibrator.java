@@ -62,8 +62,18 @@ public class ArmProfileCalibrator {
     /** Voltages held to steady state for the kV fit. */
     private static final double[] VELOCITY_STEPS = {1.0, 1.5, 2.0, 2.5, 3.0};
 
-    /** Seconds to hold each step. Long enough to reach steady state, short enough not to hit a stop. */
-    private static final double STEP_SECONDS = 0.35;
+    /**
+     * Seconds to hold each velocity step.
+     *
+     * <p>0.20, not 0.35. Sized against the travel rather than picked: at the 3 V top step the arm runs
+     * near 24 rot/s, so 0.35 s covers about 8.3 of roughly 10 rotations of travel — the arm would reach
+     * its hard stop <em>during</em> the step and the velocity read at the end would be a deceleration
+     * into steel rather than a steady state. 0.20 s covers 4.7 rotations, which leaves room.
+     *
+     * <p>Still several time constants for a light arm, so steady state is reached. And a stop hit
+     * anyway is caught rather than trusted — see {@link #velocityStep}.
+     */
+    private static final double STEP_SECONDS = 0.20;
 
     /** Fractions of travel at which holding voltage is measured. */
     private static final double[] HOLD_FRACTIONS = {0.1, 0.3, 0.5, 0.7, 0.9};
@@ -144,9 +154,20 @@ public class ArmProfileCalibrator {
                         .withTimeout(STEP_SECONDS),
                 Commands.runOnce(() -> {
                     double rps = Math.abs(intake.getDeployVelocity()) / 60.0;
-                    velocityFit.add(volts, rps);
-                    System.out.printf("[arm] %.2f V -> %.2f rot/s%n", volts, rps);
+                    boolean hitStop = intake.getDeployStops().isAtHardStop();
                     intake.stopDeploy();
+
+                    if (hitStop) {
+                        // The arm ran out of travel inside the step, so this velocity is a
+                        // deceleration into the stop rather than a steady state. Feeding it to the fit
+                        // would drag kV low, and it would do so most at the highest voltages — biasing
+                        // the slope rather than merely adding scatter.
+                        System.out.printf("[arm] %.2f V -> DISCARDED, reached the stop mid-step "
+                                + "(read %.2f rot/s). Shorten STEP_SECONDS.%n", volts, rps);
+                    } else {
+                        velocityFit.add(volts, rps);
+                        System.out.printf("[arm] %.2f V -> %.2f rot/s%n", volts, rps);
+                    }
                 }, intake),
                 // Return to the stowed end so the next step has room to run.
                 Commands.run(intake::manualReverseDeploy, intake)

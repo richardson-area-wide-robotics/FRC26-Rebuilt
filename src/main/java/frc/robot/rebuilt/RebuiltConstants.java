@@ -311,18 +311,25 @@ public final class RebuiltConstants {
     public static final double DEPLOY_HOLD_SPEED = -0.03;
 
     /**
-     * Closed-loop position gain for the deploy arm, now driving a <b>profiled</b> controller.
+     * TUNE — position gain for the profiled deploy controller, in <b>volts per motor rotation</b>.
      *
-     * <p>This used to be the only gain, applied by the SPARK in plain {@code kPosition} mode. That
-     * means output proportional to error — so a full-travel move started at maximum error and
-     * therefore maximum output, and the arm decelerated only as the error shrank. It slammed at both
-     * ends, and the only thing stopping it was the hard stop.
+     * <p><b>The unit changed, and that is the whole story of this number.</b> It was 0.05, applied by
+     * the SPARK in {@code kPosition} mode where the output is a <em>duty cycle</em> — so a rotation of
+     * error produced 0.05 duty, or 0.6 V. The profiled controller feeds {@code setVoltage} instead, so
+     * the same 0.05 became 0.05 <em>volts</em> per rotation.
      *
-     * <p>With a trapezoid profile the controller chases a moving setpoint that is never far away, so
-     * this gain now only has to correct small following errors. It wants to be <em>smaller</em> than a
-     * gain tuned for unprofiled control, not larger.
+     * <p>Twelve times smaller, and the consequence is not subtle. With the feedforward terms at zero,
+     * the PID had to supply the whole 3.8 V needed to reach the profile's velocity limit — which at
+     * 0.05 V per rotation requires <b>76 rotations of error on a mechanism with about 10 rotations of
+     * travel.</b> The arm would have barely moved, and it would have looked like a mechanical problem.
+     *
+     * <p>1.0 V per rotation with {@link #DEPLOY_kV} carrying the velocity leaves this correcting only
+     * small following errors, which is what a gain alongside a feedforward is for. Deliberately
+     * conservative: too low means the arm lags visibly, which is obvious and harmless, while too high
+     * means it oscillates or slams. <b>Raise it until the arm follows, watching
+     * {@code Intake/Deploy/Profile/FollowingError}.</b>
      */
-    public static final double DEPLOY_kP = 0.05;
+    public static final double DEPLOY_kP = 1.0;
 
     /**
      * Derivative gain for the deploy arm. Zero until there is a reason.
@@ -354,11 +361,30 @@ public final class RebuiltConstants {
      */
     public static final double DEPLOY_MAX_ACCEL_RPS2 = 150.0;
 
-    /** TUNE — volts to overcome static friction in the deploy arm. */
+    /**
+     * MEASURE — volts to overcome static friction in the deploy arm.
+     *
+     * <p>Zero until measured, which costs a little following error at the start of each move rather
+     * than anything dangerous. Step 9c measures it as the break-away voltage, in both directions,
+     * because gravity makes those two numbers differ and their average is the friction term.
+     */
     public static final double DEPLOY_kS = 0.0;
 
-    /** TUNE — volts per rotation per second, the arm's velocity feedforward. */
-    public static final double DEPLOY_kV = 0.0;
+    /**
+     * Volts per motor rotation per second — the arm's velocity feedforward. <b>Derived.</b>
+     *
+     * <p>{@code 12 V / free speed} is the textbook first estimate: the voltage that produces one unit
+     * of velocity, assuming a motor matching its datasheet under no load. The same derivation
+     * {@code Configs.java} uses for the drivetrain.
+     *
+     * <p>Not left at zero, because with no velocity feedforward the position gain has to supply the
+     * entire voltage for every move, which is what made the old 0.05 gain unable to move the arm at
+     * all. A derived kV carries the velocity so the gain only corrects error.
+     *
+     * <p>Expect the measured value in step 9c to come out <em>higher</em> than this: theory ignores
+     * gearing friction, belt drag and bus sag, all of which cost voltage.
+     */
+    public static final double DEPLOY_kV = 12.0 / (5676.0 / 60.0);
 
     /**
      * MEASURE — volts needed to hold the arm level against gravity.
