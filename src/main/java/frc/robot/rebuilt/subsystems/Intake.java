@@ -3,11 +3,8 @@ package frc.robot.rebuilt.subsystems;
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.NamedAuto;
 import frc.robot.common.components.diagnostics.GamePieceCounter;
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import frc.robot.common.components.diagnostics.HardStopDetector;
 import frc.robot.common.components.diagnostics.TunableNumber;
-import frc.robot.rebuilt.RebuiltConstants.MechanismRatios;
 import frc.robot.common.components.diagnostics.MotorLoadMonitor;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
 import frc.robot.rebuilt.RebuiltConstants.LoadConstants;
@@ -17,6 +14,8 @@ import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkFlex;
+import com.revrobotics.spark.ClosedLoopSlot;
+import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
@@ -66,15 +65,18 @@ public class Intake extends DashboardSubsystem {
 
         SparkMaxConfig deployConfig = new SparkMaxConfig();
 
-        // No closed-loop gains configured on the controller any more. Position control moved to the
-        // roboRIO-side ProfiledPIDController, which commands voltage — so a kP here would be dead
-        // configuration that reads as though the SPARK were still doing position control. Worse, it
-        // would share IntakeConstants.DEPLOY_kP, whose units are now volts per rotation rather than
-        // duty cycle per rotation, so the same number would mean two different things.
+        // MAXMotion: the trapezoid profile runs on the controller at its own rate, not in robot code
+        // at 50 Hz. Two reasons, both the team's:
         //
-        // The smart current limit and the soft limits below still apply: both are enforced by the
-        // controller regardless of control mode, which is exactly why they are worth having there
-        // rather than in robot code.
+        //   CAN traffic. A reference persists until changed, so holding position costs zero frames.
+        //   A roboRIO-side controller has to write an output every loop forever. On a single bus with
+        //   fifteen devices, saturation is a real failure mode.
+        //
+        //   Rate. The controller closes the loop far faster than a 50 Hz robot loop can.
+        //
+        // Note the units MAXMotion wants: velocity in RPM and acceleration in RPM per second, not the
+        // rotations per second the calibration reports. Converted here rather than stored twice.
+        populateDeployClosedLoop(deployConfig);
         deployConfig.smartCurrentLimit(CommonConstants.SUPERSTRUCTURE_CURRENT_LIMIT);
 
         // Soft limits enforced by the controller itself, so they also bound open-loop
@@ -309,33 +311,15 @@ public class Intake extends DashboardSubsystem {
 
     private DeployMode deployMode = DeployMode.MANUAL;
 
-    /** Enable state last loop, so the disabled-to-enabled transition can be caught. */
-    private boolean wasEnabled;
-
     /**
-     * Trapezoid profile plus PID for the deploy arm.
+     * Goal last sent to the controller, so it is only re-sent when it actually changes.
      *
-     * <p>Replaces plain {@code kPosition} control on the SPARK, which applied output proportional to
-     * error — so a full-travel move began at maximum error and therefore maximum output, decelerating
-     * only as the error shrank. The arm slammed at both ends and the hard stop was what caught it.
-     *
-     * <p>A profile generates a position <em>and velocity</em> setpoint respecting a velocity and an
-     * acceleration limit, so the controller only ever chases a nearby target. The mechanism sees
-     * bounded acceleration instead of a step.
-     *
-     * <p><b>Run on the roboRIO rather than as REVLib MAXMotion</b>, which would execute the profile on
-     * the controller at 1 kHz and be lower latency. The tradeoff taken here is visibility: this way the
-     * setpoint, its velocity and the following error are all logged next to the measurement, which is
-     * what makes it tunable — and tunable live over NT via {@code tools/nt_tool.py}. A profile
-     * executing invisibly inside the SPARK cannot be tuned from a log.
+     * <p>This is the point of running the profile on the SPARK. A reference persists on the controller
+     * until it is changed, so holding a position costs <b>zero</b> CAN frames — where a roboRIO-side
+     * controller has to write an output every single loop, forever, including while merely holding
+     * station. On a single bus with fifteen devices that difference is worth having.
      */
-    private final ProfiledPIDController deployController = new ProfiledPIDController(
-        IntakeConstants.DEPLOY_kP,
-        0.0,
-        IntakeConstants.DEPLOY_kD,
-        new TrapezoidProfile.Constraints(
-            IntakeConstants.DEPLOY_MAX_VELOCITY_RPS,
-            IntakeConstants.DEPLOY_MAX_ACCEL_RPS2));
+    private double lastCommandedGoal = Double.NaN;
 
     /**
      * Live-tunable profile and gain values.
@@ -343,6 +327,11 @@ public class Intake extends DashboardSubsystem {
      * <p>The arm is a good candidate for live tuning: a move takes about half a second, so the effect
      * of a change is visible immediately, and a bad value gives a harsh move rather than anything
      * dangerous. Inert unless {@code TunableNumber.TUNING_ENABLED} is true.
+     *
+     * <p>A change here reconfigures the controller, which is a CAN write — so it is deliberately done
+     * only when a value actually changes, and with no-persist so it does not burn flash. Reconfiguring
+     * every loop would flood the bus, which is the thing running the profile on the SPARK is meant to
+     * avoid.
      */
     private final TunableNumber tunableP =
         new TunableNumber("IntakeDeploy/kP", IntakeConstants.DEPLOY_kP);
@@ -366,15 +355,28 @@ public class Intake extends DashboardSubsystem {
     public void deployToGoal(double goalRotations) {
         double goal = clampToLearnedStops(goalRotations);
 
-        if (deployMode != DeployMode.PROFILED) {
-            // Entering profiled control from manual. Seed the profile with where the arm actually is
-            // and how fast it is going, or the first setpoint jumps from a stale state and the arm
-            // lurches — which looks exactly like a bad gain and is not.
-            deployController.reset(getDeployPosition(), getDeployVelocity() / 60.0);
-            deployMode = DeployMode.PROFILED;
+        boolean modeChanged = deployMode != DeployMode.PROFILED;
+        boolean goalChanged = Double.isNaN(lastCommandedGoal)
+                || Math.abs(goal - lastCommandedGoal) > 1e-6;
+
+        deployMode = DeployMode.PROFILED;
+
+        if (!modeChanged && !goalChanged) {
+            // Nothing to say. The controller is already executing this reference and re-sending it
+            // every call would spend CAN frames to change nothing.
+            return;
         }
 
-        deployController.setGoal(goal);
+        // setSetpoint, not setReference: the latter is deprecated in REVLib 2026.
+        //
+        // No arbitrary feedforward argument. Gravity is configured as kCos on the controller instead,
+        // which is strictly better than computing a cosine in robot code and shipping it over CAN
+        // every time the goal changes — the controller applies it continuously at its own rate, and it
+        // stays correct while merely holding position, which is exactly when gravity matters most.
+        deployMotor.getClosedLoopController().setSetpoint(
+            goal, ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0);
+
+        lastCommandedGoal = goal;
     }
 
     /**
@@ -402,75 +404,97 @@ public class Intake extends DashboardSubsystem {
     /** Hands the arm back to direct control, so profile output stops fighting it. */
     private void leaveProfiledMode() {
         deployMode = DeployMode.MANUAL;
+        // Forget the cached goal, or returning to the same goal later would be suppressed as
+        // unchanged and the reference would never be re-sent.
+        lastCommandedGoal = Double.NaN;
     }
 
     /**
-     * Computes and applies one loop of profiled output.
+     * Fills in the deploy arm's closed loop, profile and feedforward.
      *
-     * <p>Feedforward is written out rather than using {@code ArmFeedforward}, so each term can be read
-     * and disabled independently. The gravity term is inert while {@code DEPLOY_kG} is zero, which it
-     * is until the arm geometry is known — a gravity feedforward built on a guessed angle pushes
-     * hardest in the wrong place.
+     * <p>One method so the constructor and live tuning cannot drift apart — a tuning path that
+     * configured a subset would silently reset whatever it omitted.
+     *
+     * <p><b>Everything is slot-explicit.</b> REVLib's single-argument overloads are deprecated in
+     * favour of ones naming a {@code ClosedLoopSlot}, and being explicit is worth more than avoiding a
+     * warning: the slot the config writes and the slot {@code setSetpoint} reads have to be the same
+     * one, and a mismatch would leave the gains configured somewhere nothing consults.
+     *
+     * @param config The config to populate.
      */
-    private void followDeployProfile() {
-        double measured = getDeployPosition();
-        double pidOutput = deployController.calculate(measured);
+    private void populateDeployClosedLoop(SparkMaxConfig config) {
+        config.closedLoop
+            .p(tunableP.get(), ClosedLoopSlot.kSlot0)
+            .d(tunableD.get(), ClosedLoopSlot.kSlot0)
+            .outputRange(-1, 1, ClosedLoopSlot.kSlot0);
 
-        TrapezoidProfile.State setpoint = deployController.getSetpoint();
+        // The controller's own feedforward, which in REVLib 2026 is a full arm model rather than a
+        // single velocity term. Running it here means it is applied at the controller's rate and stays
+        // correct between commands, with no robot-code loop involved at all.
+        //
+        // In VOLTS, which matters on a robot that runs anywhere from 6 to 16 V: a voltage feedforward
+        // is divided by the measured bus internally, so it delivers what it asks for regardless of the
+        // pack. The deprecated duty-cycle velocityFF would have quietly weakened as the battery drained
+        // — the same class of error as everything else here that assumed 12 V.
+        config.closedLoop.feedForward
+            .kS(IntakeConstants.DEPLOY_kS, ClosedLoopSlot.kSlot0)
+            .kV(IntakeConstants.DEPLOY_kV_VOLTS_PER_RPM, ClosedLoopSlot.kSlot0)
+            .kA(IntakeConstants.DEPLOY_kA, ClosedLoopSlot.kSlot0)
+            .kCos(IntakeConstants.DEPLOY_kG, ClosedLoopSlot.kSlot0)
+            .kCosRatio(IntakeConstants.DEPLOY_COS_RATIO, ClosedLoopSlot.kSlot0);
 
-        double feedforward =
-            IntakeConstants.DEPLOY_kS * Math.signum(setpoint.velocity)
-                + IntakeConstants.DEPLOY_kV * setpoint.velocity
-                + IntakeConstants.DEPLOY_kG * Math.cos(armAngleRadians(measured));
-
-        double volts = pidOutput + feedforward;
-        deployDemand = volts / 12.0;      // the stop detector wants a direction, not a unit
-        deployMotor.setVoltage(volts);
-
-        Logger.recordOutput(getName() + "/Deploy/Profile/SetpointPosition", setpoint.position);
-        Logger.recordOutput(getName() + "/Deploy/Profile/SetpointVelocity", setpoint.velocity);
-        Logger.recordOutput(getName() + "/Deploy/Profile/Goal", deployController.getGoal().position);
-        Logger.recordOutput(getName() + "/Deploy/Profile/FollowingError",
-            setpoint.position - measured);
-        Logger.recordOutput(getName() + "/Deploy/Profile/Volts", volts);
-        Logger.recordOutput(getName() + "/Deploy/Profile/Feedforward", feedforward);
+        // MAXMotion wants velocity in RPM and acceleration in RPM per second, where the calibration
+        // reports rotations per second. Converted here rather than stored in two unit systems.
+        //
+        // cruiseVelocity, not maxVelocity: REVLib 2026 deprecated the latter. The new name is the more
+        // honest one anyway — it is the velocity the profile cruises AT, not a ceiling the mechanism is
+        // prevented from exceeding.
+        config.closedLoop.maxMotion
+            .cruiseVelocity(tunableMaxVel.get() * 60.0, ClosedLoopSlot.kSlot0)
+            .maxAcceleration(tunableMaxAccel.get() * 60.0, ClosedLoopSlot.kSlot0)
+            .allowedProfileError(IntakeConstants.DEPLOY_TOLERANCE_ROTATIONS, ClosedLoopSlot.kSlot0);
     }
 
     /**
-     * @param positionRotations Encoder position.
-     * @return the arm angle from horizontal, in radians.
+     * Re-applies the deploy closed loop after a live tuning change.
      *
-     *     <p>Only meaningful once the deploy reduction and the horizontal offset are both known. With
-     *     the reduction at its 1.0 placeholder this is not the real angle — but the gravity gain is
-     *     zero, so nothing consumes it yet.
+     * <p>No-reset and no-persist: a tweak rather than a reconfiguration, so it leaves the current limit
+     * and soft limits alone and does not burn a flash erase cycle. Persisting on every tuning nudge
+     * would wear the controller out, and it is a CAN write either way — which is why it only happens
+     * when a value actually changes.
      */
-    private double armAngleRadians(double positionRotations) {
-        double fromHorizontal =
-            positionRotations - IntakeConstants.DEPLOY_HORIZONTAL_OFFSET_ROTATIONS;
-        return Math.toRadians(MechanismRatios.deployRotationsToDegrees(fromHorizontal));
+    private void applyDeployClosedLoop() {
+        SparkMaxConfig config = new SparkMaxConfig();
+        populateDeployClosedLoop(config);
+
+        deployMotor.configure(config, ResetMode.kNoResetSafeParameters,
+            PersistMode.kNoPersistParameters);
+
+        // Re-send the reference: a reconfigure can clear the executing profile.
+        lastCommandedGoal = Double.NaN;
     }
 
     /**
      * Applies a raw voltage to the deploy motor, leaving profiled mode.
      *
      * <p>For calibration only. Voltage rather than duty cycle because every gain the calibration
-     * produces is in volts, and a duty cycle would rescale itself as the battery sags — the fit would
-     * be against a moving input.
+     * produces is in volts, and a duty cycle would rescale itself as the battery sags between 6 and
+     * 16 V — the fit would be against a moving input.
      *
      * @param volts Output voltage.
      */
     public void setDeployVoltage(double volts) {
         leaveProfiledMode();
-        deployDemand = volts / 12.0;
+        deployDemand = volts / Math.max(1.0, deployMotor.getBusVoltage());
         deployMotor.setVoltage(volts);
     }
 
     /**
      * @return the voltage currently being applied to hold the arm where it is.
      *
-     *     <p>Only meaningful while the profile is holding station. This is the direct measurement of
-     *     what gravity and friction cost at this position — no angle, no reduction, no geometry
-     *     needed. Whatever the controller has settled on IS the answer.
+     *     <p>Only meaningful while the controller is holding station. This is the direct measurement of
+     *     what gravity and friction cost at this position — no angle, no reduction, no geometry needed.
+     *     Whatever the controller has settled on IS the answer.
      */
     public double getDeployHoldVolts() {
         return deployMotor.getAppliedOutput() * deployMotor.getBusVoltage();
@@ -482,23 +506,33 @@ public class Intake extends DashboardSubsystem {
     }
 
     /**
-     * @return the goal the profile is driving toward, in motor rotations.
+     * @return the goal the controller is driving toward, in motor rotations, or NaN if none is set.
      *
-     *     <p>This is the goal <em>after</em> clamping to the learned stops, not what was requested —
-     *     so it is what the arm will actually try to reach.
+     *     <p>This is the goal <em>after</em> clamping to the learned stops, not what was requested — so
+     *     it is what the arm will actually try to reach.
      */
     public double getDeployGoal() {
-        return deployController.getGoal().position;
+        return lastCommandedGoal;
     }
 
-    /** @return the profile's current position setpoint, in motor rotations. */
-    public double getDeploySetpointPosition() {
-        return deployController.getSetpoint().position;
+    /**
+     * @return the arm's error against its goal, in motor rotations, or 0 if no goal is set.
+     *
+     *     <p>MAXMotion's internal profile setpoint is not reported over CAN, so what is available is
+     *     error against the <em>goal</em> rather than against the moving setpoint. That is the more
+     *     useful of the two anyway for judging whether the arm arrives; what it cannot show is
+     *     following error <em>during</em> the move, which is the visibility given up by moving the
+     *     profile onto the controller.
+     */
+    public double getDeployGoalError() {
+        return Double.isNaN(lastCommandedGoal) ? 0.0 : lastCommandedGoal - getDeployPosition();
     }
 
-    /** @return true when the profile has reached its goal within tolerance. */
+    /** @return true when the arm has reached its goal within tolerance. */
     public boolean isDeployAtGoal() {
-        return deployMode == DeployMode.PROFILED && deployController.atGoal();
+        return deployMode == DeployMode.PROFILED
+            && !Double.isNaN(lastCommandedGoal)
+            && Math.abs(getDeployGoalError()) <= IntakeConstants.DEPLOY_TOLERANCE_ROTATIONS;
     }
 
     /**
@@ -576,37 +610,33 @@ public class Intake extends DashboardSubsystem {
     public void periodic() {
         rollerLoad.update(getRollerCurrent(), getRollerVelocity(), intakeRunning);
         pieceCounter.update();
-        // No-ops entirely when tuning is disabled.
-        tunableP.ifChanged(deployController::setP);
-        tunableD.ifChanged(deployController::setD);
-        tunableMaxVel.ifChanged(v -> deployController.setConstraints(
-            new TrapezoidProfile.Constraints(v, tunableMaxAccel.get())));
-        tunableMaxAccel.ifChanged(a -> deployController.setConstraints(
-            new TrapezoidProfile.Constraints(tunableMaxVel.get(), a)));
+        // No-ops entirely when tuning is disabled. Each reconfigures the controller, so they only
+        // fire on an actual change.
+        tunableP.ifChanged(p -> applyDeployClosedLoop());
+        tunableD.ifChanged(d -> applyDeployClosedLoop());
+        tunableMaxVel.ifChanged(v -> applyDeployClosedLoop());
+        tunableMaxAccel.ifChanged(a -> applyDeployClosedLoop());
 
-        // Only follow the profile while enabled, and restart it from the arm on the way back.
+        // Nothing to write here. MAXMotion executes the reference on the controller until it is
+        // changed, so holding position costs no CAN traffic at all — and the profile stops with the
+        // controller on disable, then restarts from wherever the arm actually is. The
+        // runs-away-while-disabled problem a roboRIO-side profile has simply cannot arise.
         //
-        // ProfiledPIDController advances its setpoint on every calculate() call, and subsystem
-        // periodic() runs in EVERY mode including disabled. Following it while disabled therefore
-        // marched the setpoint all the way to the goal while the arm could not move — and on enable
-        // the error was the full travel and the controller commanded maximum output. That is exactly
-        // the slam the profile exists to prevent, reintroduced by the profile itself.
-        boolean enabled = DriverStation.isEnabled();
-        if (deployMode == DeployMode.PROFILED) {
-            if (!enabled) {
-                // Hold the setpoint against the stationary arm rather than letting it run ahead.
-                deployController.reset(getDeployPosition(), 0.0);
-            } else if (!wasEnabled) {
-                // First loop after enabling. Reseed from reality before computing any output.
-                deployController.reset(getDeployPosition(), getDeployVelocity() / 60.0);
-            } else {
-                followDeployProfile();
-            }
+        // What does have to be forgotten is the cached goal, so the reference is re-sent on the next
+        // request rather than suppressed as unchanged.
+        // Forget the cached goal while disabled, so the reference is re-sent rather than suppressed as
+        // unchanged when the robot comes back. Nothing else is needed: the profile lives on the
+        // controller, which stops on disable and restarts from wherever the arm actually is — the
+        // run-away-while-disabled problem a robot-code profile has cannot arise here at all.
+        if (!DriverStation.isEnabled() && deployMode == DeployMode.PROFILED) {
+            lastCommandedGoal = Double.NaN;
         }
-        wasEnabled = enabled;
 
         deployStops.update(getDeployPosition(), getDeployCurrent(), deployDemand);
         Logger.recordOutput(getName() + "/Deploy/Mode", deployMode.name());
+        Logger.recordOutput(getName() + "/Deploy/Goal", getDeployGoal());
+        Logger.recordOutput(getName() + "/Deploy/GoalError", getDeployGoalError());
+        Logger.recordOutput(getName() + "/Deploy/AtGoal", isDeployAtGoal());
 
         Logger.recordOutput(getName() + "/Deploy/FullyDeployed", isFullyDeployed());
         Logger.recordOutput(getName() + "/Deploy/FullyStowed", isFullyStowed());

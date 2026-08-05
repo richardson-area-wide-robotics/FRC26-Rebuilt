@@ -1,9 +1,11 @@
 package frc.robot.common.components.diagnostics;
 
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.common.components.diagnostics.HardStopDetector.End;
+import frc.robot.CommonConstants.BatteryConstants;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
 import frc.robot.rebuilt.subsystems.Intake;
 import java.util.ArrayList;
@@ -93,6 +95,9 @@ public class ArmProfileCalibrator {
     private final List<double[]> holdSamples = new ArrayList<>();
     private double peakVelocity;
     private double peakAcceleration;
+
+    /** Bus voltage during the limits test, so the reader knows what conditions produced it. */
+    private double limitTestVolts;
 
     private double rampStart;
     private double lastVelocity;
@@ -223,7 +228,13 @@ public class ArmProfileCalibrator {
                     System.out.println("[arm] measuring achievable velocity and acceleration");
                 }),
                 Commands.run(() -> {
-                    intake.setDeployVoltage(12.0 * LIMIT_TEST_OUTPUT);
+                    // A fraction of what the battery can ACTUALLY supply, not of a nominal 12 V.
+                    // Asking for 10.2 V on a 10 V pack simply saturates, and the measured limits would
+                    // then be the battery's rather than the arm's — reported as the arm being slower
+                    // than it is, on exactly the tired pack where someone is most likely to be
+                    // debugging something else.
+                    intake.setDeployVoltage(
+                        RobotController.getBatteryVoltage() * LIMIT_TEST_OUTPUT);
 
                     double now = Timer.getFPGATimestamp();
                     double rps = Math.abs(intake.getDeployVelocity()) / 60.0;
@@ -234,6 +245,7 @@ public class ArmProfileCalibrator {
                                 Math.abs(rps - lastVelocity) / dt);
                     }
                     peakVelocity = Math.max(peakVelocity, rps);
+                    limitTestVolts = RobotController.getBatteryVoltage();
                     lastVelocity = rps;
                     lastVelocityTime = now;
                 }, intake)
@@ -359,6 +371,12 @@ public class ArmProfileCalibrator {
         System.out.println();
         System.out.printf("  ACHIEVABLE  peak velocity %.1f rot/s, peak acceleration %.0f rot/s^2%n",
                 peakVelocity, peakAcceleration);
+        System.out.printf("              measured at %.1f V of bus, %.0f%% output%n",
+                limitTestVolts, LIMIT_TEST_OUTPUT * 100);
+        if (limitTestVolts < BatteryConstants.TYPICAL_MIN_VOLTS) {
+            System.out.println("              ^ below the usual 10 V, so these limits are pessimistic.");
+            System.out.println("                Re-run on a fresher pack before lowering the profile.");
+        }
         System.out.printf("  CONFIGURED  max velocity  %.1f rot/s, max acceleration  %.0f rot/s^2%n",
                 IntakeConstants.DEPLOY_MAX_VELOCITY_RPS, IntakeConstants.DEPLOY_MAX_ACCEL_RPS2);
 

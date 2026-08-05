@@ -77,6 +77,56 @@ public final class CommonConstants {
    */
   public static final int SUPERSTRUCTURE_CURRENT_LIMIT = 60;
 
+  /**
+   * The bus voltage this robot actually sees.
+   *
+   * <p>Recorded because <b>12 V is not a safe assumption</b> and several thresholds were quietly built
+   * on one. Observed on this robot: <b>6 V to 16 V, and mostly 10 V to 14 V.</b>
+   *
+   * <p>That range matters more than it looks. A duty-cycle command is a fraction of whatever the bus
+   * happens to be, so the same command produces roughly <b>half the torque at 6 V that it does at
+   * 12 V</b>. Anything expressed as duty cycle silently rescales itself as the pack drains; anything
+   * expressed in volts does not, which is why the calibrations command volts.
+   *
+   * <p>Speed scales the same way, which is why {@code MotorLoadMonitor} compensates its expected speed
+   * for bus voltage before comparing anything to it.
+   */
+  public static final class BatteryConstants {
+
+    /** Nominal pack voltage. The reference every derived feedforward is expressed against. */
+    public static final double NOMINAL_VOLTS = 12.0;
+
+    /** Bottom of the usual range in normal operation. */
+    public static final double TYPICAL_MIN_VOLTS = 10.0;
+
+    /** Top of the usual range, i.e. a fresh pack off the charger. */
+    public static final double TYPICAL_MAX_VOLTS = 14.0;
+
+    /**
+     * Lowest voltage seen at all, under the hardest load.
+     *
+     * <p>Genuinely low: the roboRIO's own brownout threshold is around 6.8 V and the SPARKs are not far
+     * behind, so this is the edge of the robot working at all rather than merely working poorly.
+     */
+    public static final double ABSOLUTE_MIN_VOLTS = 6.0;
+
+    /** Highest seen. */
+    public static final double ABSOLUTE_MAX_VOLTS = 16.0;
+
+    /**
+     * Below this, a sag is worth reporting rather than expected.
+     *
+     * <p>8.5 rather than the 9.5 originally used. 9.5 sits <em>inside</em> the normal 10-to-14 band once
+     * load is applied, so it flagged healthy behaviour as a battery fault — a false positive that sends
+     * someone to the charger instead of at the real problem. 8.5 is clearly below anything this robot
+     * does in normal operation and still well above brownout.
+     */
+    public static final double CONCERNING_SAG_VOLTS = 8.5;
+
+    private BatteryConstants() {
+    }
+  }
+
   public static final class ModuleConstants {
     /**
      * Teeth on the driving pinion. <b>14T, confirmed.</b>

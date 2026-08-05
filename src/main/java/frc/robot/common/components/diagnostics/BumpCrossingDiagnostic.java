@@ -5,6 +5,7 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.CommonConstants.BatteryConstants;
 import frc.robot.CommonConstants.SwerveConstants;
 import frc.robot.common.components.diagnostics.VisionCalibration.RunningStats;
 import frc.robot.common.subsystems.drive.SwerveDriveSubsystem;
@@ -70,10 +71,15 @@ public class BumpCrossingDiagnostic {
     /**
      * Bus voltage below which sag is implicated, in volts.
      *
-     * <p>11.0 V under load is unremarkable. Below about 9 V the SPARKs are losing headroom and the
-     * roboRIO is approaching its own brownout thresholds, so 9.5 V is where it stops being routine.
+     * <p>From {@link BatteryConstants#CONCERNING_SAG_VOLTS}, so the number lives with the rest of the
+     * voltage facts rather than here.
+     *
+     * <p>This was 9.5, which was wrong for this robot: it runs 10 to 14 V normally, so a minimum of
+     * 9.5 during a hard push is ordinary and the diagnostic would have reported a healthy battery as
+     * the cause. Sending someone to the charger while the real limit is elsewhere is worse than saying
+     * nothing.
      */
-    private static final double SAG_VOLTS = 9.5;
+    private static final double SAG_VOLTS = BatteryConstants.CONCERNING_SAG_VOLTS;
 
     /** What the data says was limiting the robot. */
     public enum Verdict {

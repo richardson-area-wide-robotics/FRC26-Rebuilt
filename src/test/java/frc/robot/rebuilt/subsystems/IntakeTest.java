@@ -128,50 +128,61 @@ class IntakeTest {
   class ProfiledDeploy {
 
     @Test
-    @DisplayName("The profile does not run away while the robot is disabled")
-    void profileDoesNotAdvanceWhileDisabled() {
-      // A trapezoid profile only protects the mechanism if its setpoint stays near the mechanism.
-      // ProfiledPIDController advances its setpoint on every calculate() call, and subsystem
-      // periodic() runs in EVERY mode including disabled — so if the profile is followed while
-      // disabled, the setpoint marches all the way to the goal while the arm cannot move.
+    @DisplayName("A disable forgets the cached goal, so the reference is re-sent on return")
+    void disableForgetsTheCachedGoal() {
+      // The profile lives on the SPARK, so it stops with the controller on disable and restarts from
+      // wherever the arm actually is. The run-away-while-disabled problem a robot-code profile has
+      // cannot arise at all — which is a real advantage of running the loop on the controller, not
+      // just a CAN saving.
       //
-      // Then on enable the setpoint is already at the goal, the error is the full travel, and the
-      // controller commands maximum output. That is precisely the slam the profile exists to prevent,
-      // reintroduced by the profile itself.
+      // What DOES need handling is the send-once optimisation. Goals are only transmitted when they
+      // change, so without clearing the cache a disable-enable cycle would leave the robot thinking
+      // it had already commanded a goal the controller has since forgotten.
+      intake.deployToGoal(6.0);
+      assertEquals(6.0, intake.getDeployGoal(), 1e-6);
+
       HalFixture.disable();
+      intake.periodic();
 
-      intake.stopDeploy();
-      intake.deployToGoal(10.0);
-
-      for (int i = 0; i < 60; i++) {
-        intake.periodic();
-      }
-
-      // The arm has not moved — nothing simulates motion — so the setpoint must not have either.
-      double setpoint = intake.getDeploySetpointPosition();
-      assertTrue(Math.abs(setpoint - intake.getDeployPosition()) < 1.0,
-          "while disabled the setpoint must stay with the arm, but it advanced to " + setpoint
-              + " with the arm at " + intake.getDeployPosition()
-              + " — on enable that becomes a full-travel error and maximum output");
+      assertTrue(Double.isNaN(intake.getDeployGoal()),
+          "the cached goal must be forgotten while disabled, or the reference is never re-sent");
 
       HalFixture.enableTeleop(true);
     }
 
     @Test
-    @DisplayName("Enabling after a disabled period restarts the profile from the arm")
-    void enablingResetsTheProfile() {
+    @DisplayName("Re-requesting the same goal after a disable does send it again")
+    void sameGoalIsResentAfterADisable() {
+      // The other half of the same concern. Suppressing a duplicate goal is the whole point of the
+      // send-once design, but it must not suppress the one send that actually matters — the one after
+      // the controller has been reset.
+      intake.deployToGoal(6.0);
       HalFixture.disable();
-      intake.deployToGoal(10.0);
-      for (int i = 0; i < 30; i++) {
+      intake.periodic();
+      HalFixture.enableTeleop(true);
+
+      intake.deployToGoal(6.0);
+
+      assertEquals(6.0, intake.getDeployGoal(), 1e-6,
+          "the same goal must be re-commanded after a disable, not treated as unchanged");
+    }
+
+    @Test
+    @DisplayName("Holding a goal costs no repeated commands")
+    void holdingCostsNoTraffic() {
+      // Why the profile is on the controller: a reference persists until changed, so holding position
+      // is free. A robot-code controller has to write an output every loop forever. On a single CAN
+      // bus with fifteen devices that difference is the point.
+      intake.deployToGoal(5.0);
+      double first = intake.getDeployGoal();
+
+      for (int i = 0; i < 50; i++) {
         intake.periodic();
+        intake.deployToGoal(5.0);   // asking again must be a no-op
       }
 
-      HalFixture.enableTeleop(true);
-      intake.periodic();
-
-      // The first enabled loop must find the setpoint next to the arm, not at the goal.
-      assertTrue(Math.abs(intake.getDeploySetpointPosition() - intake.getDeployPosition()) < 1.0,
-          "the profile should resume from where the arm actually is");
+      assertEquals(first, intake.getDeployGoal(), 1e-9,
+          "repeatedly requesting the same goal must not change anything");
     }
 
     @Test

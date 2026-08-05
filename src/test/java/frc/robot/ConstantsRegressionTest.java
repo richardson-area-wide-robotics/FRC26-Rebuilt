@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 import edu.wpi.first.math.util.Units;
+import frc.robot.CommonConstants.BatteryConstants;
 import frc.robot.CommonConstants.DriveConstants;
 import frc.robot.CommonConstants.HIDConstants;
 import frc.robot.CommonConstants.ModuleConstants;
@@ -169,25 +170,29 @@ class ConstantsRegressionTest {
   @Test
   @DisplayName("The deploy feedforward can actually reach the profile's velocity limit")
   void deployFeedforwardCoversTheProfile() {
-    // The bug this guards against: the profiled controller commands VOLTS, and the position gain was
-    // inherited from the SPARK's duty-cycle closed loop. 0.05 duty per rotation is 0.6 V; 0.05 volts
-    // per rotation is not. With no velocity feedforward, the gain had to supply the whole voltage for
-    // every move and needed 76 rotations of error on a mechanism with about 10 rotations of travel.
-    // The arm would barely have moved, and it would have looked mechanical.
-    double feedforwardAtLimit =
-        IntakeConstants.DEPLOY_kV * IntakeConstants.DEPLOY_MAX_VELOCITY_RPS;
+    // The bug this guards against is a units mismatch across the interface the loop runs on, and the
+    // history is worth keeping because the loop has now moved twice.
+    //
+    // Briefly the profile ran in robot code and commanded VOLTS, while the position gain was still the
+    // SPARK's duty-cycle value. 0.05 duty per rotation is 0.6 V; 0.05 volts per rotation is not, and
+    // with no velocity feedforward the gain had to supply the whole voltage for every move — 76
+    // rotations of error on a mechanism with about 10 rotations of travel. The arm would barely have
+    // moved and it would have looked mechanical.
+    //
+    // The loop is now back on the controller as MAXMotion, where the gain is duty cycle again and the
+    // feedforward is REVLib's own in VOLTS per RPM. What has to hold either way is that the velocity
+    // feedforward covers a believable share of the bus at the profile's cruise velocity, so the gain is
+    // only ever correcting error.
+    double cruiseRpm = IntakeConstants.DEPLOY_MAX_VELOCITY_RPS * 60.0;
+    double feedforwardAtCruise = IntakeConstants.DEPLOY_kV_VOLTS_PER_RPM * cruiseRpm;
 
-    assertTrue(feedforwardAtLimit > 1.0,
-        "the velocity feedforward must supply a real share of the voltage at the profile limit, "
-            + "or the position gain has to do it alone; got " + feedforwardAtLimit + " V");
-    assertTrue(feedforwardAtLimit < 12.0,
-        "the feedforward alone must not saturate the bus at the profile limit; got "
-            + feedforwardAtLimit + " V");
-
-    // And the position gain has to be a voltage-scale number, not a duty-cycle one.
-    assertTrue(IntakeConstants.DEPLOY_kP >= 0.5,
-        "DEPLOY_kP is in volts per rotation now. A duty-cycle-era value like 0.05 cannot move the "
-            + "arm: got " + IntakeConstants.DEPLOY_kP);
+    assertTrue(feedforwardAtCruise > 1.0,
+        "the velocity feedforward must supply a real share of the voltage at cruise, or the position "
+            + "gain has to do it alone; got " + feedforwardAtCruise + " V");
+    assertTrue(feedforwardAtCruise < BatteryConstants.ABSOLUTE_MIN_VOLTS,
+        "the feedforward alone must still fit inside the WORST-CASE bus, not just a nominal 12 V — "
+            + "this robot runs down to " + BatteryConstants.ABSOLUTE_MIN_VOLTS + " V; got "
+            + feedforwardAtCruise + " V");
   }
 
   @Test

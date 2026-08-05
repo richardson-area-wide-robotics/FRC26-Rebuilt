@@ -79,8 +79,24 @@ class BumpCrossingDiagnosticTest {
     class VoltageLimited {
 
         private Result result() {
-            // Everything else looks like a textbook current-limited run, but the bus fell to 8.9 V.
-            return BumpCrossingDiagnostic.analyse(49.0, 8.9, 0.55, 0.50, 0.05, 45, 300, LIMIT, true);
+            // Everything else looks like a textbook current-limited run, but the bus fell to 7.8 V —
+            // which for this robot is genuinely low. It runs 6 to 16 V and mostly 10 to 14, so 7.8 is
+            // close to the roboRIO's own brownout rather than merely a hard push.
+            return BumpCrossingDiagnostic.analyse(49.0, 7.8, 0.55, 0.50, 0.05, 45, 300, LIMIT, true);
+        }
+
+        @Test
+        @DisplayName("A sag to 8.9 V is NOT flagged, because this robot runs that low normally")
+        void ordinarySagIsNotAFault() {
+            // The threshold used to be 9.5 V, which sits INSIDE the normal 10-to-14 band once load is
+            // applied — so an ordinary hard push was reported as a battery fault and someone would have
+            // been sent to the charger while the real limit was elsewhere. A false all-clear is bad; a
+            // false alarm that redirects the whole session is worse.
+            Result result =
+                BumpCrossingDiagnostic.analyse(48.0, 8.9, 0.60, 0.55, 0.04, 40, 300, LIMIT, true);
+
+            assertEquals(Verdict.CURRENT_LIMITED, result.verdict(),
+                "8.9 V is ordinary for this robot under load, so the real limit should still show");
         }
 
         @Test

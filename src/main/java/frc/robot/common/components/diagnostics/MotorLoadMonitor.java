@@ -2,6 +2,7 @@ package frc.robot.common.components.diagnostics;
 
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.wpilibj.RobotController;
+import frc.robot.CommonConstants.BatteryConstants;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
 
@@ -195,7 +196,20 @@ public class MotorLoadMonitor {
             return state;
         }
 
-        double nominalExpected = expectedSpeed();
+        // Bus voltage first, because speed scales with it almost linearly and this robot runs
+        // anywhere from 6 to 16 V. A mechanism on a 10 V pack is genuinely slower than the same
+        // mechanism on 13 V, and without this the jam threshold would call the difference a fault.
+        //
+        // Layered deliberately: physics handles the FAST changes, learning handles the slow ones. Sag
+        // under load happens in milliseconds, far quicker than the two-second time constant on the
+        // learned ratio could follow, so it has to be computed rather than learned. Drag and wear are
+        // the opposite, and are left to the ratio.
+        double busVolts = RobotController.getBatteryVoltage();
+        double voltageScale = busVolts > 1.0
+                ? busVolts / BatteryConstants.NOMINAL_VOLTS
+                : 1.0;
+
+        double nominalExpected = expectedSpeed() * voltageScale;
 
         // The speed a healthy mechanism actually reaches, rather than the one the datasheet
         // promises. This is what the jam threshold is a fraction of.
@@ -266,7 +280,7 @@ public class MotorLoadMonitor {
         Logger.recordOutput(root + "/Speed", lastSpeed);
         Logger.recordOutput(root + "/BaselineEstablished", baselineEstablished);
         Logger.recordOutput(root + "/SpeedRatio", speedRatio);
-        Logger.recordOutput(root + "/EffectiveExpectedSpeed", expectedSpeed() * speedRatio);
+        Logger.recordOutput(root + "/EffectiveExpectedSpeed", getEffectiveExpectedSpeed());
 
         // Bus voltage, because it is the usual reason a mechanism is slower today than yesterday.
         // Logged here rather than left to be correlated by hand across two different log trees.
@@ -304,9 +318,17 @@ public class MotorLoadMonitor {
         return speedRatio;
     }
 
-    /** @return the speed the jam threshold is actually a fraction of, in the supplied unit. */
+    /**
+     * @return the speed the jam threshold is actually a fraction of, in the supplied unit.
+     *
+     *     <p>Nominal expected speed, scaled for the present bus voltage, then scaled by the learned
+     *     ratio. All three factors matter: the datasheet figure, what the battery can currently
+     *     deliver, and what this particular mechanism actually manages.
+     */
     public double getEffectiveExpectedSpeed() {
-        return expectedSpeed() * speedRatio;
+        double busVolts = RobotController.getBatteryVoltage();
+        double voltageScale = busVolts > 1.0 ? busVolts / BatteryConstants.NOMINAL_VOLTS : 1.0;
+        return expectedSpeed() * voltageScale * speedRatio;
     }
 
     /** @return learned unloaded current in amps. */

@@ -329,7 +329,7 @@ public final class RebuiltConstants {
      * means it oscillates or slams. <b>Raise it until the arm follows, watching
      * {@code Intake/Deploy/Profile/FollowingError}.</b>
      */
-    public static final double DEPLOY_kP = 1.0;
+    public static final double DEPLOY_kP = 0.05;
 
     /**
      * Derivative gain for the deploy arm. Zero until there is a reason.
@@ -339,6 +339,83 @@ public final class RebuiltConstants {
      * the setpoint <em>while following</em>, which is different from overshooting at the end.
      */
     public static final double DEPLOY_kD = 0.0;
+
+    /**
+     * Velocity feedforward for the deploy arm, in <b>volts per RPM</b>. <b>Derived.</b>
+     *
+     * <p>{@code 12 V / 5676 RPM} = 0.002114. The voltage producing one RPM, assuming a motor matching
+     * its datasheet under no load — the same derivation {@code Configs.java} uses for the drivetrain,
+     * expressed in the units REVLib's {@code FeedForwardConfig.kV} takes.
+     *
+     * <p><b>Volts, not duty cycle, and that matters on this robot.</b> A voltage feedforward is divided
+     * by the measured bus internally, so it delivers what it asks for anywhere in the observed 6-to-16 V
+     * range. The deprecated {@code velocityFF} took duty cycle, which would have quietly weakened as
+     * the pack drained — the same class of error as everything else here that assumed 12 V.
+     *
+     * <p>Sanity check: at the 30 rot/s profile limit this asks for {@code 0.002114 * 1800} = 3.8 V,
+     * which is a believable fraction of the bus. If a measured kV comes out far from this, the arm is
+     * losing speed to drag theory does not model.
+     */
+    public static final double DEPLOY_kV_VOLTS_PER_RPM = 12.0 / 5676.0;
+
+    /**
+     * MEASURE — volts per RPM per second, the arm's acceleration feedforward.
+     *
+     * <p>Zero until measured. Unlike the drivetrain there is no useful theoretical stand-in: kA depends
+     * on the arm's inertia through its gearing, and a guessed value commands voltage proportional to a
+     * number nobody measured.
+     */
+    public static final double DEPLOY_kA = 0.0;
+
+    /**
+     * MEASURE — motor rotations per full revolution of the arm, for the gravity cosine.
+     *
+     * <p>REVLib's {@code kCosRatio} is what turns encoder position into the angle the cosine is taken
+     * of, so this <em>is</em> the deploy reduction. Once
+     * {@code MechanismRatios.INTAKE_DEPLOY_REDUCTION} is counted from CAD it belongs here too.
+     *
+     * <p>Only consulted when {@link #DEPLOY_kG} is non-zero, so the placeholder is harmless today.
+     *
+     * <h2>Nothing else on this arm needs the reduction</h2>
+     *
+     * <p>Worth stating plainly, because it is the natural thing to go and fetch and it is <b>not on the
+     * critical path</b>. Everything the arm currently does works in <em>motor rotations</em>, which is
+     * what the encoder reports and what MAXMotion consumes:
+     *
+     * <ul>
+     *   <li>The profile — cruise velocity, acceleration and tolerance are all motor units.
+     *   <li>{@link #DEPLOY_kV_VOLTS_PER_RPM} — a property of the motor, derived from its free speed.
+     *   <li>{@link #DEPLOY_kS} and {@link #DEPLOY_kA} — measured at the motor by step 9c.
+     *   <li>Hard-stop detection and the travel measurement — motor rotations throughout, and the travel
+     *       is compared against {@link #DEPLOY_POSITION_ROTATIONS}, which is also in motor rotations.
+     * </ul>
+     *
+     * <p>The reduction buys exactly two things: travel expressed in <b>arm degrees</b> for a human to
+     * check against a drawing, and this constant, for gravity.
+     *
+     * <h2>The gravity term needs more than the reduction, and REVLib makes it awkward</h2>
+     *
+     * <p>{@code FeedForwardConfig} offers {@code kCos} and {@code kCosRatio} and <b>no phase offset</b>.
+     * So the cosine is taken about the encoder's zero, which means <b>using kCos requires the encoder
+     * zero to be where the arm is horizontal.</b>
+     *
+     * <p>That conflicts directly with re-zeroing at the stowed hard stop, which is the one absolute
+     * physical reference the arm has. Choosing gravity compensation therefore means choosing a datum,
+     * and the options are a real decision rather than a detail:
+     *
+     * <ul>
+     *   <li>Zero at horizontal and express stow and deploy relative to it. Gravity works; the stow stop
+     *       is no longer position zero, so the soft limits move with it.
+     *   <li>Zero at the stow stop and leave {@code kCos} unused, holding with the fixed
+     *       {@link #DEPLOY_HOLD_SPEED} bias instead. Simpler, and adequate if the arm only rests at one
+     *       end — which it does.
+     * </ul>
+     *
+     * <p><b>Step 9c says which is worth doing before anyone decides.</b> It measures the holding voltage
+     * at several positions with no geometry at all: if the spread is small, gravity barely varies across
+     * the travel and the second option is fine. Only a large spread justifies moving the datum.
+     */
+    public static final double DEPLOY_COS_RATIO = 1.0;
 
     /**
      * TUNE — profile velocity limit for the deploy arm, in motor rotations per second.
@@ -371,20 +448,16 @@ public final class RebuiltConstants {
     public static final double DEPLOY_kS = 0.0;
 
     /**
-     * Volts per motor rotation per second — the arm's velocity feedforward. <b>Derived.</b>
+     * MEASURE — volts per motor rotation per second, as step 9c reports it.
      *
-     * <p>{@code 12 V / free speed} is the textbook first estimate: the voltage that produces one unit
-     * of velocity, assuming a motor matching its datasheet under no load. The same derivation
-     * {@code Configs.java} uses for the drivetrain.
+     * <p>Not consumed by anything: the controller takes {@link #DEPLOY_kV_VOLTS_PER_RPM}, which is the
+     * same quantity in the units REVLib wants. Kept so the calibration's output has somewhere to live
+     * and can be compared against the derived figure — divide by 60 to convert.
      *
-     * <p>Not left at zero, because with no velocity feedforward the position gain has to supply the
-     * entire voltage for every move, which is what made the old 0.05 gain unable to move the arm at
-     * all. A derived kV carries the velocity so the gain only corrects error.
-     *
-     * <p>Expect the measured value in step 9c to come out <em>higher</em> than this: theory ignores
-     * gearing friction, belt drag and bus sag, all of which cost voltage.
+     * <p>A measured value materially above {@code 12 / (5676/60)} = 0.127 means the arm loses speed to
+     * drag theory does not model, and the derived constant should be scaled up in the same proportion.
      */
-    public static final double DEPLOY_kV = 12.0 / (5676.0 / 60.0);
+    public static final double DEPLOY_kV = 0.0;
 
     /**
      * MEASURE — volts needed to hold the arm level against gravity.
@@ -397,14 +470,28 @@ public final class RebuiltConstants {
      * <p>Until then, {@link #DEPLOY_HOLD_SPEED} does the job crudely: a fixed bias that holds the arm
      * against its stow stop regardless of where it actually is. That works because the arm only ever
      * rests at one end. Set this and the arm can be held anywhere.
+     *
+     * <p>Applied as REVLib's {@code kCos} on the controller, so it is scaled by the cosine of the arm
+     * angle automatically — {@link #DEPLOY_COS_RATIO} is what tells the controller how to get from
+     * encoder rotations to that angle. Nothing in robot code computes it, which means it stays correct
+     * while merely holding position, and holding is when gravity matters most.
      */
     public static final double DEPLOY_kG = 0.0;
 
     /**
      * MEASURE — the encoder position at which the arm is <b>horizontal</b>, in motor rotations.
      *
-     * <p>Gravity torque on an arm goes as the cosine of its angle from horizontal, so the feedforward
-     * needs to know where horizontal is. Only meaningful once {@link #DEPLOY_kG} is non-zero.
+     * <p>Gravity torque on an arm goes as the cosine of its angle from horizontal, so a gravity
+     * feedforward has to know where horizontal is.
+     *
+     * <p><b>Currently unused, and it cannot simply be plugged in.</b> The gravity term now runs on the
+     * controller as {@code kCos}, and REVLib's {@code FeedForwardConfig} provides no phase offset — the
+     * cosine is taken about the encoder zero. So this offset cannot be handed to the controller; it can
+     * only be applied by <em>moving the encoder zero to horizontal</em>, which is the datum decision
+     * described against {@link #DEPLOY_COS_RATIO}.
+     *
+     * <p>Kept because measuring it is still the first step down that road, and because a robot-code
+     * gravity term would need it if the controller's ever proves insufficient.
      */
     public static final double DEPLOY_HORIZONTAL_OFFSET_ROTATIONS = 0.0;
 
