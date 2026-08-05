@@ -192,3 +192,6 @@ local.properties
 simgui-ds.json
 
 profile_log.txt
+
+# Local record of which SysId result was applied, per machine (see tools/apply_sysid.py)
+tools/.sysid_applied.json

@@ -401,6 +401,19 @@ public class DriveSysId {
         public boolean isComplete() {
             return trustworthyModules == 4;
         }
+
+        /**
+         * @return true when these gains may be written into constants.
+         *
+         *     <p>Deliberately stricter than {@link #isComplete()}. A mean built from three good
+         *     modules is a legitimate <em>estimate</em> and worth printing, but it is not a number to
+         *     bake in: whatever stopped the fourth module fitting has not been explained, and a
+         *     feedforward that under-drives one corner reads as the robot yawing under acceleration
+         *     rather than as a gains problem.
+         */
+        public boolean isSafeToAdopt() {
+            return isComplete() && kV > 0 && kS >= 0 && kA >= 0 && kaSpreadPercent <= 25.0;
+        }
     }
 
     /**
@@ -426,8 +439,21 @@ public class DriveSysId {
         String worst = "none";
         int trustworthy = 0;
 
+        // Only trustworthy fits contribute. This used to sum all four unconditionally, and a
+        // module whose fit failed contributes (0, 0, 0) rather than nothing -- so one unplugged drive
+        // encoder pulled the mean to 75% of the truth, and a kV a quarter low under-drives every path
+        // of the season while reading as a tuning problem.
+        //
+        // The spread has to be computed over the same population for the same reason: a zero from a
+        // failed fit is the minimum kA by a distance, so the spread was near 100% and the warning
+        // blamed a mechanical fault on whichever module merely had the highest kA.
         for (int i = 0; i < MODULE_NAMES.length; i++) {
             SysIdRegression.Gains gains = perModule[i].fit();
+            if (!gains.isTrustworthy()) {
+                continue;
+            }
+            trustworthy++;
+
             sumS += gains.kS();
             sumV += gains.kV();
             sumA += gains.kA();
@@ -439,17 +465,17 @@ public class DriveSysId {
                 maxA = gains.kA();
                 worst = MODULE_NAMES[i];
             }
-
-            if (gains.isTrustworthy()) {
-                trustworthy++;
-            }
         }
 
-        int n = MODULE_NAMES.length;
-        double meanA = sumA / n;
+        if (trustworthy == 0) {
+            return new Summary(0, 0, 0, 0, "none", 0);
+        }
+
+        double meanA = sumA / trustworthy;
         double spread = meanA > 1e-9 ? (maxA - minA) / meanA * 100.0 : 0;
 
-        return new Summary(sumS / n, sumV / n, meanA, spread, worst, trustworthy);
+        return new Summary(sumS / trustworthy, sumV / trustworthy, meanA, spread, worst,
+                trustworthy);
     }
 
     /** Prints the per-module fits and the mean. */
@@ -474,14 +500,38 @@ public class DriveSysId {
 
         Summary summary = summarise();
 
+        // Published for tools/apply_sysid.py, which writes these into the constants so nobody has
+        // to retype four-decimal numbers off a console. The stamp is what makes that safe: it lets the
+        // script tell a fresh result from a value still sitting in NetworkTables from an earlier run,
+        // which is the one way an automatic paste is worse than a manual one.
+        String root = "SysId/Summary";
+        Logger.recordOutput(root + "/kS", summary.kS());
+        Logger.recordOutput(root + "/kV", summary.kV());
+        Logger.recordOutput(root + "/kA", summary.kA());
+        Logger.recordOutput(root + "/SpreadPercent", summary.kaSpreadPercent());
+        Logger.recordOutput(root + "/TrustworthyModules", summary.trustworthyModules());
+        Logger.recordOutput(root + "/Complete", summary.isComplete());
+        Logger.recordOutput(root + "/SafeToAdopt", summary.isSafeToAdopt());
+        Logger.recordOutput(root + "/WorstModule", summary.worstModule());
+        Logger.recordOutput(root + "/Stamp", Timer.getFPGATimestamp());
+
         System.out.println();
-        System.out.printf("  MEAN: kS = %.4f  kV = %.4f  kA = %.4f%n",
-                summary.kS(), summary.kV(), summary.kA());
-        System.out.printf("  Paste into CommonConstants.DriveFeedforwardConstants: "
-                        + "kS = %.4f; kV = %.4f; kA = %.4f;%n",
-                summary.kS(), summary.kV(), summary.kA());
-        System.out.printf("  kA spread across modules: %.1f%% (highest at %s)%n",
+        System.out.printf("  MEAN of %d trustworthy module(s): kS = %.4f  kV = %.4f  kA = %.4f%n",
+                summary.trustworthyModules(), summary.kS(), summary.kV(), summary.kA());
+        System.out.printf("  kA spread across those modules: %.1f%% (highest at %s)%n",
                 summary.kaSpreadPercent(), summary.worstModule());
+
+        // The paste line is withheld rather than printed with a caveat under it. It used to be
+        // printed first and unconditionally, so the caveat arrived after the thing it was qualifying
+        // and blocked nothing -- and a paste line reads as permission.
+        if (summary.isSafeToAdopt()) {
+            System.out.printf("  Paste into CommonConstants.DriveFeedforwardConstants: "
+                            + "kS = %.4f; kV = %.4f; kA = %.4f;%n",
+                    summary.kS(), summary.kV(), summary.kA());
+            System.out.println("  Or let the script do it:  python tools/apply_sysid.py --yes");
+        } else {
+            System.out.println("  NO VALUES TO ADOPT YET. Nothing above should be pasted.");
+        }
 
         if (summary.kaSpreadPercent() > 25) {
             System.out.println("  ^ over 25% — one corner accelerates differently from the others.");

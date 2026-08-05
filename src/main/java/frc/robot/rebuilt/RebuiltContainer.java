@@ -29,6 +29,8 @@ import frc.robot.common.components.diagnostics.CalibrationStore;
 import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
 import frc.robot.common.components.diagnostics.ArmProfileCalibrator;
+import frc.robot.common.components.diagnostics.CalibrationSteps;
+import frc.robot.common.components.diagnostics.GuidedCalibration;
 import frc.robot.common.components.diagnostics.HandMotionRoutine;
 import frc.robot.common.components.diagnostics.DeployTravelCalibrator;
 import frc.robot.common.components.diagnostics.DriveSysId;
@@ -829,6 +831,34 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getDeployTravelCommand() {
     return DEPLOY_TRAVEL.full();
+  }
+
+  /**
+   * The guided calibration: two buttons, and the robot judges its own data.
+   *
+   * <p><b>READY</b> (operator A) starts a measurement once the setup prompt has been satisfied.
+   * <b>NEXT</b> (operator B) moves on. After each measurement the step assesses what it gathered and
+   * either passes it or says what to change and offers the step again.
+   *
+   * <p>That assessment is the part worth having. Every routine here already knew whether its result
+   * was usable -- a regression knows its R-squared and sample count, a traction sweep knows whether the
+   * drivetrain ever bound -- but the knowledge was buried in printed prose, so acting on it meant a
+   * human reading a console mid-session and deciding. Now a bad run says <em>re-gather, and here is
+   * what to change</em>, and a good one says so plainly.
+   *
+   * <p>Ordered cheapest-and-most-depended-upon first: the arm travel is on blocks and everything about
+   * the arm needs it, traction needs only a wall, and SysId needs the most floor.
+   *
+   * @return the guided calibration command.
+   */
+  public static Command getGuidedCalibrationCommand() {
+    return new GuidedCalibration(
+            () -> HIDConstants.OPERATOR_CONTROLLER.a().getAsBoolean(),
+            () -> HIDConstants.OPERATOR_CONTROLLER.b().getAsBoolean())
+        .add(CalibrationSteps.armTravel(DEPLOY_TRAVEL, INTAKE))
+        .add(CalibrationSteps.tractionLimit(TRACTION_CALIBRATOR))
+        .add(CalibrationSteps.driveFeedforward(SYSID))
+        .full();
   }
 
   /**

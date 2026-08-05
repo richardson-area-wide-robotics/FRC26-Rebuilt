@@ -42,6 +42,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 0-DIMS | *Record of what CAD already supplied* — nothing to do | — | — |
 | 0 | The two things CAD could not settle | Tape, square, angle finder | 10 min |
 | 1 | Deploy | Laptop | 5 min |
+| 1a | **Guided calibration** — two buttons, self-judging. Wraps several steps below | Operator controller | — |
 | 1b | **Hand-motion check — motors OFF.** Directions and arm limits, by hand | Blocks, a helper for the arm | 15 min |
 | 2 | **On blocks** — 14-check self-test | Blocks, wheels clear | 10 min |
 | 3 | **Verify drive directions** | ~3 m clear floor | 10 min |
@@ -498,6 +499,55 @@ but is less accurate than the tuned settings.
 
 Running `./gradlew simulateJava` before a deploy is still worth it as a whole-program smoke test,
 but it is no longer the *only* thing covering container wiring.
+
+---
+
+## 1a. The guided calibration — two buttons, and the robot judges its own data
+
+Most of the numbered steps below can be driven from one command instead of scheduled one at a time.
+Schedule `RebuiltContainer.getGuidedCalibrationCommand()` and it walks the steps itself.
+
+| Button | When a setup prompt is shown | After a result |
+| --- | --- | --- |
+| **READY** (operator A) | Start measuring | Re-run this step |
+| **NEXT** (operator B) | — | Move to the next step |
+
+The loop per step is: it reads out what to set up, waits for **READY**, measures, **then judges what it
+gathered.** If the data is good it says so and waits for NEXT. If it is not, it says *what to change*
+and offers the step again — up to five attempts, after which it records the step as unresolved and
+moves on rather than trapping the session.
+
+**One press is one action.** Release the button between presses; if you are already holding it when a
+step begins, it waits for a release rather than skipping ahead.
+
+### Why this is better than reading the console yourself
+
+Every routine already knew whether its result was usable — a regression knows its R² and sample count,
+a traction sweep knows whether the drivetrain ever bound, a load calibration knows whether its two
+populations separated. That knowledge was printed as prose, so acting on it meant somebody reading a
+console mid-session and deciding. **Several of the reports also printed a paste-ready line before the
+caveat explaining why the numbers were not trustworthy**, and a paste line reads as permission.
+
+Now the judgement is a value the sequence branches on, and the paste line is *withheld* rather than
+printed with a warning under it.
+
+### What it currently covers
+
+| Step | Judges | Passes when |
+| --- | --- | --- |
+| Arm travel (powered) | Whether both hard stops were found | Travel measured — then check it against the by-hand figure from 1b |
+| Traction limit | Whether the drivetrain ever bound against the wall | Slip found, or no slip up to the cap |
+| Drive feedforward | Module count, kA spread, sign of kV | All 4 modules fitted and spread ≤ 25% |
+
+The other routines still run standalone. Adding one to the guided sequence is a small adapter — see
+`CalibrationSteps` — and the work is translating its existing report into a pass/retry verdict.
+
+### The end-of-run summary is the thing to read
+
+It lists what is usable and what needs re-gathering, with the reason. **Do not paste values for
+anything on the re-gather list.** A half-calibrated robot with numbers taken from the passing half is
+harder to reason about than an uncalibrated one, because the constants stop telling you which are
+measured.
 
 ---
 
@@ -1436,7 +1486,7 @@ the report says which were cut.
 
 | Line says | Meaning |
 | --- | --- |
-| `kS = … kV = … kA = … (R2 …) — OK` | Paste the MEAN line into `CommonConstants.DriveFeedforwardConstants` |
+| `kS = … kV = … kA = … (R2 …) — OK` | Nothing to type. Run `python tools/apply_sysid.py --yes` |
 | `SINGULAR` | The dynamic steps did not run, so acceleration was constant and kS and kA are not separable at all |
 | `REJECT: kV is not positive` | A wiring or inversion fault, not a fit problem. No amount of extra data fixes it |
 | `REJECT: kA is negative` | Unphysical — check that run for wheel slip or a collision |
@@ -1445,6 +1495,38 @@ the report says which were cut.
 Also check **kA spread across modules**. Over 25% means one corner accelerates differently from
 the other three, and a chassis feedforward built on the mean will under-drive it — which shows up
 as the robot yawing under hard acceleration rather than as anything obviously feedforward-related.
+
+---
+
+### Getting the numbers into the code
+
+**Do not retype them.** A transposed digit in kV is a 10% feedforward error that reads as a tuning
+problem for the rest of the season.
+
+```
+python tools/apply_sysid.py            # shows what would change, writes nothing
+python tools/apply_sysid.py --yes      # applies it
+```
+
+It reads the summary straight off the robot over NetworkTables (`pip install pyntcore`) and edits
+`CommonConstants.DriveFeedforwardConstants` in place. Then read `git diff` — it edited source, and you
+should see exactly three lines change.
+
+**It refuses more than it accepts, on purpose.** Automating a paste automates a bad paste, so it will
+not write:
+
+| Refusal | Why it matters |
+| --- | --- |
+| Fewer than 4 modules fitted | A failed module fit contributes **zero, not nothing**, so one dead drive encoder puts the mean 25% low — and a kV a quarter low under-drives every path of the season |
+| kA spread over 25% | One corner accelerating differently is not something a chassis-level feedforward can represent; forcing it reads as the robot yawing under acceleration |
+| Values outside plausible bounds | Theory says kV ≈ 2.09 for this drivetrain at 4.50:1. A fit far off that is more likely bad than surprising |
+| **A stale result** | NetworkTables keeps the last value published, so a run that crashed — or yesterday's session — looks identical to a fresh success. The robot publishes a timestamp and the script records the one it applied, so the same result cannot be adopted twice |
+
+`--force` overrides all of it and prints each reason it is overriding. There is rarely a good use for
+it.
+
+If you would rather not connect: the same values are in the AdvantageKit log under
+`SysId/Summary/*`, and `--from-json` takes a file with those fields.
 
 ---
 
