@@ -88,6 +88,29 @@ public class LoadCalibrationRoutine {
     }
 
     /**
+     * @return every mechanism's recommendation, in the order they are calibrated.
+     *
+     *     <p>Exposed so a caller can act on {@code isViable()} rather than a human reading the printed
+     *     report and deciding.
+     */
+    public List<LoadCalibrator.Recommendation> recommendations() {
+        List<LoadCalibrator.Recommendation> out = new ArrayList<>();
+        for (LoadCalibrator cal : new LoadCalibrator[] {
+                intakeCal, spindexerCal, feederCal, shooterCal}) {
+            out.add(cal.recommend());
+        }
+        return out;
+    }
+
+    /** Discards every population, so a re-run replaces the previous attempt rather than joining it. */
+    public void reset() {
+        intakeCal.reset();
+        spindexerCal.reset();
+        feederCal.reset();
+        shooterCal.reset();
+    }
+
+    /**
      * Builds the three-phase sequence for one mechanism.
      *
      * <p>The mechanism is commanded to run for the whole sequence and stopped once at the end, so the

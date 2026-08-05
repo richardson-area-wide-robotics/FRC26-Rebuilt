@@ -37,21 +37,55 @@ class RotationalInertiaCalibratorTest {
     class Torque {
 
         @Test
-        @DisplayName("scales linearly with current")
-        void linearInCurrent() {
+        @DisplayName("is AFFINE in current, not proportional -- the no-load current earns no torque")
+        void affineInCurrent() {
+            // This used to assert that doubling the current doubles the torque, which is what
+            // stall-torque-over-stall-current implies. It is wrong, and the error was 29% at this
+            // routine's operating point, all in one direction.
+            //
+            // Some current at any operating point produces no torque at all -- the datasheet's free
+            // current. Useful torque is Kt * (I - I_free), so torque is affine in current and doubling
+            // the current MORE than doubles the torque. That matters here precisely because SPIN_VOLTS
+            // is deliberately small: at low current a fixed 3.6 A per motor is a large share of it.
             double at10 = RotationalInertiaCalibrator.torqueFromCurrent(10);
             double at20 = RotationalInertiaCalibrator.torqueFromCurrent(20);
 
-            assertEquals(2.0, at20 / at10, 1e-9);
+            assertTrue(at20 / at10 > 2.0,
+                "doubling the current must more than double the torque, because the no-load current "
+                    + "is paid once rather than scaling; got " + (at20 / at10));
+
+            // Affine: equal current steps give equal torque steps.
+            double at30 = RotationalInertiaCalibrator.torqueFromCurrent(30);
+            assertEquals(at20 - at10, at30 - at20, 1e-9,
+                "equal current increments must give equal torque increments");
+        }
+
+        @Test
+        @DisplayName("Current at or below the no-load draw makes no torque, and never negative")
+        void noTorqueBelowFreeCurrent() {
+            // Left unguarded, a below-free-current sample gives a negative torque, and a negative
+            // torque divided by a positive acceleration gives a negative moment of inertia -- which is
+            // not a measurement of anything, but is a number that would get printed.
+            assertEquals(0.0, RotationalInertiaCalibrator.torqueFromCurrent(3.6), 1e-9);
+            assertEquals(0.0, RotationalInertiaCalibrator.torqueFromCurrent(0.0), 1e-9);
+            assertEquals(0.0, RotationalInertiaCalibrator.torqueFromCurrent(-5.0), 1e-9);
         }
 
         @Test
         @DisplayName("matches a hand calculation for the as-built drivetrain")
         void matchesHandCalculation() {
-            // 4 motors x (0.01706 N.m/A x 15 A x 4.50 reduction / 0.0381 m wheel radius) x 0.42207 m
-            // drive radius. Worked through: 1.1948 N.m at the wheel shaft per motor, 30.20 N at the
-            // carpet, 120.8 N total, 51.0 N.m about the centre.
-            assertEquals(51.0, RotationalInertiaCalibrator.torqueFromCurrent(AMPS), 0.5);
+            // Kt = 3.60 / (211 - 3.6) = 0.017357 N.m per amp of USEFUL current.
+            // Useful current at the 15 A operating point = 15 - 3.6 = 11.4 A.
+            // Per motor at the shaft: 0.017357 x 11.4 = 0.19787 N.m
+            // At the wheel:           x 4.50 reduction = 0.89041 N.m
+            // At the carpet:          / 0.0381 m radius = 23.371 N
+            // Four motors:            = 93.485 N
+            // About the centre:       x 0.42207 m drive radius = 39.46 N.m
+            //
+            // The old figure here was 51.0 N.m, from stall torque over stall current with no no-load
+            // deduction -- 29% high. Since I = torque / alpha, the inertia inherited all of it, and the
+            // result went into PathPlanner's robotMOI to plan every rotation of the season.
+            assertEquals(39.46, RotationalInertiaCalibrator.torqueFromCurrent(AMPS), 0.1);
         }
 
         @Test

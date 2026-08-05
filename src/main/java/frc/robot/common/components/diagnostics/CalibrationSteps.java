@@ -4,6 +4,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.common.components.diagnostics.GatedStep.Assessment;
 import frc.robot.common.components.diagnostics.HardStopDetector.End;
 import frc.robot.rebuilt.subsystems.Intake;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Adapters that let the existing calibrators run under {@link GuidedCalibration}.
@@ -129,6 +131,176 @@ public final class CalibrationSteps {
                         "Slip at %d A per motor, so the recommendation is %d A.%s",
                         result.tractionLimitAmps(), result.recommendedAmps(),
                         breaker.isEmpty() ? "" : " " + breaker));
+            }
+        };
+    }
+
+    /**
+     * The intake arm's motion profile: break-away, kV, gravity and achievable limits.
+     *
+     * @param profile The arm profile calibration.
+     * @return the gated step.
+     */
+    public static GatedStep armProfile(ArmProfileCalibrator profile) {
+        return new GatedStep() {
+            @Override
+            public String name() {
+                return "ARM MOTION PROFILE";
+            }
+
+            @Override
+            public String setupPrompt() {
+                return "Robot on blocks, NO game pieces, nothing under the arm. Run ARM TRAVEL first "
+                        + "-- the gravity phase drives to fractions of the measured travel and is "
+                        + "skipped without it.";
+            }
+
+            @Override
+            public Command measure() {
+                return profile.full();
+            }
+
+            @Override
+            public void reset() {
+                profile.reset();
+            }
+
+            @Override
+            public Assessment assess() {
+                ArmProfileCalibrator.Outcome outcome = profile.outcome();
+
+                if (!outcome.breakawayMeasuredBothWays()) {
+                    return Assessment.retry("A break-away ramp never saw the arm move, so friction and "
+                            + "gravity cannot be separated. Almost always a soft limit cutting output "
+                            + "at one end -- check them and re-run.");
+                }
+                if (!outcome.kvFit()) {
+                    return Assessment.retry("The velocity fit is not trustworthy. Steps were discarded "
+                            + "for hitting a stop or stalling, so there is not enough clean travel. "
+                            + "Check the arm swings freely across its whole range, then re-run.");
+                }
+                if (outcome.holdSamples() == 0) {
+                    return Assessment.retry("No holding-voltage sample survived. Either travel was "
+                            + "never measured, or the arm did not reach the positions it was asked for "
+                            + "-- which would record gravity against the wrong angle. Run ARM TRAVEL "
+                            + "first, then re-run.");
+                }
+
+                return Assessment.pass(String.format(
+                        "Break-away both ways, kV fitted, %d/5 hold samples, peak %.1f rot/s and "
+                        + "%.0f rot/s2. Compare those against the configured profile limits.",
+                        outcome.holdSamples(), outcome.peakVelocityRps(), outcome.peakAccelRps2()));
+            }
+        };
+    }
+
+    /**
+     * Current thresholds for game-piece and jam detection, across all four mechanisms.
+     *
+     * @param routine The load calibration.
+     * @return the gated step.
+     */
+    public static GatedStep loadThresholds(LoadCalibrationRoutine routine) {
+        return new GatedStep() {
+            @Override
+            public String name() {
+                return "LOAD THRESHOLDS";
+            }
+
+            @Override
+            public String setupPrompt() {
+                return "Robot on blocks. About 20 game pieces and a helper. Nothing loaded when it "
+                        + "starts -- the empty phase runs first, and a piece left in it inflates the "
+                        + "noise floor everything else is judged against.";
+            }
+
+            @Override
+            public Command measure() {
+                return routine.full();
+            }
+
+            @Override
+            public void reset() {
+                routine.reset();
+            }
+
+            @Override
+            public Assessment assess() {
+                List<LoadCalibrator.Recommendation> all = routine.recommendations();
+
+                List<String> notViable = new ArrayList<>();
+                for (LoadCalibrator.Recommendation recommendation : all) {
+                    if (!recommendation.isViable()) {
+                        notViable.add(recommendation.mechanism());
+                    }
+                }
+
+                if (notViable.size() == all.size()) {
+                    return Assessment.retry("No mechanism separated loaded from empty. That is more "
+                            + "likely a phase that did not happen than four bad mechanisms -- feed "
+                            + "pieces continuously through the whole LOADED phase, and obstruct the "
+                            + "mechanism properly during the OBSTRUCTED phase. Then re-run.");
+                }
+                if (!notViable.isEmpty()) {
+                    return Assessment.retry("Did not separate on: " + String.join(", ", notViable)
+                            + ". Feed pieces through those more continuously and re-run. If it repeats, "
+                            + "current sensing genuinely will not work there and it needs a sensor.");
+                }
+
+                return Assessment.pass("All " + all.size() + " mechanisms separated loaded from empty. "
+                        + "Read the per-mechanism numbers before pasting -- they depend on which game "
+                        + "piece was used and how worn the rollers are.");
+            }
+        };
+    }
+
+    /**
+     * Rotational inertia, in both intake states.
+     *
+     * @param inertia The inertia calibration.
+     * @return the gated step.
+     */
+    public static GatedStep rotationalInertia(RotationalInertiaCalibrator inertia) {
+        return new GatedStep() {
+            @Override
+            public String name() {
+                return "ROTATIONAL INERTIA";
+            }
+
+            @Override
+            public String setupPrompt() {
+                return "Robot on the floor with about 2 m clear all round. It will spin in place twice "
+                        + "-- once stowed, once deployed -- because deploying moves several kilograms "
+                        + "outward and inertia goes as mass times radius squared.";
+            }
+
+            @Override
+            public Command measure() {
+                return inertia.full();
+            }
+
+            @Override
+            public Assessment assess() {
+                RotationalInertiaCalibrator.Result stowed = inertia.getStowedResult();
+                RotationalInertiaCalibrator.Result deployed = inertia.getDeployedResult();
+
+                if (stowed == null || deployed == null) {
+                    return Assessment.retry("One of the two states never produced a run. Check the arm "
+                            + "actually deployed and stowed between them, then re-run.");
+                }
+                if (!stowed.isValid() || !deployed.isValid()) {
+                    String which = !stowed.isValid() ? "stowed" : "deployed";
+                    return Assessment.retry("The " + which + " run is not believable -- too few "
+                            + "samples, a poor straight-line fit, or the wheels outran the spin rate. "
+                            + "Make sure it has room to spin freely on carpet and re-run. Do NOT lower "
+                            + "the spin voltage: that lowers the spin rate and makes the check worse.");
+                }
+
+                return Assessment.pass(String.format(
+                        "I = %.3f stowed, %.3f deployed kg.m2. Treat these as upper bounds -- they "
+                        + "come from motor current through a datasheet torque constant, with no "
+                        + "allowance for gearbox efficiency.",
+                        stowed.momentOfInertia(), deployed.momentOfInertia()));
             }
         };
     }

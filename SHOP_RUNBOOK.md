@@ -507,18 +507,32 @@ but it is no longer the *only* thing covering container wiring.
 Most of the numbered steps below can be driven from one command instead of scheduled one at a time.
 Schedule `RebuiltContainer.getGuidedCalibrationCommand()` and it walks the steps itself.
 
-| Button | When a setup prompt is shown | After a result |
-| --- | --- | --- |
-| **READY** (operator A) | Start measuring | Re-run this step |
-| **NEXT** (operator B) | — | Move to the next step |
+| Button | Operator | Does | Notes |
+| --- | --- | --- | --- |
+| **RUN** | A | Measure this step now | Also the re-run — pressing it again repeats the step and discards the previous attempt |
+| **NEXT** | B | Accept the result and go forward | **Refused if the step has not been measured.** That is what SKIP is for |
+| **PREVIOUS** | X | Go back one step | Its result is kept, so you can look at it again or re-run it |
+| **SKIP** | Y | Go forward *without* a result | Recorded as skipped, and named in the summary |
 
-The loop per step is: it reads out what to set up, waits for **READY**, measures, **then judges what it
-gathered.** If the data is good it says so and waits for NEXT. If it is not, it says *what to change*
-and offers the step again — up to five attempts, after which it records the step as unresolved and
-moves on rather than trapping the session.
+The loop per step is: it reads out what to set up, waits for a button, and if that was **RUN**, measures
+and **then judges what it gathered.** If the data is good it says so. If not, it says *what to change*
+and you press RUN again.
 
-**One press is one action.** Release the button between presses; if you are already holding it when a
+**RUN is deliberately also the re-run** — starting a measurement and repeating one are the same physical
+act, and a separate button for each is how somebody in a shop presses the wrong one.
+
+**NEXT and SKIP are deliberately different.** NEXT means "I have a result and I accept it"; SKIP means
+"I am moving on without one". Folding them together is exactly what lets a session advance past an
+unmeasured step and finish looking complete — so NEXT refuses when there is nothing to accept, and
+tells you to press RUN or SKIP.
+
+**One press is one action.** Release the button between presses; if you are already holding one when a
 step begins, it waits for a release rather than skipping ahead.
+
+**You can still drive between steps.** The routine holds the drivetrain while it runs, so the teleop
+drive command is fed through while it waits for a button — the driver controller works normally right
+up to the moment RUN is pressed. Which matters, because the setup prompts ask you to square the robot
+against a wall.
 
 ### Why this is better than reading the console yourself
 
@@ -533,14 +547,23 @@ printed with a warning under it.
 
 ### What it currently covers
 
-| Step | Judges | Passes when |
-| --- | --- | --- |
-| Arm travel (powered) | Whether both hard stops were found | Travel measured — then check it against the by-hand figure from 1b |
-| Traction limit | Whether the drivetrain ever bound against the wall | Slip found, or no slip up to the cap |
-| Drive feedforward | Module count, kA spread, sign of kV | All 4 modules fitted and spread ≤ 25% |
+Six steps, ordered so each one's prerequisites are already done:
 
-The other routines still run standalone. Adding one to the guided sequence is a small adapter — see
-`CalibrationSteps` — and the work is translating its existing report into a pass/retry verdict.
+| # | Step | Judges | Passes when |
+| --- | --- | --- | --- |
+| 1 | Arm travel (powered) | Whether both hard stops were found | Travel measured — then check it against the by-hand figure from 1b |
+| 2 | Arm motion profile | Break-away both ways, kV fit, surviving hold samples | All three present |
+| 3 | Load thresholds | Whether each mechanism separated loaded from empty | All four separated |
+| 4 | Traction limit | Whether the drivetrain ever bound against the wall | Slip found, or no slip up to the cap |
+| 5 | Rotational inertia | Sample count, fit quality, wheel slip, both arm states | Both runs believable |
+| 6 | Drive feedforward | Module count, kA spread, sign of kV | All 4 modules fitted and spread ≤ 25% |
+
+Steps 1 and 2 are on blocks; 3 is on blocks with a helper and game pieces; 4 needs a wall; 5 and 6 need
+floor. The order suits the *dependencies* rather than the setup, so expect to move the robot — which is
+why you can still drive between steps.
+
+The remaining routines (vision, bump-crossing, manoeuvre suite) still run standalone. Adding one is a
+small adapter in `CalibrationSteps`; the work is translating its report into a pass/retry verdict.
 
 ### The end-of-run summary is the thing to read
 
@@ -1604,15 +1627,16 @@ wrong thing. Fixed items are not listed; these are the ones still open as of thi
 
 | Step | Do not trust | Why |
 | --- | --- | --- |
-| 9c | The **gravity / holding-voltage** result | All five samples can come from a parked arm at one position, and the report then concludes gravity does not matter. If every hold voltage is identical, the phase did not run. |
-| 9c | A break-away of **exactly 4.000 V** | That is the ramp timing out, recorded as if it were a measurement. Re-run; if it repeats, the arm did not move. |
-| 9c | **Peak acceleration** | Includes the deceleration into the limit, so it reads roughly ten times high. Treat the achievable-acceleration verdict as unproven. |
-| 9c | **`DEPLOY_kV`** if R² is suspiciously perfect | One sample per step means a velocity short of steady state scales every point equally — a perfect fit to an inflated number. |
-| 9 | **NOT VIABLE** on a mechanism that clearly works | Viability is diluted by how often a piece was actually present. Feed pieces as continuously as you can, and disbelieve a lone NOT VIABLE. |
-| 9 | A **jam fraction of exactly 0.60** | That is the clamp. It means the obstructed phase did not obstruct anything. |
-| 8 | **TRACTION_LIMITED** on a crossing where the robot skewed | Yaw is counted as slip, and traction is tested before current — so the advice can be the exact opposite of the fix. Re-run keeping it straight. |
-| 10 | The pasted **kV** if any module says untrustworthy | The mean includes failed fits, so one dead encoder puts it 25% low. Read the per-module lines before pasting. |
-| 7b | **Rotational inertia**, always | Torque per amp omits the no-load current, so the figure is about 30% high. Treat it as an upper bound. Its slip warning also fires spuriously — do **not** follow its advice to lower the spin voltage, which makes the error worse. |
+| 9 | A **jam fraction of exactly 0.60** | That is the clamp. It means the obstructed phase did not obstruct anything — nothing yet checks that the obstructed phase slowed the mechanism more than a piece does. |
+| 8 | **TRACTION_LIMITED** on a crossing where the robot skewed | Wheel speed includes the rotational component, so yaw reads as slip — 43°/s is enough. Traction is tested before current, so the advice can be the exact opposite of the fix. Re-run keeping it straight. |
+| 8 | **VOLTAGE_LIMITED** from a single dip | No dwell requirement, and it is first in the priority chain, so one 20 ms sag below 8.5 V masks every other verdict. |
+| 10 | **kA** specifically | The acceleration regressor is a raw one-step difference of the same velocity used as a regressor, which attenuates its coefficient. kS and kV are sound; treat kA as approximate. |
+| 7b | **Rotational inertia**, as an upper bound | The torque constant is now correct, but there is still no allowance for gearbox efficiency, and the fit takes a run-mean torque against a slope measured after most of the rise. Both push the same way. Its slip warning also still fires spuriously — do **not** follow its advice to lower the spin voltage, which lowers the spin rate and makes the check worse. |
+
+**Fixed since the last revision**, so these no longer apply: the gravity phase recording parked-arm
+samples; a break-away timeout reported as 4.000 V; peak acceleration counting the deceleration into the
+limit; kV steps fed a stalled reading; `NOT VIABLE` on a mechanism fed sparsely; the SysId mean
+including failed module fits; and torque-per-amp omitting the no-load current.
 
 ## Known-unverified list
 

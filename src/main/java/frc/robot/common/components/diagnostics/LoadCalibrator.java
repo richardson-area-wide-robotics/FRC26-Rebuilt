@@ -170,6 +170,25 @@ public class LoadCalibrator {
     private final RunningStats jamSpeed = new RunningStats();
 
     /**
+     * Discards every population, so a re-run replaces the previous attempt rather than joining it.
+     *
+     * <p>Needed the moment a routine can be re-run on the operator's say-so, and its absence was
+     * quiet: re-running merged both attempts into one population. A first attempt with a game piece
+     * accidentally left in the empty phase would then inflate the noise floor for ever -- and the noise
+     * floor is what every later sample is segmented against, so one bad run silently degrades every
+     * good one after it. Doubled sample counts were the only visible tell.
+     */
+    public void reset() {
+        emptyAmps.reset();
+        emptySpeed.reset();
+        loadedPhaseAmps.reset();
+        loadedAmps.reset();
+        loadedSpeed.reset();
+        jamAmps.reset();
+        jamSpeed.reset();
+    }
+
+    /**
      * @param mechanism Name for the report, e.g. "INTAKE".
      */
     public LoadCalibrator(String mechanism) {
@@ -254,11 +273,34 @@ public class LoadCalibrator {
         double loaded = loadedAmps.getMean();
         double freeSpeed = emptySpeed.getMean();
 
-        // Separation is measured on the UNSELECTED phase mean. Using the selected population here
-        // would be circular: those samples were chosen for being above the floor, so they are
-        // guaranteed to clear it and would report every mechanism as viable.
+        // Separation, and it took two attempts to get right. Both failure modes are worth keeping,
+        // because they are opposite and each looks reasonable on its own.
+        //
+        // It was originally the UNSELECTED phase mean against idle, to avoid the obvious circularity:
+        // the selected samples were chosen for clearing the floor, so of course they clear it. But the
+        // unselected mean is DILUTED by the gaps between pieces. With duty cycle D and true excess E
+        // over sigma, that figure is D*E/sigma -- so a 4-sigma bar silently demanded a true separation
+        // of 4/D, and at the 20% duty this routine's own docs anticipate that is a 20-sigma bar. A
+        // genuinely excellent 14-sigma mechanism computed as 2.8 and was condemned as NOT VIABLE, which
+        // sends somebody looking for a beam-break sensor a working intake did not need.
+        //
+        // Dividing by the observed duty cycle looks like the fix and is worse. The "observed duty" is
+        // the SELECTED fraction, and when the populations genuinely overlap that fraction collapses to
+        // the noise tail -- so dividing by it manufactures separation exactly where there is none. It
+        // turns the one case that must fail into a pass.
+        //
+        // What works is to ask the right question of the selected population: is its mean higher than
+        // truncation ALONE would produce? Selecting the top tail of pure noise yields a mean of about
+        // (k + 1/k) sigma above idle for a k-sigma cut. Anything materially above that is signal, and
+        // nothing about it is diluted by duty cycle or circular.
+        double noiseOnlyMean = idle
+                + (NOISE_MARGIN_SIGMA + 1.0 / NOISE_MARGIN_SIGMA) * noise;
         double separationSigma =
-                noise > 1e-6 ? (loadedPhaseAmps.getMean() - idle) / noise : 0;
+                noise > 1e-6 ? (loadedAmps.getMean() - noiseOnlyMean) / noise : 0;
+
+        double observedDuty = loadedPhaseAmps.getCount() == 0
+                ? 0
+                : (double) loadedAmps.getCount() / loadedPhaseAmps.getCount();
 
         // The threshold has to clear the noise AND sit meaningfully below the loaded level. Take
         // whichever constraint binds harder rather than assuming one always does.
@@ -285,9 +327,7 @@ public class LoadCalibrator {
                     Math.min(0.60, (loadedFraction + jamFractionObserved) / 2.0));
         }
 
-        double dutyCycle = loadedPhaseAmps.getCount() == 0
-                ? 0
-                : (double) loadedAmps.getCount() / loadedPhaseAmps.getCount();
+        double dutyCycle = observedDuty;
 
         return new Recommendation(
                 mechanism, idle, noise, loaded, loadedAmps.getMax(), workExcess, freeSpeed,

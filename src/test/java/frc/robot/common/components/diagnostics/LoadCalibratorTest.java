@@ -111,6 +111,61 @@ class LoadCalibratorTest {
     }
 
     @Nested
+    @DisplayName("a good mechanism fed at a realistic duty cycle")
+    class SparseFeeding {
+
+        /**
+         * A strong mechanism with pieces present only a fifth of the time.
+         *
+         * <p>Idle 5 A with 0.5 A of noise; a piece adds 7 A. That is a 14-sigma separation, about as
+         * good as a current signature gets. But the routine's own docs anticipate pieces being present
+         * around 20% of a loaded phase, because a human is picking them up, so most of the phase reads
+         * idle.
+         */
+        private Recommendation recommend() {
+            Random random = new Random(SEED);
+            LoadCalibrator cal = new LoadCalibrator("INTAKE");
+
+            feed(200, 5.0, 0.5, 5000, random, cal::addEmptySample);
+
+            // 20% of the loaded phase has a piece in it; the rest is the mechanism running empty.
+            feed(60, 12.0, 0.5, 4300, random, cal::addLoadedSample);
+            feed(240, 5.0, 0.5, 5000, random, cal::addLoadedSample);
+
+            return cal.recommend();
+        }
+
+        @Test
+        @DisplayName("is VIABLE -- a sparse feed must not read as a bad mechanism")
+        void sparseFeedingIsStillViable() {
+            // The false alarm this pins. Separation was measured on the whole loaded phase including
+            // its gaps, so it scaled with duty cycle: this 14-sigma mechanism computed as about 2.8 and
+            // was condemned as NOT VIABLE, with the report explicitly telling the team not to paste it.
+            // Somebody then goes looking for a beam-break sensor that a working intake did not need.
+            //
+            // A false all-clear is bad. A false alarm that redirects the session and adds hardware is
+            // worse, because nothing later contradicts it.
+            Recommendation r = recommend();
+
+            assertTrue(r.isViable(),
+                "a 14-sigma mechanism fed 20% of the time must be viable; separation reported as "
+                    + r.separationSigma());
+        }
+
+        @Test
+        @DisplayName("and the reported duty cycle shows how sparse the feed was")
+        void dutyCycleIsReported() {
+            // Kept visible rather than corrected away: the operator should be able to see that the
+            // phase was mostly gaps, because that is what decides whether re-running with a faster
+            // feed would sharpen the numbers.
+            double duty = recommend().pieceDutyCycle();
+
+            assertTrue(duty > 0.1 && duty < 0.35,
+                "about a fifth of the phase had a piece in it; got " + duty);
+        }
+    }
+
+    @Nested
     @DisplayName("a mechanism where a game piece barely loads the motor")
     class OverlappingPopulations {
 

@@ -854,9 +854,24 @@ public class RebuiltContainer implements IRobotContainer {
   public static Command getGuidedCalibrationCommand() {
     return new GuidedCalibration(
             () -> HIDConstants.OPERATOR_CONTROLLER.a().getAsBoolean(),
-            () -> HIDConstants.OPERATOR_CONTROLLER.b().getAsBoolean())
+            () -> HIDConstants.OPERATOR_CONTROLLER.b().getAsBoolean(),
+            () -> HIDConstants.OPERATOR_CONTROLLER.x().getAsBoolean(),
+            () -> HIDConstants.OPERATOR_CONTROLLER.y().getAsBoolean(),
+            DRIVE_SUBSYSTEM, INTAKE, FEEDER, SHOOTER)
+        // Teleop drive runs while waiting for a button, so the robot can still be repositioned
+        // between steps. Without it the drivetrain sits inert, because the routine holds it -- and
+        // the setup prompts ask the operator to square it against a wall.
+        .whileWaiting(() -> DRIVE_SUBSYSTEM.driveCommandWithHeadingAssist(
+            () -> -HIDConstants.DRIVER_CONTROLLER.getLeftY(),
+            () -> -HIDConstants.DRIVER_CONTROLLER.getLeftX(),
+            () -> -HIDConstants.DRIVER_CONTROLLER.getRightX(),
+            () -> stateOutput.headingTarget(),
+            true))
         .add(CalibrationSteps.armTravel(DEPLOY_TRAVEL, INTAKE))
+        .add(CalibrationSteps.armProfile(ARM_PROFILE))
+        .add(CalibrationSteps.loadThresholds(LOAD_CALIBRATOR))
         .add(CalibrationSteps.tractionLimit(TRACTION_CALIBRATOR))
+        .add(CalibrationSteps.rotationalInertia(INERTIA_CALIBRATOR))
         .add(CalibrationSteps.driveFeedforward(SYSID))
         .full();
   }

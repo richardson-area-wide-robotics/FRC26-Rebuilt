@@ -83,12 +83,42 @@ public class RotationalInertiaCalibrator {
      */
     private static final double SLIP_RATIO = 1.15;
 
-    /** NEO Vortex stall torque and stall current, from REV's datasheet. */
+    /** NEO Vortex stall torque, stall current and free current, from REV's datasheet. */
     private static final double VORTEX_STALL_TORQUE_NM = 3.60;
     private static final double VORTEX_STALL_CURRENT_AMPS = 211.0;
+    private static final double VORTEX_FREE_CURRENT_AMPS = 3.6;
 
-    /** Newton-metres per amp at the motor shaft. */
-    public static final double TORQUE_PER_AMP = VORTEX_STALL_TORQUE_NM / VORTEX_STALL_CURRENT_AMPS;
+    /**
+     * Torque constant, in newton-metres per amp of <b>useful</b> current.
+     *
+     * <p>Note the denominator. This was stall torque over stall <em>current</em>, which is not the
+     * torque constant: some of the current at any operating point produces no torque at all, and the
+     * datasheet's free current is what that costs. So Kt is stall torque over
+     * {@code stall - free} current, and the torque produced is {@code Kt * (I - I_free)} -- see
+     * {@link #usefulTorqueNm}.
+     *
+     * <p>The error was large and in one direction. At the 15 A per motor this routine actually
+     * operates at, the old arithmetic gave 0.256 N.m where the truth is 0.198 -- a <b>29%
+     * overestimate of torque, and therefore of the inertia computed from it</b>, before any allowance
+     * for gearbox efficiency, which pushes the same way. That figure was printed to three decimals and
+     * pasted into PathPlanner's {@code robotMOI}, where it plans every rotation of the season.
+     *
+     * <p>The fraction lost to no-load current is large here precisely <em>because</em>
+     * {@code SPIN_VOLTS} is deliberately small: at low current, a fixed 3.6 A of it is a big share.
+     */
+    public static final double TORQUE_PER_AMP =
+            VORTEX_STALL_TORQUE_NM / (VORTEX_STALL_CURRENT_AMPS - VORTEX_FREE_CURRENT_AMPS);
+
+    /**
+     * @param amps Measured current for one motor.
+     * @return the torque that current actually produces, in newton-metres.
+     *
+     *     <p>Clamped at zero: below the free current a motor produces no useful torque, and a negative
+     *     torque here would come out as a negative inertia, which is not a measurement of anything.
+     */
+    public static double usefulTorqueNm(double amps) {
+        return Math.max(0.0, (amps - VORTEX_FREE_CURRENT_AMPS) * TORQUE_PER_AMP);
+    }
 
     /** Which configuration a run was taken in. */
     public enum IntakeState {
@@ -206,15 +236,19 @@ public class RotationalInertiaCalibrator {
     /**
      * Torque about the chassis centre, from the current each drive motor is drawing.
      *
-     * <p>Four motors, each making {@code TORQUE_PER_AMP * amps} at the shaft. Through the gearing that
+     * <p>Four motors, each making {@link #usefulTorqueNm} at the shaft. Through the gearing that
      * becomes {@code * reduction} at the wheel, and dividing by the wheel radius gives the force at the
      * carpet. Each force acts at the drive radius, so the torques add.
+     *
+     * <p>Uses {@link #usefulTorqueNm} rather than a flat torque-per-amp, so the no-load current is
+     * subtracted before the current is turned into torque. That correction is worth about 29% at this
+     * routine's operating point, all in one direction -- see {@link #TORQUE_PER_AMP}.
      *
      * @param perMotorAmps Mean current per drive motor.
      * @return torque about the chassis centre, in newton-metres.
      */
     public static double torqueFromCurrent(double perMotorAmps) {
-        double wheelForce = TORQUE_PER_AMP * perMotorAmps * ModuleConstants.kDrivingMotorReduction
+        double wheelForce = usefulTorqueNm(perMotorAmps) * ModuleConstants.kDrivingMotorReduction
                 / (ModuleConstants.kWheelDiameterMeters / 2);
         return 4 * wheelForce * SwerveDriveSubsystem.getDriveRadiusMeters();
     }

@@ -72,10 +72,21 @@ public class ArmProfileCalibrator {
      * its hard stop <em>during</em> the step and the velocity read at the end would be a deceleration
      * into steel rather than a steady state. 0.20 s covers 4.7 rotations, which leaves room.
      *
-     * <p>Still several time constants for a light arm, so steady state is reached. And a stop hit
-     * anyway is caught rather than trusted — see {@link #velocityStep}.
+     * <p>Still several time constants for a light arm, so steady state is reached. A step that runs
+     * into something anyway is discarded rather than trusted -- see {@link #velocityStep}, and note
+     * that the discard test had to change: the hard-stop detector needs longer to agree than this step
+     * lasts, so the check that actually fires in time is the velocity one.
      */
     private static final double STEP_SECONDS = 0.20;
+
+    /**
+     * Velocity below which the arm counts as stalled rather than slow, in rotations per second.
+     *
+     * <p>Well under the slowest step's expected velocity and well over encoder noise. Its whole job is
+     * to notice, <em>without waiting for a detector to agree</em>, that several volts produced no
+     * motion -- which means the reading is a stall or a deceleration and not a steady state.
+     */
+    private static final double STALLED_RPS = 0.05;
 
     /** Fractions of travel at which holding voltage is measured. */
     private static final double[] HOLD_FRACTIONS = {0.1, 0.3, 0.5, 0.7, 0.9};
@@ -87,6 +98,9 @@ public class ArmProfileCalibrator {
     private static final double REST_SECONDS = 0.8;
 
     private final Intake intake;
+
+    /** Whether the current break-away ramp actually saw the arm move. */
+    private boolean brokeAway;
 
     private double breakawayUp = Double.NaN;
     private double breakawayDown = Double.NaN;
@@ -125,6 +139,7 @@ public class ArmProfileCalibrator {
         return Commands.sequence(
                 Commands.runOnce(() -> {
                     rampStart = Timer.getFPGATimestamp();
+                    brokeAway = false;
                     System.out.println("[arm] break-away ramp " + label);
                 }),
                 Commands.run(() -> {
@@ -132,12 +147,25 @@ public class ArmProfileCalibrator {
                             * (Timer.getFPGATimestamp() - rampStart);
                     intake.setDeployVoltage(volts);
                 }, intake)
-                        .until(() -> Math.abs(intake.getDeployVelocity()) / 60.0
-                                > BREAKAWAY_VELOCITY_RPS)
+                        // The flag is set INSIDE the predicate, which is the only place that knows the
+                        // arm actually moved. Without it a timeout is indistinguishable from a
+                        // break-away, and reports as one at exactly ramp-rate x timeout -- a suspiciously
+                        // round 4.000 V that then gets read as a real measurement, and half the
+                        // difference between the two directions gets reported as gravity.
+                        .until(() -> {
+                            if (Math.abs(intake.getDeployVelocity()) / 60.0
+                                    > BREAKAWAY_VELOCITY_RPS) {
+                                brokeAway = true;
+                                return true;
+                            }
+                            return false;
+                        })
                         .withTimeout(BREAKAWAY_TIMEOUT),
                 Commands.runOnce(() -> {
-                    double volts = Math.abs(BREAKAWAY_RAMP_VOLTS_PER_SEC
-                            * (Timer.getFPGATimestamp() - rampStart));
+                    double volts = brokeAway
+                            ? Math.abs(BREAKAWAY_RAMP_VOLTS_PER_SEC
+                                    * (Timer.getFPGATimestamp() - rampStart))
+                            : Double.NaN;
                     intake.stopDeploy();
 
                     if (deployDirection) {
@@ -145,7 +173,16 @@ public class ArmProfileCalibrator {
                     } else {
                         breakawayDown = volts;
                     }
-                    System.out.printf("[arm] broke away %s at %.3f V%n", label, volts);
+
+                    if (brokeAway) {
+                        System.out.printf("[arm] broke away %s at %.3f V%n", label, volts);
+                    } else {
+                        System.out.printf("[arm] NOT MEASURED %s -- the ramp reached %.1f V in %.0f s "
+                                + "and the arm never moved.%n", label,
+                                BREAKAWAY_RAMP_VOLTS_PER_SEC * BREAKAWAY_TIMEOUT, BREAKAWAY_TIMEOUT);
+                        System.out.println("[arm]   Most likely a soft limit is cutting output at this "
+                                + "end of travel. Check it, then re-run.");
+                    }
                 }, intake),
                 Commands.waitSeconds(REST_SECONDS));
     }
@@ -159,7 +196,24 @@ public class ArmProfileCalibrator {
                         .withTimeout(STEP_SECONDS),
                 Commands.runOnce(() -> {
                     double rps = Math.abs(intake.getDeployVelocity()) / 60.0;
-                    boolean hitStop = intake.getDeployStops().isAtHardStop();
+
+                    // Three ways a step can fail to be a steady-state reading. The original checked
+                    // only the one that cannot fire in time.
+                    //
+                    //   isAtHardStop() needs the detector to fill a 12-sample window AND then sustain
+                    //   12 qualifying loops -- at least 240 ms against a 200 ms step. So the guard the
+                    //   docstring relies on never executed, and deceleration-into-steel was fed to the
+                    //   fit at the highest voltages, biasing the slope rather than adding scatter.
+                    //
+                    //   isAtSoftLimit() was not checked at all, and a soft limit inside the travel is
+                    //   what the arm reaches FIRST.
+                    //
+                    //   A velocity of nearly nothing under several volts is a stall however it was
+                    //   caused, and needs no detector latency to notice. This is the check that
+                    //   actually catches the case in time.
+                    boolean hitStop = intake.getDeployStops().isAtHardStop()
+                            || intake.getDeployStops().isAtSoftLimit()
+                            || rps < STALLED_RPS;
                     intake.stopDeploy();
 
                     if (hitStop) {
@@ -167,8 +221,9 @@ public class ArmProfileCalibrator {
                         // deceleration into the stop rather than a steady state. Feeding it to the fit
                         // would drag kV low, and it would do so most at the highest voltages — biasing
                         // the slope rather than merely adding scatter.
-                        System.out.printf("[arm] %.2f V -> DISCARDED, reached the stop mid-step "
-                                + "(read %.2f rot/s). Shorten STEP_SECONDS.%n", volts, rps);
+                        System.out.printf("[arm] %.2f V -> DISCARDED, the arm was not moving freely "
+                                + "(read %.2f rot/s). It reached a stop or a soft limit inside the "
+                                + "step.%n", volts, rps);
                     } else {
                         velocityFit.add(volts, rps);
                         System.out.printf("[arm] %.2f V -> %.2f rot/s%n", volts, rps);
@@ -191,21 +246,50 @@ public class ArmProfileCalibrator {
      * @return the command.
      */
     private Command holdAt(double fraction) {
+        // Captured per call so the recording step can see whether the commanding step actually ran.
+        // A bare `return` inside the first lambda exits only the lambda, not the sequence -- so the
+        // recording step ran regardless, and every one of the five fractions appended a reading of the
+        // PARKED arm at the same position. Spread across the samples was then about zero, and the
+        // report concluded "gravity barely varies across the travel, not worth chasing the arm
+        // geometry" -- a confident answer closing the exact question the phase exists to open, from a
+        // phase in which nothing happened. The isEmpty() guard written to catch this was unreachable.
+        boolean[] commanded = new boolean[1];
+        double[] goal = new double[1];
+
         return Commands.sequence(
                 Commands.runOnce(() -> {
+                    commanded[0] = false;
+
                     double travel = intake.getDeployStops().getMeasuredTravel();
                     double low = intake.getDeployStops().getLearnedStop(End.LOW);
                     if (Double.isNaN(travel)) {
-                        System.out.println("[arm] hold test skipped — travel not measured. "
+                        System.out.println("[arm] hold test skipped -- travel not measured. "
                                 + "Run the deploy travel calibration first.");
                         return;
                     }
-                    intake.deployToGoal(low + travel * fraction);
+
+                    goal[0] = low + travel * fraction;
+                    intake.deployToGoal(goal[0]);
+                    commanded[0] = true;
                 }, intake),
                 Commands.waitSeconds(1.2),
                 Commands.runOnce(() -> {
-                    // Whatever the profiled controller is applying to hold station IS the holding
-                    // voltage, so it can simply be read rather than searched for.
+                    if (!commanded[0]) {
+                        return;
+                    }
+
+                    // Arriving matters as much as commanding. The goal is silently clamped to the
+                    // learned stops, and a weak position gain lets the arm settle short -- either way
+                    // the voltage would be gravity at some OTHER position than the one being reported.
+                    if (!intake.isDeployAtGoal()) {
+                        System.out.printf("[arm] hold sample discarded -- asked for %.2f, settled at "
+                                + "%.2f. Gravity here would be recorded against the wrong angle.%n",
+                                goal[0], intake.getDeployPosition());
+                        return;
+                    }
+
+                    // Whatever the controller is applying to hold station IS the holding voltage, so
+                    // it can be read rather than searched for.
                     double volts = intake.getDeployHoldVolts();
                     double position = intake.getDeployPosition();
                     holdSamples.add(new double[] {position, volts});
@@ -240,7 +324,15 @@ public class ArmProfileCalibrator {
                     double rps = Math.abs(intake.getDeployVelocity()) / 60.0;
                     double dt = now - lastVelocityTime;
 
-                    if (dt > 1e-3 && dt < 0.1) {
+                    // Only count SPEEDING UP. Math.abs on the difference made a deceleration count
+                    // as an acceleration -- and the largest one in the run is the arm being brought
+                    // from full speed to zero by its own limit, in one or two loops. That reported
+                    // roughly ten times the real figure, so the achievable-acceleration check always
+                    // passed and the profile constraint was never actually validated. An arm silently
+                    // lagging its own setpoint all season is precisely what this phase exists to catch.
+                    boolean speedingUp = Math.abs(rps) > Math.abs(lastVelocity);
+
+                    if (dt > 1e-3 && dt < 0.1 && speedingUp) {
                         peakAcceleration = Math.max(peakAcceleration,
                                 Math.abs(rps - lastVelocity) / dt);
                     }
@@ -296,6 +388,30 @@ public class ArmProfileCalibrator {
         return Commands.sequence(phases.toArray(new Command[0]))
                 .finallyDo(interrupted -> intake.stopDeploy())
                 .withName("ArmProfile/Full");
+    }
+
+    /**
+     * What this run managed to establish, for a caller that has to decide rather than read.
+     *
+     * @param breakawayMeasuredBothWays Both ramps saw the arm move, so the friction/gravity split is
+     *                                  real rather than half a timeout.
+     * @param kvFit                     Whether the velocity fit is trustworthy.
+     * @param holdSamples               Hold readings that survived the arrived-at-goal check.
+     * @param peakVelocityRps           Fastest velocity seen, rotations per second.
+     * @param peakAccelRps2             Largest <em>speeding-up</em> acceleration seen.
+     */
+    public record Outcome(boolean breakawayMeasuredBothWays, boolean kvFit, int holdSamples,
+            double peakVelocityRps, double peakAccelRps2) {
+    }
+
+    /** @return what this run established. */
+    public Outcome outcome() {
+        return new Outcome(
+                !Double.isNaN(breakawayUp) && !Double.isNaN(breakawayDown),
+                velocityFit.fit().isTrustworthy(),
+                holdSamples.size(),
+                peakVelocity,
+                peakAcceleration);
     }
 
     /** Clears everything measured. */
