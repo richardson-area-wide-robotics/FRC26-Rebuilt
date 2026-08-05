@@ -45,6 +45,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 7b | **Rotational inertia** — CAD cannot give it | ~2 m clear all round | 10 min |
 | 8 | **Traction limit** and **ramp bog-down diagnosis** | Wall, carpet, good battery, a ramp, a tag | 20 min |
 | 9 | **Load thresholds** — piece and jam detection | Blocks, ~20 game pieces, a helper | 15 min |
+| 9b | **Intake arm travel** and hard-stop detection | Blocks, **no** game pieces | 5 min |
 | 10 | **SysId feedforward** — the only source of kA | 28 ft of carpet, robot at one end | 10 min |
 | 11 | Tuning | Time and patience | open-ended |
 
@@ -1263,6 +1264,69 @@ working mechanism slows, which says nothing about how far a stuck one does).
 path, Start jostles the intake. Both are bounded and escalating: three attempts at increasing
 amplitude, then it gives up rather than pumping a mechanism that is not going to free. Try each
 with a piece deliberately wedged and confirm it stops on its own.
+
+---
+
+## 9b. Intake arm travel — and knowing "deployed" from "hit a ball"
+
+**On blocks, and with no game pieces anywhere in the robot.** Schedule
+`RebuiltContainer.getDeployTravelCommand()`.
+
+Drives the arm gently onto the stowed stop, then the deployed stop, then the stowed stop again, and
+reports the real travel.
+
+### Why current alone cannot tell you the arm is deployed
+
+Reaching the end of travel and pushing a ball look identical to a current sensor — both are "current
+up, speed down". The discriminator is mechanical:
+
+| | Position | Clears? |
+| --- | --- | --- |
+| **Hard stop** | Frozen to encoder noise, indefinitely | Never |
+| **Ball** | Keeps **creeping** as it squashes or rolls | Usually within a few hundred ms |
+
+So `HardStopDetector` watches whether position is **frozen or creeping** while the motor pushes.
+`isFullyDeployed()` and `isFullyStowed()` mean the arm physically ran out of travel;
+`isDeployPushingBall()` means it stalled on something that is still moving — which is the case a
+jostle can clear.
+
+There is a **third** case that current gets backwards. A **soft limit** also freezes position, but the
+SPARK enforces it by cutting output, so current **falls** rather than rising. A detector looking only
+for "stopped" would call it a hard stop. It is reported as `AT_SOFT_LIMIT` and deliberately never
+learned as a position reference.
+
+### The latent problem this fixes
+
+`Intake`'s constructor calls `deployEncoder.setPosition(0)` — it **assumes the arm is stowed when the
+code starts**. If it ever boots part-way, from a mid-match reboot, a brownout, or someone moving the
+arm by hand with the robot off, then:
+
+- every position afterwards carries that offset, and
+- **the soft limits carry it too**, because they are expressed in the same encoder units.
+
+Soft limits referenced to a relative encoder are only as trustworthy as the boot assumption. A
+confirmed hard stop is an absolute reference: `Intake.rezeroDeployAtStowedStop()` corrects the encoder
+against the physical stop instead. It refuses to act unless the stop is confirmed, because otherwise it
+would be writing the very assumption it exists to replace.
+
+Watch `Intake/Deploy/EncoderDrift` — non-zero at the stowed stop means the boot assumption was wrong
+by that much.
+
+### Reading the report
+
+| Line | What to do |
+| --- | --- |
+| `MEASURED TRAVEL x.xxx rotations` | Compare against `DEPLOY_POSITION_ROTATIONS = 10` |
+| `ASKS FOR MORE TRAVEL THAN EXISTS` | The deploy target is past the stop, so the arm sits against steel drawing current on every deploy. Lower it |
+| forward limit `OUTSIDE the physical stop` | The soft limit protects nothing — the arm reaches steel first |
+| `the stowed stop moved x.xxx between visits` | Not a calibration problem. Either the encoder is losing count or a fastener is backing out. Fix that first |
+| `INCOMPLETE` | A stop was not found. Usually a game piece was loaded, or a soft limit stopped the arm first |
+
+**This closes the "do the soft limits match real travel" item** that has been on the unverified list
+since the first review — without needing CAD, and describing the arm as built rather than as drawn.
+
+> One honest limit: a ball wedged so hard it cannot move at all **is** mechanically a hard stop, and no
+> signal distinguishes them. That is why the instruction is to run with the robot empty.
 
 ---
 

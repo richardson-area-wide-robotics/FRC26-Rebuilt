@@ -444,6 +444,29 @@ public final class RebuiltConstants {
      */
     public static final int JAM_CONFIRM_LOOPS = 15;
 
+    /**
+     * MEASURE — position range, in motor rotations, below which the deploy arm counts as frozen.
+     *
+     * <p>The discriminator between reaching a hard stop and pushing a ball. A steel stop holds to
+     * encoder noise, a few thousandths of a rotation; a ball being squashed yields tenths. 0.05 sits an
+     * order of magnitude above one and an order below the other.
+     *
+     * <p>Judged over {@link #DEPLOY_STOP_SUSTAIN_LOOPS}, not per sample.
+     */
+    public static final double DEPLOY_FROZEN_BAND_ROTATIONS = 0.05;
+
+    /** MEASURE — amps above which the deploy motor is genuinely pushing rather than coasting. */
+    public static final double DEPLOY_PUSHING_AMPS = 8.0;
+
+    /**
+     * Loops the arm must be frozen and pushing before a hard stop is declared. 12 loops is 240 ms.
+     *
+     * <p>Long enough that a ball has time to yield and be seen creeping, short enough that the arm is
+     * not held against its stop for long. A brushless motor near stall turns almost all its input into
+     * winding heat.
+     */
+    public static final int DEPLOY_STOP_SUSTAIN_LOOPS = 12;
+
     /** Loops of sustained load before a game piece is counted. 3 loops is 60 ms. */
     public static final int PIECE_SUSTAIN_LOOPS = 3;
 

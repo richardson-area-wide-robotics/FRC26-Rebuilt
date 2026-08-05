@@ -3,6 +3,7 @@ package frc.robot.rebuilt.subsystems;
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.NamedAuto;
 import frc.robot.common.components.diagnostics.GamePieceCounter;
+import frc.robot.common.components.diagnostics.HardStopDetector;
 import frc.robot.common.components.diagnostics.MotorLoadMonitor;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
 import frc.robot.rebuilt.RebuiltConstants.LoadConstants;
@@ -158,14 +159,17 @@ public class Intake extends DashboardSubsystem {
      * <p>Not a true stop — see {@code IntakeConstants.DEPLOY_HOLD_SPEED}.
      */
     public void stopDeploy() {
+        deployDemand = IntakeConstants.DEPLOY_HOLD_SPEED;
         deployMotor.set(IntakeConstants.DEPLOY_HOLD_SPEED);
     }
 
     public void manualDeploy() {
+        deployDemand = IntakeConstants.MANUAL_DEPLOY_SPEED;
         deployMotor.set(IntakeConstants.MANUAL_DEPLOY_SPEED);
     }
 
     public void manualReverseDeploy() {
+        deployDemand = IntakeConstants.MANUAL_RETRACT_SPEED;
         deployMotor.set(IntakeConstants.MANUAL_RETRACT_SPEED);
     }
 
@@ -265,6 +269,88 @@ public class Intake extends DashboardSubsystem {
         pieceCounter.reset();
     }
 
+    /**
+     * Tells the arm reaching its end of travel apart from it pushing a ball.
+     *
+     * <p>Both look identical to current alone. The discriminator is whether position freezes or keeps
+     * creeping — see {@link HardStopDetector}. This is what makes {@link #isFullyDeployed()} mean
+     * something more than "the encoder says so".
+     */
+    private final HardStopDetector deployStops = new HardStopDetector(
+        "Intake/Deploy",
+        LoadConstants.DEPLOY_FROZEN_BAND_ROTATIONS,
+        LoadConstants.DEPLOY_PUSHING_AMPS,
+        LoadConstants.DEPLOY_STOP_SUSTAIN_LOOPS);
+
+    /** What the deploy motor was last told to do. The detector needs the direction. */
+    private double deployDemand;
+
+    /**
+     * @return true when the arm is against its <b>deployed</b> hard stop.
+     *
+     *     <p>Distinct from {@link #isDeployed()}, which only asks whether the encoder is near the
+     *     target. This asks whether the arm has physically run out of travel — so a ball wedged under
+     *     the arm reports false here and {@link #isDeployPushingBall()} true, where the encoder check
+     *     alone would call it arrived.
+     */
+    public boolean isFullyDeployed() {
+        return deployStops.isAtHardStop() && deployDemand > 0;
+    }
+
+    /** @return true when the arm is against its <b>stowed</b> hard stop. */
+    public boolean isFullyStowed() {
+        return deployStops.isAtHardStop() && deployDemand < 0;
+    }
+
+    /**
+     * @return true when the arm has stalled against something that is still moving — a ball.
+     *
+     *     <p>Actionable rather than informational: this is the case a jostle can clear, where a hard
+     *     stop is not.
+     */
+    public boolean isDeployPushingBall() {
+        return deployStops.isObstructed();
+    }
+
+    /**
+     * @return how far the deploy encoder has drifted from where the stowed stop should be, or NaN if
+     *     the arm is not currently against it.
+     *
+     *     <p>The constructor zeroes the encoder assuming the arm starts stowed. If the code ever
+     *     starts with the arm part-way — a mid-match reboot, a brownout, someone moving it by hand —
+     *     every position afterwards carries that offset, and <b>the soft limits carry it too</b>,
+     *     because they are expressed in the same units. This is the measurement of that error.
+     */
+    public double getDeployEncoderDrift() {
+        return deployStops.getEncoderDrift(
+            HardStopDetector.End.LOW, IntakeConstants.STOW_POSITION_ROTATIONS);
+    }
+
+    /**
+     * Re-zeroes the deploy encoder against the stowed hard stop.
+     *
+     * <p>Only acts while the arm is confirmed against that stop, because otherwise it would be
+     * writing an assumption rather than a measurement — exactly the problem it exists to fix.
+     *
+     * @return true if the encoder was corrected.
+     */
+    public boolean rezeroDeployAtStowedStop() {
+        if (!isFullyStowed()) {
+            return false;
+        }
+
+        double drift = getDeployEncoderDrift();
+        deployEncoder.setPosition(IntakeConstants.STOW_POSITION_ROTATIONS);
+        System.out.printf("[intake] deploy encoder re-zeroed at the stowed stop, correcting %+.3f "
+            + "rotations%n", drift);
+        return true;
+    }
+
+    /** @return the hard stop detector, for calibration and diagnostics. */
+    public HardStopDetector getDeployStops() {
+        return deployStops;
+    }
+
     /** @return the roller load monitor, for jam-clearing routines and diagnostics. */
     public MotorLoadMonitor getRollerLoad() {
         return rollerLoad;
@@ -274,6 +360,12 @@ public class Intake extends DashboardSubsystem {
     public void periodic() {
         rollerLoad.update(getRollerCurrent(), getRollerVelocity(), intakeRunning);
         pieceCounter.update();
+        deployStops.update(getDeployPosition(), getDeployCurrent(), deployDemand);
+
+        Logger.recordOutput(getName() + "/Deploy/FullyDeployed", isFullyDeployed());
+        Logger.recordOutput(getName() + "/Deploy/FullyStowed", isFullyStowed());
+        Logger.recordOutput(getName() + "/Deploy/PushingBall", isDeployPushingBall());
+        Logger.recordOutput(getName() + "/Deploy/EncoderDrift", getDeployEncoderDrift());
 
         Logger.recordOutput(getName() + "/Encoder/Position", getDeployPosition());
         Logger.recordOutput(getName() + "/Deploy/OutputCurrent", deployMotor.getOutputCurrent());

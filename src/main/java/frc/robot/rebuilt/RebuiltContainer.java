@@ -28,6 +28,7 @@ import frc.robot.common.components.diagnostics.CalibrationManeuvers;
 import frc.robot.common.components.diagnostics.CalibrationStore;
 import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
+import frc.robot.common.components.diagnostics.DeployTravelCalibrator;
 import frc.robot.common.components.diagnostics.DriveSysId;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
 import frc.robot.common.components.diagnostics.BumpCrossingDiagnostic;
@@ -127,6 +128,9 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static final RotationalInertiaCalibrator INERTIA_CALIBRATOR =
       new RotationalInertiaCalibrator(DRIVE_SUBSYSTEM, INTAKE::stopDeploy, INTAKE::manualDeploy);
+
+  /** Measures the intake arm's real travel against its physical stops. */
+  public static final DeployTravelCalibrator DEPLOY_TRAVEL = new DeployTravelCalibrator(INTAKE);
 
   /** Diagnoses why the chassis bogs down on the field ramps. */
   public static final BumpCrossingDiagnostic BUMP_DIAGNOSTIC =
@@ -793,6 +797,22 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getInertiaCalibrationCommand() {
     return INERTIA_CALIBRATOR.full();
+  }
+
+  /**
+   * Measures the intake arm's travel by driving it gently onto each hard stop.
+   *
+   * <p><b>On blocks, and with no game pieces in the robot</b> — a ball under the arm gets found
+   * instead of the stop. It is reported as an obstruction rather than mistaken for a stop, so the run
+   * fails honestly, but it is still wasted.
+   *
+   * <p>Closes a gap open since the first review: the deploy target of 10 rotations and the soft limits
+   * of 0 to 11 are hand-chosen numbers that nothing has ever checked against the arm.
+   *
+   * @return the travel calibration command.
+   */
+  public static Command getDeployTravelCommand() {
+    return DEPLOY_TRAVEL.full();
   }
 
   /** @return just the sixteen drive-turn-drive permutations. */
