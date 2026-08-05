@@ -173,7 +173,24 @@ class ContainerWiringTest {
       assertNotNull(RebuiltContainer.getTractionCalibrationCommand());
       assertNotNull(RebuiltContainer.getSysIdCommand());
       assertNotNull(RebuiltContainer.getBumpDiagnosticCommand());
+      assertNotNull(RebuiltContainer.getInertiaCalibrationCommand());
     });
+  }
+
+  @Test
+  @Order(9)
+  @DisplayName("The inertia spin owns the drivetrain and can measure both intake states")
+  void inertiaSpinIsWired() {
+    // Open loop on purpose, so it must own the drivetrain — the default command writing closed-loop
+    // setpoints over the top would make the angular acceleration a property of the velocity gains
+    // rather than of the robot's inertia.
+    assertTrue(RebuiltContainer.getInertiaCalibrationCommand().getRequirements()
+        .contains(RebuiltContainer.DRIVE_SUBSYSTEM),
+        "the inertia spin must own the drivetrain or it measures the controller, not the robot");
+
+    assertTrue(RebuiltContainer.INERTIA_CALIBRATOR.canMeasureBothStates(),
+        "an intake was supplied, so both stowed and deployed inertia should be measurable — "
+            + "deploying moves mass outward and inertia goes as radius squared");
   }
 
   @Test

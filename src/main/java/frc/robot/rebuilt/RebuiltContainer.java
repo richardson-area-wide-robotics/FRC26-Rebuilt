@@ -33,6 +33,7 @@ import frc.robot.common.components.diagnostics.ExpectationMonitor;
 import frc.robot.common.components.diagnostics.BumpCrossingDiagnostic;
 import frc.robot.common.components.diagnostics.LoadCalibrationRoutine;
 import frc.robot.common.components.diagnostics.ManeuverRunner;
+import frc.robot.common.components.diagnostics.RotationalInertiaCalibrator;
 import frc.robot.common.components.diagnostics.TractionCalibrator;
 import frc.robot.rebuilt.states.RobotStateMachine;
 import frc.robot.common.interfaces.IRobotContainer;
@@ -117,6 +118,15 @@ public class RebuiltContainer implements IRobotContainer {
 
   /** WPILib SysId, chained and self-analysing. The only source of kA. */
   public static final DriveSysId SYSID = new DriveSysId(DRIVE_SUBSYSTEM);
+
+  /**
+   * Measures rotational inertia, which CAD cannot supply on this robot.
+   *
+   * <p>Measures both intake states, because deploying moves several kilograms outward and inertia
+   * goes as mass times radius squared.
+   */
+  public static final RotationalInertiaCalibrator INERTIA_CALIBRATOR =
+      new RotationalInertiaCalibrator(DRIVE_SUBSYSTEM, INTAKE::stopDeploy, INTAKE::manualDeploy);
 
   /** Diagnoses why the chassis bogs down on the field ramps. */
   public static final BumpCrossingDiagnostic BUMP_DIAGNOSTIC =
@@ -762,6 +772,27 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getBumpDiagnosticCommand() {
     return BUMP_DIAGNOSTIC.watch();
+  }
+
+  /**
+   * Measures the robot's rotational inertia, in both intake positions.
+   *
+   * <p><b>Robot on the floor with about 2 m clear all round.</b> Spins in place twice at a low
+   * voltage, once with the intake stowed and once deployed, and reports the moment of inertia for
+   * each plus the difference.
+   *
+   * <p>This is the number {@code settings.json} carries as {@code robotMOI} and the one that normally
+   * comes from CAD — which is not available here, because the assembly is too large for the
+   * mass-properties tool. Measuring it on the robot has the advantage of including the wire and tape
+   * a model never has.
+   *
+   * <p>Rejects a run where the wheels slipped, since the torque figure assumes every newton reaches
+   * the carpet.
+   *
+   * @return the inertia calibration command.
+   */
+  public static Command getInertiaCalibrationCommand() {
+    return INERTIA_CALIBRATOR.full();
   }
 
   /** @return just the sixteen drive-turn-drive permutations. */

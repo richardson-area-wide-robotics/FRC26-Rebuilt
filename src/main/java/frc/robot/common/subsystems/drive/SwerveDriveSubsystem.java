@@ -477,6 +477,37 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     m_rearRight.setDriveVoltage(volts, straight);
   }
 
+  /**
+   * Spins the chassis in place at a fixed voltage, modules held tangential.
+   *
+   * <p>For measuring rotational inertia. <b>Open loop on purpose.</b> Using the closed-loop
+   * {@code drive()} would make the angular acceleration a property of the velocity gains rather than
+   * of the robot's inertia — the loop shapes the ramp, so what gets measured is the controller.
+   *
+   * <p>Module angles are the tangential directions for a counter-clockwise spin. At position
+   * {@code (x, y)} the velocity under rotation is {@code omega * (-y, x)}, so the heading is
+   * {@code atan2(x, -y)}: 135 degrees front-left, 45 front-right, 225 rear-left, 315 rear-right.
+   * That is the familiar X pattern.
+   *
+   * @param volts Output voltage. Positive spins counter-clockwise.
+   */
+  public void spinOpenLoop(double volts) {
+    m_frontLeft.setDriveVoltage(volts, Rotation2d.fromDegrees(135));
+    m_frontRight.setDriveVoltage(volts, Rotation2d.fromDegrees(45));
+    m_rearLeft.setDriveVoltage(volts, Rotation2d.fromDegrees(225));
+    m_rearRight.setDriveVoltage(volts, Rotation2d.fromDegrees(315));
+  }
+
+  /**
+   * @return the distance from the chassis centre to a module, in metres.
+   *
+   *     <p>The radius every rotational calculation needs: torque about the centre is wheel force
+   *     times this, and a wheel's tangential speed during a pure spin is angular rate times this.
+   */
+  public static double getDriveRadiusMeters() {
+    return Math.hypot(DriveConstants.kWheelBase / 2, DriveConstants.kTrackWidth / 2);
+  }
+
   /** @return drive position per module in metres, in FL, FR, RL, RR order. */
   public double[] getModuleDrivePositions() {
     return new double[] {

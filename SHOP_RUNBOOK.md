@@ -37,6 +37,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 5 | Auto-calibration | ~4 m clear, tags visible | 20 min |
 | 6 | Manoeuvre suite | Large clear space | 20–60 min |
 | 7 | Localisation states | Practice field | 20 min |
+| 7b | **Rotational inertia** — CAD cannot give it | ~2 m clear all round | 10 min |
 | 8 | **Traction limit** and **ramp bog-down diagnosis** | Wall, carpet, good battery, a ramp, a tag | 20 min |
 | 9 | **Load thresholds** — piece and jam detection | Blocks, ~20 game pieces, a helper | 15 min |
 | 10 | **SysId feedforward** — the only source of kA | 28 ft of carpet, robot at one end | 10 min |
@@ -76,7 +77,7 @@ The calibrators print paste-ready blocks; keep all of them. Also worth recording
 `Calibration/Auto/WheelScale`, `Calibration/Auto/SteerOffsetDeg`,
 `Calibration/Auto/ModuleKvSpreadPercent`, both `Acceptance/*/TotalErrorMm` figures,
 `Calibration/Maneuvers/Summary/*`, `TractionCalibration/*`, `LoadCalibration/*/*`,
-`SysId/Mean/*` and `SysId/WorstRunMeters`.
+`SysId/Mean/*`, `SysId/WorstRunMeters` and `Inertia/*/MomentOfInertia` for both intake states.
 
 **`SysId/WorstRunMeters` is worth a note of its own.** It says how much of your 28 ft each run
 actually needed. If it comes back near the 6.0 m abort, the drivetrain is faster than the nominal
@@ -98,6 +99,13 @@ Having the CAD removes most of step 0 and does a **better** job of the hardest p
 a lens pitch with a tape measure as well as a model does. But it is not a clean substitute, because
 **CAD describes the design and the robot is the build.** Three categories, and the third is the one
 worth reading carefully.
+
+> **On this robot the mass-properties tool is unusable** — the assembly is large enough to crash it.
+> So moment of inertia and centre of mass, which are normally the strongest reasons to reach for CAD,
+> are not available. Step 7b measures inertia on the robot instead. If the tool will run on
+> **subassemblies one at a time**, that is worth trying: note each one's mass and centre of mass, then
+> combine them by hand with the parallel axis theorem. Many small computations instead of one large
+> one is often the difference between crashing and finishing.
 
 ### 0-CAD worksheet — fill these in
 
@@ -224,9 +232,9 @@ already in the model.
 | # | Number | Code says | What a wrong value does |
 | --- | --- | --- | --- |
 | 7 | **Drive pinion teeth** | 14 | 12T/13T/14T all bolt on and differ by **17% in free speed**. Scales the feedforward and the top speed — same magnitude and same failure mode as the wrong-motor bug. `MechanismRatios.DRIVE_PINION_TEETH` |
-| 8 | **Moment of inertia about Z** | 3.733 kg·m² | PathPlanner uses it to plan rotational acceleration. Too low and it commands turns the robot cannot achieve. **You essentially cannot measure this any other way** — mass properties tool |
+| 8 | ~~Moment of inertia about Z~~ | 3.733 kg·m² | **Cannot be had from this CAD** — the assembly crashes the mass-properties tool. Step 7b measures it on the robot instead, which also captures the wire and tape a model never has |
 | 9 | **Module mounting orientation** | FL −90°, FR 0°, RL 180°, RR +90° | These are the standard MAXSwerve pattern, where each module is mounted a quarter turn from its neighbour. If they were all mounted the same way all four would be 0. A wrong one points that module 90° off. Confirm the pattern from CAD — the *fine* encoder zero is still a physical calibration |
-| 10 | **Design mass** | 47.6272 kg *(looks weighed)* | Not to replace the weighed figure — to **compare**. A big gap means something real is missing from the model, which then also makes the MOI in row 8 suspect |
+| 10 | **Design mass** | 47.6272 kg *(looks weighed)* | Only if the mass-properties tool will do it on subassemblies one at a time. Not to replace the weighed figure — to **compare** |
 
 #### Group B — currently changes nothing, but unlocks a check
 
@@ -237,7 +245,7 @@ already in the model.
 | 13 | **Shooter reduction** | 1.0 *(placeholder)* | With row 14, predicts ball exit speed from motor RPM. If that comes out implausible for the distances the team actually makes, one of the three is wrong |
 | 14 | **Flywheel diameter** | 0.1016 m *(4″, assumed)* | As above |
 | 15 | **Bumper thickness** | implied 3.25″ per side | `settings.json` says 0.838 m across, consistent with 26.5″ + 2×3.25″. Feeds the SysId runway reserve and the robot footprint |
-| 16 | **CG height** | *(not in code)* | Not used yet, but it governs weight transfer going up a ramp — which is the mechanism behind step 8b. Worth knowing before changing wheels or ballast |
+| 16 | **CG height** | *(not in code)* | Same tool, same problem. If subassembly-at-a-time works it is worth having, because it governs weight transfer going up a ramp — the mechanism behind step 8b |
 | 17 | **Camera roll** | 0.0 | Assumed level. Only matters if the camera is deliberately canted |
 | 18 | **Camera FOV / lens spec** | *(unknown)* | Step 4a checks the calibrated FOV against the spec sheet, within about ±10°. Having the spec to hand makes that check possible |
 
@@ -261,8 +269,8 @@ Because CAD's answer would be wrong, not merely absent:
 | --- | --- | --- |
 | Module positions | `DriveConstants.kTrackWidth` / `kWheelBase`, `settings.json` module offsets | Distance between the four module rotation axes. Settles the 26.50″ vs 27.01″ disagreement outright |
 | **Camera position and angle** | `VisionConstants.ROBOT_TO_CAMERA` | See the coordinate-frame note below. This is where CAD wins hardest |
-| **Moment of inertia about Z** | `settings.json` `robotMOI` | Mass properties tool. You essentially cannot measure this any other way |
-| Centre of gravity height | *(not in code, but worth knowing)* | Mass properties. Governs weight transfer on the ramp |
+| ~~Moment of inertia about Z~~ | — | **Not available.** The assembly is too large for the mass-properties tool to finish. Measured on the robot instead — step 7b |
+| ~~Centre of gravity height~~ | — | **Not available**, same reason |
 | Bumper perimeter | `settings.json` `robotWidth` / `robotLength` | Currently 0.838 m = 33.0″, consistent with a 26.5″ frame plus 3.25″ bumpers each side |
 | **All gear and pulley reductions** | `MechanismRatios` | Count teeth. See below — this is the other place CAD is authoritative and a tape measure is useless |
 | Nominal wheel diameter | `ModuleConstants.kWheelDiameterMeters` | 3.00″ = 0.0762 m. Note *nominal*, see category three |
@@ -937,6 +945,56 @@ Both fall back to `MANUAL` if the pose is untrustworthy, so if neither ever enga
 
 ---
 
+## 7b. Rotational inertia — the number CAD cannot give you
+
+`settings.json` carries `robotMOI = 3.733 kg·m²` and PathPlanner uses it to plan rotational
+acceleration. It is normally a CAD figure, and **this CAD cannot produce it** — the assembly is large
+enough that the mass-properties tool crashes.
+
+So measure it from the robot's own dynamics. `I = torque / angular acceleration`, with torque from the
+measured motor current and angular acceleration from the gyro. Both are things the robot already
+reports every loop, and it has the advantage over CAD of including the wire, tape and fasteners a
+model never has.
+
+1. **Robot on the floor with about 2 m clear all round.** It spins in place, twice.
+2. Schedule `RebuiltContainer.getInertiaCalibrationCommand()`.
+3. It stows the intake, spins, stops; deploys the intake, spins, stops; then reports both.
+4. Each spin is only 0.6 s at 2.5 V. Short on purpose: the inertia is read from the **initial** slope
+   of the angular rate, before drag matters. A long spin reaches a terminal rate governed by drag and
+   would measure the wrong thing.
+
+### Why both intake positions
+
+Deploying moves several kilograms from tucked against the frame to well outside it, and inertia goes
+as **mass × radius²**. Moving 5 kg from 0.20 m to 0.45 m adds 0.81 kg·m² — **22%** of the figure
+currently in the file.
+
+**So one `robotMOI` is necessarily wrong for one of the two states**, and no gain tuning fixes it:
+PathPlanner will either plan rotations the robot cannot achieve, or under-drive it. The report gives
+both values and the difference. If it exceeds 10%, pick the state your autos actually run in — usually
+**deployed**, since that is when pieces are being collected.
+
+### What invalidates a run
+
+**Wheel slip.** The torque figure assumes every newton reaches the carpet, so a slipping wheel makes
+the robot accelerate less than the current implies and the inertia comes out **too high** — plausibly
+so, which is why it has to be a rejection rather than a warning. During a pure spin every wheel is
+tangential, so a wheel's speed should be exactly the angular rate times the drive radius; anything
+more than 15% faster is slipping and the run is refused.
+
+2.5 V keeps well clear of it: the spin demands a coefficient of friction of about 0.26 against a
+carpet that manages roughly 1.0.
+
+### Sanity check on the existing number
+
+Before you run anything, 3.733 is not obviously wrong. A lumped estimate — four 2.5 kg modules at the
+0.422 m drive radius plus the rest as a plate over the inner frame — gives about **4.0 kg·m²**, and a
+uniform plate over the whole bumper perimeter gives 5.6 as an upper bound. So it is in the right
+range, just unverified. Expect the measurement to land near 4, and treat anything under 2 or over 7 as
+a sign the run went wrong rather than a discovery.
+
+---
+
 ## 8. Traction and the ramp bog-down — the drive current limit
 
 ### 8a. Traction — find the limit
@@ -1233,6 +1291,8 @@ separate change that should be made against a measured number rather than a gues
 - [ ] `LoadConstants` updated, or the NOT VIABLE mechanisms noted as such
 - [ ] `SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT` updated from the traction sweep
 - [ ] `DriveFeedforwardConstants` kS/kV/kA pasted from the SysId report
+- [ ] `settings.json` `robotMOI` updated from step 7b, and a note of **which intake state** it
+      describes — a single value cannot serve both
 - [ ] SysId kS/kV cross-checked against the auto-calibrator's figures
 - [ ] `Shooter/Sensors/AnalogRPM` confirmed reading 0
 - [ ] Camera intrinsics calibrated in PhotonVision, at match resolution, mean reprojection error
@@ -1287,6 +1347,13 @@ verify them** — this list is the honest measure of how much of this code has m
 - **Every reduction in `MechanismRatios`** — placeholders of 1.0, which makes the conversions the
   identity and changes no behaviour, but means the intake deploy's travel is still expressed in opaque
   motor rotations rather than arm degrees
+- **`robotMOI` = 3.733 kg·m²** — provenance unknown and CAD cannot check it on this robot. A lumped
+  estimate says it is in the right range; step 7b measures it
+- **That `robotMOI` describes only one intake state.** Deploying the intake changes rotational inertia
+  by an estimated 13–45%, so whichever value goes in the file, PathPlanner is wrong about the other
+  configuration. Not fixable by tuning — a real limit on rotational path-following accuracy
+- **Centre of mass, in either state.** Not measured, not in the code, and it governs weight transfer
+  on the ramp — which is the mechanism behind step 8b
 - **kS, kV and kA** — the SysId routine and its regression are tested against synthetic data with
   known answers, but no real drivetrain has been characterised (step 10)
 - **Whether the SysId runs actually fit in 28 ft.** The distances are computed from the nominal kV,
