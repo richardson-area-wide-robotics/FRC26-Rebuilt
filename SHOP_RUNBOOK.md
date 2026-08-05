@@ -20,6 +20,10 @@ session, and includes the largest single term in the 10 ft error budget.
 **Every measurement assumes bumpers on**, since that is how this robot is always tested. Step 0b
 explains why that changes nothing about the numbers and everything about where you take them from.
 
+**Live telemetry is available during every step below** — see 0-LIVE. Everything the robot logs is
+readable over NT4 as it happens, so the capture list can be gathered live rather than reconstructed
+from a WPILOG afterwards.
+
 Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-hardening.md`.
 
 ---
@@ -28,6 +32,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 
 | Step | What | Needs | Rough time |
 | --- | --- | --- | --- |
+| 0-NET | **Check robot traffic is not going down the VPN** | Both NICs up | 5 min |
 | 0-CAD | **Pull what you can from CAD first** — worksheet included | Onshape | 20–40 min |
 | 0 | Whatever CAD cannot give — see 0-CAD | Tape, square, angle finder, PhotonVision UI | 10–45 min |
 | 1 | Deploy | Laptop | 5 min |
@@ -570,6 +575,81 @@ fails to turn when it matters.
 > on your half, take both numbers from the official field drawings rather than estimating. Leaving
 > the placeholders in place is the one option that is definitely wrong: they describe a generic
 > mid-field band and the state machine will act on them as though they were measured.
+
+---
+
+## 0-NET. Two NICs and a VPN — check this before you trust anything
+
+Driver Station on a laptop with **one NIC on the robot and one on a VPN**. That combination has a
+specific failure mode: robot traffic silently leaves via the wrong interface, and the Driver Station
+shows no robot — or worse, an intermittent one — with nothing in the routing table looking wrong.
+
+**Run this first, once both NICs are up:**
+
+```powershell
+pwsh -File tools/robot_preflight.ps1
+```
+
+It reports which interface would actually carry traffic to `10.17.45.2`, flags competing routes,
+and — the part that matters — **pings**, because the check has to be empirical.
+
+### Why routing usually saves you, and when it does not
+
+Windows picks a route by **longest prefix match first**, then by metric. Your robot NIC gets a
+connected `/24` for `10.17.45.0`, which beats a VPN's `0.0.0.0/0`, beats the `0.0.0.0/1` +
+`128.0.0.0/1` pair full-tunnel VPNs install, and beats even a corporate `10.0.0.0/8`. So in most
+setups it just works.
+
+**What it does not survive is a VPN client enforcing full tunnelling below the routing layer.**
+Zscaler, GlobalProtect and some AnyConnect profiles have a kill-switch mode that drops non-tunnel
+traffic regardless of routes. Routes look perfect, packets die. No route fixes it — disconnect the
+VPN while testing. The script identifies this case; it cannot work around it.
+
+### If traffic is on the wrong interface
+
+```powershell
+# As Administrator. A /24 beats anything the VPN advertises short of the same /24.
+New-NetRoute -DestinationPrefix 10.17.45.0/24 -InterfaceIndex <ifIndex> -RouteMetric 1
+```
+
+**Use the literal `10.17.45.2`, not `roborio-1745-frc.local`.** mDNS is unreliable with several NICs
+up: the query goes out every interface and the first answer wins, which may be the wrong one.
+
+---
+
+## 0-LIVE. Live telemetry and live gain tuning
+
+Everything the robot logs through `Logger.recordOutput` is published to NT4, so it is readable live
+rather than only after pulling a WPILOG. `tools/nt_tool.py` does that.
+
+```powershell
+py -3.12 -m pip install pyntcore        # once
+
+py -3.12 tools/nt_tool.py preflight                       # is NT up, is tuning available
+py -3.12 tools/nt_tool.py list --filter sysid             # what exists
+py -3.12 tools/nt_tool.py watch --preset load             # print live
+py -3.12 tools/nt_tool.py capture --preset drive --preset vision --out run1.jsonl
+py -3.12 tools/nt_tool.py set Shooter/kP 0.0004           # live gain write
+```
+
+Presets match the runbook's capture list: `drive`, `vision`, `sysid`, `inertia`, `traction`, `bump`,
+`load`, `shooter`.
+
+### Two things to know before relying on it
+
+**Live gain writes need a deliberate deploy first.** `TunableNumber.TUNING_ENABLED` is a
+compile-time `false`, so there are no `Tuning/` topics to write to until you set it true and
+redeploy. That is intentional — a robot whose gains can be changed remotely is not something to
+leave switched on by accident. `preflight` tells you which state you are in.
+
+**NT4 is a snapshot channel, not a log.** Sampling at 10–20 Hz will alias against the robot's own
+50 Hz loop, so it will miss the *shape* of a transient. For anything where that shape is the point —
+the SysId acceleration step, a jam onset, a bump crossing — **trust the WPILOG on the roboRIO** and
+use NT for monitoring and for tuning between runs. `capture` warns if you ask for a rate where this
+starts to bite.
+
+Also: a value written with `set` is **not persisted**. It lives until the code restarts. Paste
+anything worth keeping into the constants.
 
 ---
 
