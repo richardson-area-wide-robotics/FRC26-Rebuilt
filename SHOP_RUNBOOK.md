@@ -46,6 +46,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 8 | **Traction limit** and **ramp bog-down diagnosis** | Wall, carpet, good battery, a ramp, a tag | 20 min |
 | 9 | **Load thresholds** — piece and jam detection | Blocks, ~20 game pieces, a helper | 15 min |
 | 9b | **Intake arm travel** and hard-stop detection | Blocks, **no** game pieces | 5 min |
+| 9c | **Intake arm motion profile** — are the limits achievable? | Blocks, **no** game pieces | 10 min |
 | 10 | **SysId feedforward** — the only source of kA | 28 ft of carpet, robot at one end | 10 min |
 | 11 | Tuning | Time and patience | open-ended |
 
@@ -1327,6 +1328,76 @@ since the first review — without needing CAD, and describing the arm as built 
 
 > One honest limit: a ball wedged so hard it cannot move at all **is** mechanically a hard stop, and no
 > signal distinguishes them. That is why the instruction is to run with the robot empty.
+
+---
+
+## 9c. Intake arm motion profile
+
+The arm used to be driven by plain `kPosition` on the SPARK — output proportional to error, so a
+full-travel move began at **maximum error and therefore maximum output** and decelerated only as the
+error shrank. It slammed at both ends and the hard stop was what caught it.
+
+It now follows a **trapezoid profile with PID**: a position *and velocity* setpoint respecting a
+velocity and an acceleration limit, so the controller only ever chases a nearby target and the
+mechanism sees bounded acceleration instead of a step.
+
+### Calibrating it
+
+Schedule `RebuiltContainer.getArmProfileCommand()` — or `getSuperstructureCalibrationCommand()`,
+which runs travel, profile and load thresholds in the right order.
+
+**Run 9b first.** The gravity phase drives to fractions of the measured travel, so it is skipped if
+the travel is unknown.
+
+| Phase | Measures |
+| --- | --- |
+| Break-away ramp, **both directions** | The voltage at which the arm starts to move |
+| Voltage steps to steady state | `DEPLOY_kV` |
+| Holding voltage at five positions | The gravity signature |
+| Near-full-output move | **Achievable** velocity and acceleration |
+
+### The check that matters most
+
+**Are the configured constraints achievable?** If the profile asks for more velocity or acceleration
+than the arm can deliver, the controller saturates, the arm falls behind its own setpoint, and the
+following error grows through the whole move — **which looks exactly like a badly tuned gain.** No
+amount of PID tuning fixes a profile asking for the impossible.
+
+The report compares achievable against configured and, if configured is higher, tells you to drop to
+about 80% of achievable. Watch `Intake/Deploy/Profile/FollowingError`: it should stay small
+*throughout* the move, not only at the end.
+
+### Break-away is measured both ways on purpose
+
+Gravity helps one direction and opposes the other, so an arm has **two** break-away voltages. Their
+average is friction; **half their difference is gravity.** A single kS would be an average of two
+unlike things, and the report separates them.
+
+### Why gravity is a table, not a cosine
+
+The textbook arm feedforward is `kG x cos(angle from horizontal)`. Fitting that needs the arm's angle,
+which needs both the deploy reduction and where horizontal falls on the encoder — and the reduction
+cannot be measured, only counted from CAD.
+
+So instead the holding voltage is measured **at positions**, with no geometry involved: whatever the
+profiled controller has settled on to hold station *is* the answer. Read the spread:
+
+- **Under 0.3 V** — gravity barely varies across the travel. A constant bias is enough and
+  `DEPLOY_HOLD_SPEED` already provides one. Not worth chasing the geometry.
+- **Large** — gravity matters, a constant bias is wrong at one end, and `DEPLOY_kG` plus the arm angle
+  are worth having. The number tells you what is at stake before anyone spends time on it.
+
+`DEPLOY_kG` is currently **0**, so the gravity term is inert. Deliberately: a gravity feedforward built
+on a guessed angle pushes hardest in the wrong place.
+
+### Tuning it live
+
+`IntakeDeploy/kP`, `kD`, `MaxVelRps` and `MaxAccelRps2` are `TunableNumber`s, so with
+`TUNING_ENABLED` true they can be changed over NT while the arm moves — see 0-LIVE. A move takes about
+half a second, so the effect is immediate.
+
+**Lower acceleration first if the arm is harsh at the ends.** Acceleration is what the mechanism feels;
+the velocity limit only sets how long the move takes.
 
 ---
 

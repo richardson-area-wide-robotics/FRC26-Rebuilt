@@ -310,8 +310,77 @@ public final class RebuiltConstants {
      */
     public static final double DEPLOY_HOLD_SPEED = -0.03;
 
-    /** Closed-loop position gain for the deploy arm. */
+    /**
+     * Closed-loop position gain for the deploy arm, now driving a <b>profiled</b> controller.
+     *
+     * <p>This used to be the only gain, applied by the SPARK in plain {@code kPosition} mode. That
+     * means output proportional to error — so a full-travel move started at maximum error and
+     * therefore maximum output, and the arm decelerated only as the error shrank. It slammed at both
+     * ends, and the only thing stopping it was the hard stop.
+     *
+     * <p>With a trapezoid profile the controller chases a moving setpoint that is never far away, so
+     * this gain now only has to correct small following errors. It wants to be <em>smaller</em> than a
+     * gain tuned for unprofiled control, not larger.
+     */
     public static final double DEPLOY_kP = 0.05;
+
+    /**
+     * Derivative gain for the deploy arm. Zero until there is a reason.
+     *
+     * <p>A profiled controller usually needs little or no D: most of what D would damp is the
+     * aggressive start that the profile has already removed. Add it only if the arm oscillates around
+     * the setpoint <em>while following</em>, which is different from overshooting at the end.
+     */
+    public static final double DEPLOY_kD = 0.0;
+
+    /**
+     * TUNE — profile velocity limit for the deploy arm, in motor rotations per second.
+     *
+     * <p>The arm is a NEO 2.0 with a free speed of 94.6 rev/s at the motor, so 30 is under a third of
+     * what the motor could do — deliberately, because the profile's job is to make the move
+     * predictable rather than fast. Full travel of roughly 10 rotations comes out near half a second
+     * with the acceleration below.
+     */
+    public static final double DEPLOY_MAX_VELOCITY_RPS = 30.0;
+
+    /**
+     * TUNE — profile acceleration limit, in motor rotations per second squared.
+     *
+     * <p>150 reaches the velocity limit in 0.2 s over about 3 rotations, which leaves cruise and
+     * deceleration phases on a 10 rotation move rather than collapsing into a triangle.
+     *
+     * <p><b>Lower this first if the arm is harsh at the ends.</b> Acceleration is what the mechanism
+     * feels; the velocity limit only sets how long the move takes.
+     */
+    public static final double DEPLOY_MAX_ACCEL_RPS2 = 150.0;
+
+    /** TUNE — volts to overcome static friction in the deploy arm. */
+    public static final double DEPLOY_kS = 0.0;
+
+    /** TUNE — volts per rotation per second, the arm's velocity feedforward. */
+    public static final double DEPLOY_kV = 0.0;
+
+    /**
+     * MEASURE — volts needed to hold the arm level against gravity.
+     *
+     * <p><b>Zero, which makes the gravity term inert.</b> Deliberately so: computing it needs the arm's
+     * angle, which needs both {@code MechanismRatios.INTAKE_DEPLOY_REDUCTION} and
+     * {@link #DEPLOY_HORIZONTAL_OFFSET_ROTATIONS}, and neither is known yet. A gravity feedforward
+     * built on a guessed angle pushes hardest in the wrong place.
+     *
+     * <p>Until then, {@link #DEPLOY_HOLD_SPEED} does the job crudely: a fixed bias that holds the arm
+     * against its stow stop regardless of where it actually is. That works because the arm only ever
+     * rests at one end. Set this and the arm can be held anywhere.
+     */
+    public static final double DEPLOY_kG = 0.0;
+
+    /**
+     * MEASURE — the encoder position at which the arm is <b>horizontal</b>, in motor rotations.
+     *
+     * <p>Gravity torque on an arm goes as the cosine of its angle from horizontal, so the feedforward
+     * needs to know where horizontal is. Only meaningful once {@link #DEPLOY_kG} is non-zero.
+     */
+    public static final double DEPLOY_HORIZONTAL_OFFSET_ROTATIONS = 0.0;
 
     /** How close to the deploy target counts as arrived, in rotations. */
     public static final double DEPLOY_TOLERANCE_ROTATIONS = 0.5;

@@ -28,6 +28,7 @@ import frc.robot.common.components.diagnostics.CalibrationManeuvers;
 import frc.robot.common.components.diagnostics.CalibrationStore;
 import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
+import frc.robot.common.components.diagnostics.ArmProfileCalibrator;
 import frc.robot.common.components.diagnostics.DeployTravelCalibrator;
 import frc.robot.common.components.diagnostics.DriveSysId;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
@@ -128,6 +129,9 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static final RotationalInertiaCalibrator INERTIA_CALIBRATOR =
       new RotationalInertiaCalibrator(DRIVE_SUBSYSTEM, INTAKE::stopDeploy, INTAKE::manualDeploy);
+
+  /** Measures what the intake arm's motion profile depends on. */
+  public static final ArmProfileCalibrator ARM_PROFILE = new ArmProfileCalibrator(INTAKE);
 
   /** Measures the intake arm's real travel against its physical stops. */
   public static final DeployTravelCalibrator DEPLOY_TRAVEL = new DeployTravelCalibrator(INTAKE);
@@ -813,6 +817,43 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getDeployTravelCommand() {
     return DEPLOY_TRAVEL.full();
+  }
+
+  /**
+   * Measures the intake arm's break-away voltage, velocity feedforward, gravity signature and — most
+   * importantly — whether its profile constraints are achievable.
+   *
+   * <p><b>On blocks, no game pieces.</b> Swings the full travel several times.
+   *
+   * <p>Run {@link #getDeployTravelCommand()} first: the gravity phase drives to fractions of the
+   * measured travel, so it is skipped if the travel is unknown.
+   *
+   * @return the arm profile calibration command.
+   */
+  public static Command getArmProfileCommand() {
+    return ARM_PROFILE.full();
+  }
+
+  /**
+   * Every superstructure calibration, in dependency order.
+   *
+   * <p><b>On blocks. Game pieces to hand, but NOT loaded when it starts</b> — the travel measurement
+   * needs an empty robot and it runs first.
+   *
+   * <p>The order is not arbitrary. Arm travel comes first because the arm profile calibration drives
+   * to fractions of it and the profile goal clamping uses the learned stops. Load thresholds come last
+   * because that is the phase that needs a person feeding game pieces, so everything automatic is out
+   * of the way by then.
+   *
+   * @return the combined superstructure calibration.
+   */
+  public static Command getSuperstructureCalibrationCommand() {
+    return Commands.sequence(
+        Commands.runOnce(() -> System.out.println(
+            "[calib] === Superstructure calibration: travel, arm profile, then load ===")),
+        getDeployTravelCommand(),
+        getArmProfileCommand(),
+        getLoadCalibrationCommand());
   }
 
   /** @return just the sixteen drive-turn-drive permutations. */

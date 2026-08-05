@@ -3,7 +3,11 @@ package frc.robot.rebuilt.subsystems;
 import frc.robot.CommonConstants;
 import frc.robot.common.annotations.NamedAuto;
 import frc.robot.common.components.diagnostics.GamePieceCounter;
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import frc.robot.common.components.diagnostics.HardStopDetector;
+import frc.robot.common.components.diagnostics.TunableNumber;
+import frc.robot.rebuilt.RebuiltConstants.MechanismRatios;
 import frc.robot.common.components.diagnostics.MotorLoadMonitor;
 import frc.robot.rebuilt.RebuiltConstants.IntakeConstants;
 import frc.robot.rebuilt.RebuiltConstants.LoadConstants;
@@ -149,8 +153,7 @@ public class Intake extends DashboardSubsystem {
 
     public Command deploy() {
         return Commands.runOnce(
-            () -> RobotUtils.moveToPosition(deployMotor, IntakeConstants.DEPLOY_POSITION_ROTATIONS),
-            this);
+            () -> deployToGoal(IntakeConstants.DEPLOY_POSITION_ROTATIONS), this);
     }
 
     /**
@@ -159,24 +162,26 @@ public class Intake extends DashboardSubsystem {
      * <p>Not a true stop — see {@code IntakeConstants.DEPLOY_HOLD_SPEED}.
      */
     public void stopDeploy() {
+        leaveProfiledMode();
         deployDemand = IntakeConstants.DEPLOY_HOLD_SPEED;
         deployMotor.set(IntakeConstants.DEPLOY_HOLD_SPEED);
     }
 
     public void manualDeploy() {
+        leaveProfiledMode();
         deployDemand = IntakeConstants.MANUAL_DEPLOY_SPEED;
         deployMotor.set(IntakeConstants.MANUAL_DEPLOY_SPEED);
     }
 
     public void manualReverseDeploy() {
+        leaveProfiledMode();
         deployDemand = IntakeConstants.MANUAL_RETRACT_SPEED;
         deployMotor.set(IntakeConstants.MANUAL_RETRACT_SPEED);
     }
 
     public Command reverseDeploy() {
-        return Commands.run(
-            () -> RobotUtils.moveToPosition(deployMotor, IntakeConstants.STOW_POSITION_ROTATIONS),
-            this);
+        return Commands.runOnce(
+            () -> deployToGoal(IntakeConstants.STOW_POSITION_ROTATIONS), this);
     }
 
     @NamedAuto(value = "Deploy Intake")
@@ -285,6 +290,200 @@ public class Intake extends DashboardSubsystem {
     /** What the deploy motor was last told to do. The detector needs the direction. */
     private double deployDemand;
 
+    /** How the deploy arm is currently being driven. */
+    public enum DeployMode {
+        /** Driven directly by an operator or a jostle. */
+        MANUAL,
+        /** Following a trapezoid profile toward a goal. */
+        PROFILED
+    }
+
+    private DeployMode deployMode = DeployMode.MANUAL;
+
+    /**
+     * Trapezoid profile plus PID for the deploy arm.
+     *
+     * <p>Replaces plain {@code kPosition} control on the SPARK, which applied output proportional to
+     * error — so a full-travel move began at maximum error and therefore maximum output, decelerating
+     * only as the error shrank. The arm slammed at both ends and the hard stop was what caught it.
+     *
+     * <p>A profile generates a position <em>and velocity</em> setpoint respecting a velocity and an
+     * acceleration limit, so the controller only ever chases a nearby target. The mechanism sees
+     * bounded acceleration instead of a step.
+     *
+     * <p><b>Run on the roboRIO rather than as REVLib MAXMotion</b>, which would execute the profile on
+     * the controller at 1 kHz and be lower latency. The tradeoff taken here is visibility: this way the
+     * setpoint, its velocity and the following error are all logged next to the measurement, which is
+     * what makes it tunable — and tunable live over NT via {@code tools/nt_tool.py}. A profile
+     * executing invisibly inside the SPARK cannot be tuned from a log.
+     */
+    private final ProfiledPIDController deployController = new ProfiledPIDController(
+        IntakeConstants.DEPLOY_kP,
+        0.0,
+        IntakeConstants.DEPLOY_kD,
+        new TrapezoidProfile.Constraints(
+            IntakeConstants.DEPLOY_MAX_VELOCITY_RPS,
+            IntakeConstants.DEPLOY_MAX_ACCEL_RPS2));
+
+    /**
+     * Live-tunable profile and gain values.
+     *
+     * <p>The arm is a good candidate for live tuning: a move takes about half a second, so the effect
+     * of a change is visible immediately, and a bad value gives a harsh move rather than anything
+     * dangerous. Inert unless {@code TunableNumber.TUNING_ENABLED} is true.
+     */
+    private final TunableNumber tunableP =
+        new TunableNumber("IntakeDeploy/kP", IntakeConstants.DEPLOY_kP);
+    private final TunableNumber tunableD =
+        new TunableNumber("IntakeDeploy/kD", IntakeConstants.DEPLOY_kD);
+    private final TunableNumber tunableMaxVel =
+        new TunableNumber("IntakeDeploy/MaxVelRps", IntakeConstants.DEPLOY_MAX_VELOCITY_RPS);
+    private final TunableNumber tunableMaxAccel =
+        new TunableNumber("IntakeDeploy/MaxAccelRps2", IntakeConstants.DEPLOY_MAX_ACCEL_RPS2);
+
+    /**
+     * Drives the arm toward a goal along a trapezoid profile.
+     *
+     * <p>The goal is clamped to the learned hard stops when they are known, so a target past the end of
+     * travel becomes a target at the end of travel. Without that the profile drives into steel and
+     * holds there — which is how a deploy target of 10 rotations against 9 rotations of real travel
+     * turns into current draw for the rest of the match.
+     *
+     * @param goalRotations Desired arm position, in motor rotations.
+     */
+    public void deployToGoal(double goalRotations) {
+        double goal = clampToLearnedStops(goalRotations);
+
+        if (deployMode != DeployMode.PROFILED) {
+            // Entering profiled control from manual. Seed the profile with where the arm actually is
+            // and how fast it is going, or the first setpoint jumps from a stale state and the arm
+            // lurches — which looks exactly like a bad gain and is not.
+            deployController.reset(getDeployPosition(), getDeployVelocity() / 60.0);
+            deployMode = DeployMode.PROFILED;
+        }
+
+        deployController.setGoal(goal);
+    }
+
+    /**
+     * @param goal Requested goal, in motor rotations.
+     * @return the goal limited to the measured travel, if it has been measured.
+     *
+     *     <p>Uses the <em>learned</em> stops rather than the configured soft limits on purpose: the
+     *     soft limits are expressed in encoder units and inherit any error in the encoder zero, while
+     *     a learned stop is a physical reference.
+     */
+    private double clampToLearnedStops(double goal) {
+        double low = deployStops.getLearnedStop(HardStopDetector.End.LOW);
+        double high = deployStops.getLearnedStop(HardStopDetector.End.HIGH);
+
+        double limited = goal;
+        if (!Double.isNaN(low)) {
+            limited = Math.max(limited, low);
+        }
+        if (!Double.isNaN(high)) {
+            limited = Math.min(limited, high);
+        }
+        return limited;
+    }
+
+    /** Hands the arm back to direct control, so profile output stops fighting it. */
+    private void leaveProfiledMode() {
+        deployMode = DeployMode.MANUAL;
+    }
+
+    /**
+     * Computes and applies one loop of profiled output.
+     *
+     * <p>Feedforward is written out rather than using {@code ArmFeedforward}, so each term can be read
+     * and disabled independently. The gravity term is inert while {@code DEPLOY_kG} is zero, which it
+     * is until the arm geometry is known — a gravity feedforward built on a guessed angle pushes
+     * hardest in the wrong place.
+     */
+    private void followDeployProfile() {
+        double measured = getDeployPosition();
+        double pidOutput = deployController.calculate(measured);
+
+        TrapezoidProfile.State setpoint = deployController.getSetpoint();
+
+        double feedforward =
+            IntakeConstants.DEPLOY_kS * Math.signum(setpoint.velocity)
+                + IntakeConstants.DEPLOY_kV * setpoint.velocity
+                + IntakeConstants.DEPLOY_kG * Math.cos(armAngleRadians(measured));
+
+        double volts = pidOutput + feedforward;
+        deployDemand = volts / 12.0;      // the stop detector wants a direction, not a unit
+        deployMotor.setVoltage(volts);
+
+        Logger.recordOutput(getName() + "/Deploy/Profile/SetpointPosition", setpoint.position);
+        Logger.recordOutput(getName() + "/Deploy/Profile/SetpointVelocity", setpoint.velocity);
+        Logger.recordOutput(getName() + "/Deploy/Profile/Goal", deployController.getGoal().position);
+        Logger.recordOutput(getName() + "/Deploy/Profile/FollowingError",
+            setpoint.position - measured);
+        Logger.recordOutput(getName() + "/Deploy/Profile/Volts", volts);
+        Logger.recordOutput(getName() + "/Deploy/Profile/Feedforward", feedforward);
+    }
+
+    /**
+     * @param positionRotations Encoder position.
+     * @return the arm angle from horizontal, in radians.
+     *
+     *     <p>Only meaningful once the deploy reduction and the horizontal offset are both known. With
+     *     the reduction at its 1.0 placeholder this is not the real angle — but the gravity gain is
+     *     zero, so nothing consumes it yet.
+     */
+    private double armAngleRadians(double positionRotations) {
+        double fromHorizontal =
+            positionRotations - IntakeConstants.DEPLOY_HORIZONTAL_OFFSET_ROTATIONS;
+        return Math.toRadians(MechanismRatios.deployRotationsToDegrees(fromHorizontal));
+    }
+
+    /**
+     * Applies a raw voltage to the deploy motor, leaving profiled mode.
+     *
+     * <p>For calibration only. Voltage rather than duty cycle because every gain the calibration
+     * produces is in volts, and a duty cycle would rescale itself as the battery sags — the fit would
+     * be against a moving input.
+     *
+     * @param volts Output voltage.
+     */
+    public void setDeployVoltage(double volts) {
+        leaveProfiledMode();
+        deployDemand = volts / 12.0;
+        deployMotor.setVoltage(volts);
+    }
+
+    /**
+     * @return the voltage currently being applied to hold the arm where it is.
+     *
+     *     <p>Only meaningful while the profile is holding station. This is the direct measurement of
+     *     what gravity and friction cost at this position — no angle, no reduction, no geometry
+     *     needed. Whatever the controller has settled on IS the answer.
+     */
+    public double getDeployHoldVolts() {
+        return deployMotor.getAppliedOutput() * deployMotor.getBusVoltage();
+    }
+
+    /** @return whether the arm is following a profile or being driven directly. */
+    public DeployMode getDeployMode() {
+        return deployMode;
+    }
+
+    /**
+     * @return the goal the profile is driving toward, in motor rotations.
+     *
+     *     <p>This is the goal <em>after</em> clamping to the learned stops, not what was requested —
+     *     so it is what the arm will actually try to reach.
+     */
+    public double getDeployGoal() {
+        return deployController.getGoal().position;
+    }
+
+    /** @return true when the profile has reached its goal within tolerance. */
+    public boolean isDeployAtGoal() {
+        return deployMode == DeployMode.PROFILED && deployController.atGoal();
+    }
+
     /**
      * @return true when the arm is against its <b>deployed</b> hard stop.
      *
@@ -360,7 +559,20 @@ public class Intake extends DashboardSubsystem {
     public void periodic() {
         rollerLoad.update(getRollerCurrent(), getRollerVelocity(), intakeRunning);
         pieceCounter.update();
+        // No-ops entirely when tuning is disabled.
+        tunableP.ifChanged(deployController::setP);
+        tunableD.ifChanged(deployController::setD);
+        tunableMaxVel.ifChanged(v -> deployController.setConstraints(
+            new TrapezoidProfile.Constraints(v, tunableMaxAccel.get())));
+        tunableMaxAccel.ifChanged(a -> deployController.setConstraints(
+            new TrapezoidProfile.Constraints(tunableMaxVel.get(), a)));
+
+        if (deployMode == DeployMode.PROFILED) {
+            followDeployProfile();
+        }
+
         deployStops.update(getDeployPosition(), getDeployCurrent(), deployDemand);
+        Logger.recordOutput(getName() + "/Deploy/Mode", deployMode.name());
 
         Logger.recordOutput(getName() + "/Deploy/FullyDeployed", isFullyDeployed());
         Logger.recordOutput(getName() + "/Deploy/FullyStowed", isFullyStowed());

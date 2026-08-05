@@ -175,6 +175,8 @@ class ContainerWiringTest {
       assertNotNull(RebuiltContainer.getBumpDiagnosticCommand());
       assertNotNull(RebuiltContainer.getInertiaCalibrationCommand());
       assertNotNull(RebuiltContainer.getDeployTravelCommand());
+      assertNotNull(RebuiltContainer.getArmProfileCommand());
+      assertNotNull(RebuiltContainer.getSuperstructureCalibrationCommand());
     });
   }
 
