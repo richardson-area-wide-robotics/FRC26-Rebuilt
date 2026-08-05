@@ -11,8 +11,8 @@ Console tab without AdvantageScope: `[validate]`, `[calib]`, `[maneuver]`, `[sta
 each measurement is taken *from* and *to* — a wrong datum there produces confidently wrong poses,
 which is worse than no vision at all.
 
-**Read 0-CAD first.** With the CAD you can skip 0a, 0b and 0d entirely — and CAD does the camera
-better than a tape measure can. 0-CAD also lists what CAD *cannot* give, which is what is left of the
+**The CAD geometry is already in the code** — module spacing, drive gearing and the full camera
+transform. 0-DIMS records what those numbers are and what they measure. What is left of the
 session, and includes the largest single term in the 10 ft error budget.
 
 **Then start with 0c.** Two minutes, no tools, and it is a convention question CAD cannot settle.
@@ -39,8 +39,8 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | Step | What | Needs | Rough time |
 | --- | --- | --- | --- |
 | 0-NET | **Check robot traffic is not going down the VPN** | Both NICs up | 5 min |
-| 0-CAD | **Pull what you can from CAD first** — worksheet included | Onshape | 20–40 min |
-| 0 | Whatever CAD cannot give — see 0-CAD | Tape, square, angle finder, PhotonVision UI | 10–45 min |
+| 0-DIMS | *Record of what CAD already supplied* — nothing to do | — | — |
+| 0 | The two things CAD could not settle | Tape, square, angle finder | 10 min |
 | 1 | Deploy | Laptop | 5 min |
 | 1b | **Hand-motion check — motors OFF.** Directions and arm limits, by hand | Blocks, a helper for the arm | 15 min |
 | 2 | **On blocks** — 14-check self-test | Blocks, wheels clear | 10 min |
@@ -66,9 +66,9 @@ intrinsics error becomes a 5% wheel-scale error against a total budget of 0.833%
 
 ### Bring to the shop
 
-- **The CAD open on a laptop.** See 0-CAD; it removes most of step 0
+- *(CAD not needed — its numbers are already in the constants. See 0-DIMS.)*
 - **Tape measure**, **masking tape**, a **carpenter's square**, a **marker**, and **string or a
-  chalk line** — for whatever CAD does not cover, and for the diagonal squareness check
+  chalk line** — for 0e, and for the optional 0b/0d checks
 - A **digital angle finder or phone inclinometer** for camera pitch
 - **Bumpers on**, as always. Step 0b explains why that changes nothing about the numbers but
   everything about where you measure them from
@@ -107,269 +107,83 @@ reads anything but 0, someone fitted one and that needs knowing.
 
 ---
 
-## 0-CAD. What to take from CAD instead of measuring
+## 0-DIMS. What CAD already gave, and what it means
 
-Having the CAD removes most of step 0 and does a **better** job of the hardest parts — nobody measures
-a lens pitch with a tape measure as well as a model does. But it is not a clean substitute, because
-**CAD describes the design and the robot is the build.** Three categories, and the third is the one
-worth reading carefully.
+**This is a record, not a task.** These numbers came from the robot CAD and are already in the
+constants. They are written down here because *what a number measures* is the part that goes wrong,
+not the number itself — and one of them has already caused a 12.8% kinematics error by being the
+right value for the wrong quantity.
 
-> **On this robot the mass-properties tool is unusable** — the assembly is large enough to crash it.
-> So moment of inertia and centre of mass, which are normally the strongest reasons to reach for CAD,
-> are not available. Step 7b measures inertia on the robot instead. If the tool will run on
-> **subassemblies one at a time**, that is worth trying: note each one's mass and centre of mass, then
-> combine them by hand with the parallel axis theorem. Many small computations instead of one large
-> one is often the difference between crashing and finishing.
+| Quantity | Value | Lives in |
+| --- | --- | --- |
+| Module spacing, **axle centre to axle centre** | 23.500″ both ways | `DriveConstants.kTrackWidth`, `kWheelBase`, `settings.json` |
+| Drive pinion / spur | 14T / 21T → **4.50:1** (Extra High 1) | `kDrivingMotorPinionTeeth`, `kDrivingMotorSpurTeeth`, `settings.json` |
+| Camera x, forward of centre | 2.808″ | `VisionConstants.ROBOT_TO_CAMERA` |
+| Camera y, left of centre | 6.267″ | `ROBOT_TO_CAMERA` |
+| Camera z, floor to lens | 25.271″ | `ROBOT_TO_CAMERA` |
+| Camera pitch, below horizontal | 5.5° | `ROBOT_TO_CAMERA` |
+| Camera yaw | **+90°** — in line with the shooter, 90° to the intake | `CAMERA_YAW_DEGREES`, `ROBOT_TO_CAMERA` |
+| Shooter yaw offset | **+90°**, following from the camera being in line with the shooter | `GeometryConstants.SHOOTER_YAW_OFFSET_DEGREES` |
 
-### 0-CAD worksheet — fill these in
+### The two mistakes these numbers already caught
 
-**Six numbers to start with, in priority order.** If more of the model is available, the ranked list
-further down goes as deep as you have time for. Each row says what the code believes now, so a disagreement is
-visible immediately rather than after you have entered it.
+Worth keeping, because both were invisible and both would have read as tuning problems.
 
-| # | Number | Code says now | From CAD | Tolerance |
+**Module spacing was the frame perimeter, not the module axes.** The code said 26.5″ and PathPlanner
+said 27.01″ — two independent sources agreeing closely, which is exactly what verified looks like.
+They were both describing the frame. The modules sit 23.5″ apart, so the kinematics were **12.8%
+wrong**, and a test titled *matching the measured 26.5 inch frame* is how it stayed that way.
+
+**The spur gear was the template's 22T, not the robot's 21T.** Combined with a free speed inherited
+for a NEO rather than a Vortex, the drivetrain model was **25.2% off on kV**. The 4.8 m/s speed cap
+turned out to be a *fossil* of that doubly-wrong model — it computed 4.8037 m/s — rather than a limit
+anyone chose.
+
+### Still not obtainable from CAD
+
+Centre of mass and moment of inertia. CAD crashes computing them on this assembly, and they change
+between arm states anyway — deploying moves several kilograms outward, and inertia goes as mass times
+radius squared. **Step 7b measures both states on the robot**, which is the better answer regardless:
+CAD describes the design, and inertia is a property of the build.
+
+---
+
+## 0. Before power-on — one measurement, and some optional checks
+
+The geometry from CAD is already in the constants (see 0-DIMS), so nearly all of what this step used
+to ask for is done. **One field measurement is genuinely left**, plus a two-minute confirmation.
+
+| # | What | Where it goes | Time | Still needed? |
 | --- | --- | --- | --- | --- |
-| 1 | **Camera pitch** | −15.0° | ______ | **±0.5°** |
-| 2 | **Camera yaw sign** | +90° *(unconfirmed)* | ______ | left = +90, right = −90 |
-| 3 | **Wheel base / track width** | 26.500″ *(PathPlanner says 27.01″)* | ______ | **±2 mm** |
-| 4 | **Camera x** (forward of centre) | 12.0″ | ______ | ±5 mm |
-| 5 | **Camera y** (left of centre) | 0.0″ | ______ | ±5 mm |
-| 6 | **Camera z** (floor to lens) | 8.0″ | ______ | ±5 mm |
+| 0e | Bump band position | `FieldRegions` | 5 min | **Yes** — a field measurement, not a robot one |
+| 0c | **Which side the shooter fires from** | `GeometryConstants` + `VisionConstants` | 2 min | Confirm only — sign now known |
+| 0a | Robot origin marked on the floor | *(only needed for 0d)* | 10 min | Only if doing 0d |
+| 0b | Module spacing, axle centre to axle centre | already set to 23.5″ | 10 min | Optional check |
+| 0d | Camera position and angle | already set from CAD | 20 min | Optional check |
 
----
+**0c is now a confirmation, not a discovery.** The camera yaw sign is **+90°**, and since the camera
+is in line with the shooter, `SHOOTER_YAW_OFFSET_DEGREES` is +90° too. Spend the two minutes anyway:
+this one number decides which way the robot turns to aim, and a sign error points the **intake** at the
+goal — a bug that a pre-existing test in this repo used to assert as correct behaviour, which is how
+it survived.
 
-#### 1. Camera pitch — do this one most carefully
+### Why 0b and 0d are worth doing anyway, if you have twenty minutes
 
-The angle of the camera's **optical axis** from horizontal.
+Not because the CAD numbers are suspect, but because **CAD describes the design and the robot is the
+build.** A disagreement between them is a real finding: a module shimmed during assembly, a camera
+mount that flexed, a bracket drilled 3 mm off. Those never appear in CAD and they do appear in the
+vision residuals, where they read as a calibration problem.
 
-- **In CAD:** measure the angle of the camera's mounting face, or of a datum on the camera part that
-  is parallel to the lens axis, relative to the chassis' horizontal plane.
-- **Sign: negative is tilted UP.** WPILib's frame is right-handed with +y left, so a positive rotation
-  about +y drops the nose. `PitchConventionTest` asserts this so it cannot be misremembered.
-- **Goes in:** `VisionConstants.ROBOT_TO_CAMERA`, the middle argument of `Rotation3d`.
+If you skip them, nothing downstream breaks. Step 4's vision commissioning will surface a bad camera
+transform as pose disagreement between tags, and step 5's wheel-scale run will surface bad spacing as
+a scale factor that will not converge — you just find out later and with more ambiguity about the
+cause.
 
-**Why ±0.5°:** pitch error grows with range, unlike every other number here.
+**Everything below is measured with bumpers on**, since that is how this robot is always tested. That
+matters most in 0b: bumpers hide the frame entirely, and the frame is not the datum anyway.
 
-| Range | 0.5° of pitch error |
-| --- | --- |
-| 2 m | 17 mm |
-| 3 m | 26 mm |
-| 5 m | 44 mm |
-
-At 5 m half a degree already costs more than the entire 25 mm budget for the 10 ft run. This is why
-step 0d offers a crosshair method as a physical cross-check — worth doing even with good CAD.
-
----
-
-#### 2. Camera yaw — the sign is the whole question
-
-The magnitude is known: **90°**, because the camera is in line with the shooter and the shooter is 90°
-from the intake. What nobody has confirmed is which way.
-
-- **In CAD:** which side of the chassis does the camera look out of, relative to the direction the
-  robot drives forward?
-- **+90 = out of the robot's LEFT.** −90 = out of the right. (+y is left in WPILib.)
-- **Goes in two places, and they must match:** `VisionConstants.CAMERA_YAW_DEGREES` and
-  `RebuiltConstants.GeometryConstants.SHOOTER_YAW_OFFSET_DEGREES`. `GeometryConsistencyTest` fails the
-  build if they disagree, since the camera and shooter share a physical axis.
-
-**Careful — CAD alone cannot fully settle this.** "Forward" is a *convention* tied to which module was
-wired as front-left, not a fact about the geometry. Take the side from CAD, then confirm with the
-two-minute check in 0c: stand behind the robot looking the way it drives forward.
-
-**If the sign is wrong:** `AIM_AT_HUB` turns the robot 180° from the hub, and every tag pose is
-rotated 180°. Both fail loudly rather than subtly, which is the one mercy here.
-
----
-
-#### 3. Wheel base and track width — settles a live disagreement
-
-Distance between the **module rotation axes**, not the frame and definitely not the bumpers.
-
-- **In CAD:** distance between the swerve module mate connectors or part origins. Front-left to
-  front-right is track width; front-left to rear-left is wheel base. On a square chassis they match.
-- **Goes in:** `DriveConstants.kTrackWidth` and `kWheelBase`, **and** the four module offsets in
-  `settings.json`, which are **half** the spacing.
-
-**This resolves an open decision.** The two sources currently disagree:
-
-| Source | Spacing | Offset |
-| --- | --- | --- |
-| `CommonConstants` | 673.1 mm (26.500″) | ±336.5 mm |
-| `settings.json` | 686.0 mm (27.010″) | ±343.0 mm |
-| **Difference** | **12.9 mm** | **6.5 mm per side** |
-
-6.5 mm per side is a **1.9% kinematics error**, which makes commanded rotation bleed into translation
-and vice versa — the robot drifts slightly sideways while spinning and yaws slightly while driving
-straight. It looks like a tuning problem and no amount of tuning fixes it.
-
-Whichever CAD says, change the other to match, then set the two `KNOWN_*_DIVERGENCE` constants in
-`PathPlannerSettingsConsistencyTest` to zero. A test will tell you to.
-
-**Still worth doing on the robot:** measure both floor diagonals (0a step 5). Equal diagonals mean the
-frame is square; unequal means it is racked, and CAD cannot know that. That is a build check, not a
-measurement.
-
----
-
-#### 4–6. Camera x, y, z — three numbers from one place
-
-All measured from the **robot origin: the centre of the four wheel contact patches, at floor level.**
-Not the bumper centre, not the frame centre, not the CAD assembly origin.
-
-- **x** — forward of the origin, positive forward
-- **y** — left of the origin, positive left. Currently 0.0″, i.e. on the centreline
-- **z** — floor to the **centre of the lens glass**, always positive
-
-**Measure to the lens, not the camera body origin or the mount face.** Find the lens in the model; the
-optical centre is a few mm inside the front face of the glass and the front face is close enough.
-
-**x and y matter more than z for the 2D pose**, so do not stop at height. An error in x or y puts a
-fixed offset of that size straight into every pose. z mostly affects the tag-elevation geometry, which
-matters for single-tag solves and washes out for multi-tag.
-
-> **The one cross-check worth keeping even with perfect CAD:** put a tape on the lens height and
-> compare it to the model's z. Thirty seconds, and it catches every frame-conversion error at once — a
-> +y sign flip, a wrong origin, an inch/mm slip. If z agrees, the conversion is probably right. If it
-> does not, none of the other five numbers can be trusted either.
-
----
-
-### If you can get more — everything else CAD can give, ranked
-
-Split by whether it changes what the robot does today or unlocks a check. That distinction is worth
-having: the first group is worth interrupting someone for, the second is worth doing while you are
-already in the model.
-
-#### Group A — wrong values change robot behaviour
-
-| # | Number | Code says | What a wrong value does |
-| --- | --- | --- | --- |
-| 7 | **Drive pinion teeth** | 14 | 12T/13T/14T all bolt on and differ by **17% in free speed**. Scales the feedforward and the top speed — same magnitude and same failure mode as the wrong-motor bug. `MechanismRatios.DRIVE_PINION_TEETH` |
-| 8 | ~~Moment of inertia about Z~~ | 3.733 kg·m² | **Cannot be had from this CAD** — the assembly crashes the mass-properties tool. Step 7b measures it on the robot instead, which also captures the wire and tape a model never has |
-| 9 | **Module mounting orientation** | FL −90°, FR 0°, RL 180°, RR +90° | These are the standard MAXSwerve pattern, where each module is mounted a quarter turn from its neighbour. If they were all mounted the same way all four would be 0. A wrong one points that module 90° off. Confirm the pattern from CAD — the *fine* encoder zero is still a physical calibration |
-| 10 | **Design mass** | 47.6272 kg *(looks weighed)* | Only if the mass-properties tool will do it on subassemblies one at a time. Not to replace the weighed figure — to **compare** |
-
-#### Group B — currently changes nothing, but unlocks a check
-
-| # | Number | Code says | What it buys |
-| --- | --- | --- | --- |
-| 11 | **Intake deploy reduction** | 1.0 *(placeholder)* | Turns `DEPLOY_POSITION_ROTATIONS = 10` and soft limits of 0–11 from opaque motor rotations into **arm degrees**. "Do the soft limits match real travel" has been unverified since the first review; this is what closes it |
-| 12 | **Intake deploy arm travel, stowed → deployed** | *(unknown)* | With row 11, checks the two against each other directly. If 10 motor rotations does not equal the CAD travel, one of them is wrong |
-| 13 | **Shooter reduction** | 1.0 *(placeholder)* | With row 14, predicts ball exit speed from motor RPM. If that comes out implausible for the distances the team actually makes, one of the three is wrong |
-| 14 | **Flywheel diameter** | 0.1016 m *(4″, assumed)* | As above |
-| 15 | **Bumper thickness** | implied 3.25″ per side | `settings.json` says 0.838 m across, consistent with 26.5″ + 2×3.25″. Feeds the SysId runway reserve and the robot footprint |
-| 16 | **CG height** | *(not in code)* | Same tool, same problem. If subassembly-at-a-time works it is worth having, because it governs weight transfer going up a ramp — the mechanism behind step 8b |
-| 17 | **Camera roll** | 0.0 | Assumed level. Only matters if the camera is deliberately canted |
-| 18 | **Camera FOV / lens spec** | *(unknown)* | Step 4a checks the calibrated FOV against the spec sheet, within about ±10°. Having the spec to hand makes that check possible |
-
-#### Not worth asking CAD for
-
-Because CAD's answer would be wrong, not merely absent:
-
-- **Effective wheel diameter.** CAD gives nominal 3.00″; loaded tread compresses 1–3% smaller, which is
-  **30–91 mm over 10 ft against a 25 mm budget**. The largest single error term, and CAD is confidently
-  wrong about it. Only the AprilTag run measures it
-- **Steering encoder zeros.** A calibration, not a dimension
-- **`wheelCOF`** and the traction limit. A property of the carpet
-- **kS, kV, kA.** Friction and inertia through gearing — CAD's MOI helps a simulation, not a feedforward
-- **Camera intrinsics.** Properties of the lens as manufactured
-
----
-
-### CAD replaces these outright
-
-| Number | Where it goes | How to get it |
-| --- | --- | --- |
-| Module positions | `DriveConstants.kTrackWidth` / `kWheelBase`, `settings.json` module offsets | Distance between the four module rotation axes. Settles the 26.50″ vs 27.01″ disagreement outright |
-| **Camera position and angle** | `VisionConstants.ROBOT_TO_CAMERA` | See the coordinate-frame note below. This is where CAD wins hardest |
-| ~~Moment of inertia about Z~~ | — | **Not available.** The assembly is too large for the mass-properties tool to finish. Measured on the robot instead — step 7b |
-| ~~Centre of gravity height~~ | — | **Not available**, same reason |
-| Bumper perimeter | `settings.json` `robotWidth` / `robotLength` | Currently 0.838 m = 33.0″, consistent with a 26.5″ frame plus 3.25″ bumpers each side |
-| **All gear and pulley reductions** | `MechanismRatios` | Count teeth. See below — this is the other place CAD is authoritative and a tape measure is useless |
-| Nominal wheel diameter | `ModuleConstants.kWheelDiameterMeters` | 3.00″ = 0.0762 m. Note *nominal*, see category three |
-
-Skip **0a, 0b and 0d** if you take these from CAD. 0a only existed as a datum for measuring the
-camera, so if the camera comes from CAD the floor marks are unnecessary.
-
-### The coordinate frame is where CAD numbers go wrong
-
-CAD gives exact numbers in **CAD's** frame. The code wants them in **WPILib's**, and the conversion is
-the step that quietly ruins otherwise perfect data.
-
-1. The robot origin is the **centre of the four wheel contact patches, at floor level**. An Onshape
-   assembly origin is wherever the first part landed — almost certainly not that.
-2. WPILib is **+x forward, +y LEFT, +z up**. CAD may well be +y right, or z along the length. Check,
-   do not assume.
-3. Measure to the **lens**, not the camera body origin or the mount face. Find the lens in the model.
-4. **Pitch is positive downward**, so a camera tilted up is negative. Asserted by
-   `PitchConventionTest` so it cannot drift.
-
-> **Do one physical cross-check even with perfect CAD.** Measure lens height above the floor with a
-> tape and compare it against the model's z. It takes thirty seconds and it catches every
-> frame-conversion error at once — a sign flip, a wrong origin, a mm/inch slip. If z agrees, the frame
-> conversion is probably right; if it does not, none of the other five numbers are trustworthy either.
-
-### CAD gives these, but check the build anyway
-
-| Number | Why CAD is not the last word |
-| --- | --- |
-| Module spacing | CAD gives the design. **Measure both diagonals on the floor** — equal diagonals mean the frame is square, unequal means it is racked and the kinematics' rectangle assumption is already violated. That is a build check, not a measurement |
-| **Drive pinion teeth** | The BOM says what was ordered; the robot has what was fitted. 12T, 13T and 14T all bolt on, and they differ by **17% in free speed** — the same magnitude and the same failure mode as the wrong-motor bug. **Count the teeth on the robot** |
-| Robot mass | CAD mass is design mass and is usually optimistic — wire, tape, zip ties and bumpers all go missing. `settings.json` has 47.6272 kg which looks weighed. **A scale beats CAD here** |
-| Shooter and camera side | CAD shows the geometry, but which face is +x is a *convention* tied to how the module CAN IDs were assigned. Take it from CAD, then do the two-minute check in 0c |
-
-### CAD cannot give you these at all
-
-This is the list that matters, because it is what remains of the shop session — and it includes the
-single largest term in the 10 ft error budget.
-
-- **Effective wheel diameter.** CAD gives the nominal 3.00″. Under load the tread compresses and the
-  rolling diameter is *smaller*, by 1–3%. That is **30–91 mm over 10 ft**, against a budget of 25 mm.
-  It is the largest single error term and only the AprilTag wheel-scale run in step 6 measures it.
-  CAD is confidently wrong here in a way that looks right.
-- **Steering angular offsets.** The absolute encoder zero for each module is a calibration, not a
-  dimension. ±0.5° of misalignment is worth 26.6 mm over 10 ft on its own.
-- **Camera intrinsics.** Focal length, principal point and distortion are properties of the lens as
-  manufactured. Step 4a, and everything distance-derived inherits it.
-- **kS, kV, kA.** Friction, and inertia reflected through gearing. CAD's MOI helps a simulation; it
-  does not give you the feedforward. Step 10.
-- **Traction limit and `wheelCOF`.** A property of the carpet as much as the robot. Step 8.
-- **Current thresholds for piece and jam detection.** Step 9.
-- **The bump band.** A fact about the field, not the robot. Robot CAD says nothing; use the field
-  drawings.
-
-### Three inconsistencies in `settings.json` that CAD settles
-
-Reading the file turned these up. All three are PathPlanner disagreeing with the code or with itself.
-
-| Field | Value | Problem |
-| --- | --- | --- |
-| `flModuleX` etc. | ±0.343 m | Implies 27.01″ spacing; the code says 26.50″. **CAD settles it** |
-| `robotTrackwidth` | 0.546 m | 21.50″ — a *third* value, agreeing with neither. Probably unused in `holonomicMode: true`, since PathPlanner uses the module offsets for holonomic kinematics, but it should not be left describing a robot that does not exist |
-| `maxDriveSpeed` | 4.879 m/s | The constants give a physical **5.741 m/s**, so this is 15% low. PathPlanner will plan conservatively — not dangerous, but it is leaving speed unused and it is not a number anything derived |
-
----
-
-## 0. Before power-on — the five measurements only you can make
-
-Nothing in the code can derive these, and a wrong camera transform produces *confidently wrong*
-poses, which is worse than no vision at all — the estimator fuses the error in and reports high
-confidence while doing it.
-
-**Everything below is measured with bumpers on**, since that is how this robot is always tested.
-That matters most in 0b: bumpers hide the frame entirely, and the frame is not the datum anyway.
-
-| # | What | Where it goes | Time |
-| --- | --- | --- | --- |
-| 0a | Robot origin marked on the floor | *(needed for 0d)* | 10 min |
-| 0b | Module spacing, wheel centre to wheel centre | `CommonConstants.DriveConstants` + `settings.json` | 10 min |
-| 0c | **Which side the shooter fires from** | `GeometryConstants` + `VisionConstants` | 2 min |
-| 0d | Camera position and angle | `VisionConstants.ROBOT_TO_CAMERA` | 20 min |
-| 0e | Bump band position | `FieldRegions` | 5 min |
-
-You need: tape measure, masking tape, a carpenter's square, a marker, a digital angle finder or
-phone inclinometer, and string or a chalk line.
+You need, for whichever you do: tape measure, masking tape, a carpenter's square, a marker, a digital
+angle finder or phone inclinometer, and string or a chalk line.
 
 ---
 
@@ -1688,8 +1502,9 @@ separate change that should be made against a measured number rather than a gues
 - [ ] Bump band measured and entered in `FieldRegions`
 - [ ] **Field ramp lip height measured** — it is what decides whether 8b's verdict can be fixed with
       current at all (see the table in 8b)
-- [ ] `MechanismRatios` filled in from CAD, especially `DRIVE_PINION_TEETH` counted on the robot
-- [ ] `settings.json` `robotTrackwidth` and `maxDriveSpeed` reconciled — see 0-CAD
+- [ ] `MechanismRatios` reductions filled in — the drive pinion and spur are known (14T/21T), the
+      mechanism reductions are still 1.0 placeholders
+- [ ] `settings.json` `robotTrackwidth` and `maxDriveSpeed` reconciled — see 0-DIMS
 - [ ] Motor inventory spot-checked against step 9's measured free speeds — ~6,500 for the four
       Vortex mechanisms, ~5,400 for the spindexer. A mechanism near the wrong figure means the
       controller-to-motor rule has an exception nobody has mentioned
@@ -1750,11 +1565,11 @@ verify them** — this list is the honest measure of how much of this code has m
   tuning problem and is not one
 - **The frozen-band and pushing-current thresholds** that separate a hard stop from a ball — reasoned
   from encoder noise against ball compliance, never watched on a real arm with a real ball under it
-- **That the arm has two hard stops inside its soft limits at all.** If a soft limit sits inside a
-  stop, step 9b reports the stop as never found — and travel, goal clamping and the encoder re-zero all
-  depend on finding it
-- **The drive pinion tooth count.** 14T is assumed. 12T would change free speed by 17%, which is the
-  same magnitude and the same failure mode as the wrong-motor bug. Count it (0-CAD)
+- **That the arm's hard stops are now reachable.** They were not: the reverse soft limit sat exactly
+  on the stow datum, so the controller cut output before the arm could touch its own stop, and travel,
+  goal clamping and the encoder re-zero all silently depended on finding it. The limit has been moved
+  outside the datum — but that the arm now actually reaches both stops is still unwitnessed, and step
+  1b measures the travel by hand so 9b has something to be checked against
 - **Every reduction in `MechanismRatios`** — placeholders of 1.0, which makes the conversions the
   identity and changes no behaviour, but means the intake deploy's travel is still expressed in opaque
   motor rotations rather than arm degrees

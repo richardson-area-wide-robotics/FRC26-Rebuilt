@@ -102,19 +102,19 @@ public final class RebuiltConstants {
   public static final class GeometryConstants {
 
     /**
-     * CONFIRM THE SIGN — degrees from chassis forward (+x) to the direction the shooter fires.
+     * Degrees from chassis forward (+x) to the direction the shooter fires. <b>+90, confirmed.</b>
      *
-     * <p>Magnitude is 90, which is known. The sign is not, and it cannot be read off the code:
+     * <p>So the shooter fires out of the robot's <b>left</b> side, since +y is left in WPILib's frame.
      *
-     * <ul>
-     *   <li>{@code +90} means the shooter fires out of the robot's <b>left</b> side, since +y is
-     *       left in WPILib's frame.
-     *   <li>{@code -90} means it fires out of the <b>right</b> side.
-     * </ul>
+     * <p>Confirmed by way of the camera rather than measured separately: the camera is in line with
+     * the shooter and its yaw is {@code +90} (see {@code VisionConstants.CAMERA_YAW_DEGREES}), so the
+     * shooter's offset is the same number. Recorded here because that is a derivation, not an
+     * independent measurement — if the camera ever moves off the shooter axis, this stops following
+     * from it.
      *
-     * <p>To settle it: stand behind the robot looking the way it drives forward. If the shooter is on
-     * your left, this is {@code +90}. Getting it backwards aims the robot 180 degrees away from the
-     * hub, which at least fails obviously rather than subtly.
+     * <p>The sign matters more than it looks. Getting it backwards aims the robot 180 degrees from the
+     * hub, and the failure it produces is that the <b>intake</b> points at the goal — which is exactly
+     * what this code used to do, with a test asserting it as correct behaviour.
      */
     public static final double SHOOTER_YAW_OFFSET_DEGREES = 90.0;
 
@@ -148,9 +148,9 @@ public final class RebuiltConstants {
   public static final class MechanismRatios {
 
     /**
-     * CONFIRM FROM CAD — teeth on the MAXSwerve driving pinion.
+     * Teeth on the MAXSwerve driving pinion. <b>14T, confirmed from CAD.</b>
      *
-     * <p><b>14T, confirmed from CAD.</b> REV ships 12T, 13T and 14T, and the choice scales the drive
+     * <p> REV ships 12T, 13T and 14T, and the choice scales the drive
      * reduction and therefore the feedforward and the top speed:
      *
      * <pre>
