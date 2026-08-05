@@ -556,6 +556,33 @@ public class SwerveDriveSubsystem extends SubsystemBase implements ModulePositio
     m_rearRight.applyDriveCurrentLimit(amps);
   }
 
+  /**
+   * Puts all eight drivetrain motors in coast so the robot can be pushed and steered by hand.
+   *
+   * <p>For the hand-motion polarity check. See {@link MAXSwerveModule#setCoastForHandCalibration}.
+   *
+   * <p><b>A coasting drivetrain does not hold the robot still.</b> On anything but level ground it
+   * will roll, so this belongs on carpet with the robot on blocks or against a wall.
+   *
+   * @param coast True for coast, false to restore brake.
+   */
+  public void setCoastForHandCalibration(boolean coast) {
+    m_frontLeft.setCoastForHandCalibration(coast);
+    m_frontRight.setCoastForHandCalibration(coast);
+    m_rearLeft.setCoastForHandCalibration(coast);
+    m_rearRight.setCoastForHandCalibration(coast);
+  }
+
+  /** @return raw steering encoder readings, in radians, offsets not applied. */
+  public double[] getRawTurnPositionsRadians() {
+    return new double[] {
+        m_frontLeft.getRawTurnPositionRadians(),
+        m_frontRight.getRawTurnPositionRadians(),
+        m_rearLeft.getRawTurnPositionRadians(),
+        m_rearRight.getRawTurnPositionRadians()
+    };
+  }
+
   /** Re-applies drive closed-loop gains to all four modules. For live tuning. */
   public void applyDriveGains(double p, double d) {
     m_frontLeft.applyDriveGains(p, d);

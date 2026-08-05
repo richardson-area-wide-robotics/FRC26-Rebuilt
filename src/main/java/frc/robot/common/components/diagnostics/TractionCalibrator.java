@@ -107,13 +107,14 @@ public class TractionCalibrator {
     private static final double SLIP_VELOCITY_MPS = 0.15;
 
     /**
-     * Chassis movement, in metres, above which the robot was not against the wall.
+     * Odometry distance, in metres, at which the run is stopped for safety.
      *
-     * <p>Generous, because the pose estimate itself moves a little on vision updates while the robot
-     * sits still. What it has to separate is "did not move" from "drove across the room", and those
-     * differ by metres.
+     * <p>Not a validity test. Odometry is fed by the same wheels whose slip is being measured, so it
+     * cannot distinguish creep from slip at the scale that matters -- which is exactly the mistake
+     * this constant replaced. What it can do is notice that the robot is crossing the room, which is
+     * a reason to stop regardless of how the number was obtained.
      */
-    private static final double STATIC_TOLERANCE_METERS = 0.10;
+    private static final double RUNAWAY_METERS = 2.0;
 
     /** Fraction of the commanded limit the current must reach for the limit to be binding. */
     private static final double BINDING_FRACTION = 0.80;
@@ -134,7 +135,8 @@ public class TractionCalibrator {
         public String describe() {
             String verdict;
             if (robotMoved) {
-                verdict = "INVALID, robot moved " + String.format("%.2f", chassisMovedMeters) + " m";
+                verdict = "STOPPED, odometry moved "
+                        + String.format("%.2f", chassisMovedMeters) + " m";
             } else if (slipped) {
                 verdict = "SLIPPED";
             } else if (!limitWasBinding) {
@@ -286,6 +288,8 @@ public class TractionCalibrator {
 
     /** @return true once there is nothing more to learn from pushing harder. */
     private boolean isFinished() {
+        // Slip found, or the robot has travelled far enough that something is wrong. The second
+        // is a safety stop, not a verdict -- see RUNAWAY_METERS.
         return steps.stream().anyMatch(Step::robotMoved) || tractionLimitAmps() > 0;
     }
 
@@ -296,12 +300,33 @@ public class TractionCalibrator {
         double wheelSpeed = stepWheelSpeed.getMean();
         double perMotor = stepCurrent.getMean();
 
-        boolean robotMoved = moved > STATIC_TOLERANCE_METERS;
         boolean binding = perMotor >= amps * BINDING_FRACTION;
 
-        // Slip requires the wheels turning AND the robot staying put. Without the second half,
-        // driving away from the wall would read as a spectacular slip at the first step.
-        boolean slipped = wheelSpeed > SLIP_VELOCITY_MPS && !robotMoved;
+        // Slip is the wheels spinning up WHILE THE CURRENT LIMIT IS STILL BINDING.
+        //
+        // It used to be "wheels turning and the robot staying put", with staying put taken from
+        // drive.getPose(). That could never fire, and the arithmetic says so: getPose() is the pose
+        // estimator, which in a shop with no tag in view is wheel-integrated odometry -- so spinning
+        // wheels advance it. Wheel speed above 0.15 m/s sustained over the 0.75 s push necessarily
+        // moves the estimate more than the 0.10 m static tolerance, so robotMoved was true exactly
+        // when slip occurred, and the two halves of the test excluded each other. The step that
+        // genuinely broke traction aborted the run as "not against the wall", and squaring the robot
+        // up again produced the same message for ever.
+        //
+        // Binding is the better second half, and it needs no chassis reference at all: a robot that
+        // is NOT against the wall rolls freely and never reaches its current limit, so binding alone
+        // establishes that the drivetrain is pushing something immovable. Wheels turning while still
+        // pinned at the limit is slip, and nothing else is.
+        //
+        // The same reasoning is already written down in BumpCrossingDiagnostic, which refuses to
+        // compare wheel speed against a chassis speed derived from wheels. This file disagreed with
+        // it.
+        boolean slipped = wheelSpeed > SLIP_VELOCITY_MPS && binding;
+
+        // Kept, but only as a SAFETY stop and an informational figure -- never as a validity gate.
+        // Odometry cannot tell 10 cm of creep from 10 cm of slip; it can tell that the robot has
+        // travelled several metres and should be stopped.
+        boolean robotMoved = moved > RUNAWAY_METERS;
 
         Step step = new Step(amps, wheelSpeed, perMotor, perMotor * 4,
                 stepVoltage.getMean(), moved, slipped, binding, robotMoved);
@@ -355,15 +380,25 @@ public class TractionCalibrator {
      * @return the recommendation.
      */
     static Result analyse(List<Step> steps, int configuredLimit) {
-        boolean aborted = steps.stream().anyMatch(Step::robotMoved);
+        // The run is invalid when the drivetrain never pushed anything hard enough to reach its
+        // commanded limit. That, not an odometry distance, is what "not against the wall" looks like
+        // in a signal that is independent of the wheels: a robot rolling freely never binds.
+        boolean aborted = !steps.isEmpty()
+                && steps.stream().noneMatch(Step::limitWasBinding);
         String abortReason = "";
 
         if (aborted) {
-            Step bad = steps.stream().filter(Step::robotMoved).findFirst().orElseThrow();
-            abortReason = String.format(
-                    "The robot moved %.2f m during the %d A step. It is not against the wall, so "
-                            + "wheel rotation cannot be read as slip. Reposition and re-run.",
-                    bad.chassisMovedMeters(), bad.limitAmps());
+            abortReason = "No step reached its commanded current limit, so the drivetrain was never "
+                    + "pushing anything immovable. Square the robot against the wall, confirm the "
+                    + "bumpers are in contact across their width, and re-run.";
+        }
+
+        Step ranAway = steps.stream().filter(Step::robotMoved).findFirst().orElse(null);
+        if (ranAway != null) {
+            abortReason = abortReason + (abortReason.isEmpty() ? "" : " ")
+                    + String.format("Also: odometry moved %.2f m during the %d A step, so the run was "
+                            + "stopped early for safety.",
+                            ranAway.chassisMovedMeters(), ranAway.limitAmps());
         }
 
         int traction = tractionLimitAmps(steps);

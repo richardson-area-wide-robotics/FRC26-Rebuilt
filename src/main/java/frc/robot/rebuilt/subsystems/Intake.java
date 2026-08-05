@@ -79,6 +79,19 @@ public class Intake extends DashboardSubsystem {
         populateDeployClosedLoop(deployConfig);
         deployConfig.smartCurrentLimit(CommonConstants.SUPERSTRUCTURE_CURRENT_LIMIT);
 
+        // Brake, stated here even though EasyMotor was already asked for brake above. It has to be
+        // restated, and the reason is a trap worth naming: this configure uses
+        // kResetSafeParameters, which restores factory defaults before applying anything in
+        // deployConfig -- and the SPARK MAX factory default idle mode is COAST. So the brake set at
+        // construction was being wiped, and because this call also persists, coast was being burned
+        // to flash. The arm is not balanced, so it free-fell every time output reached zero: on
+        // disable, on brownout, on e-stop, and at the end of every match.
+        //
+        // The general rule this is an instance of: with kResetSafeParameters, anything not named in
+        // the config is not preserved, it is reset. An earlier configure call is not a foundation to
+        // build on.
+        deployConfig.idleMode(IdleMode.kBrake);
+
         // Soft limits enforced by the controller itself, so they also bound open-loop
         // manual jogging. Previously these bounds existed only as commented-out checks in
         // periodic(), leaving nothing to stop the arm over-travelling into the frame.
@@ -174,19 +187,16 @@ public class Intake extends DashboardSubsystem {
      */
     public void stopDeploy() {
         leaveProfiledMode();
-        deployDemand = IntakeConstants.DEPLOY_HOLD_SPEED;
         deployMotor.set(IntakeConstants.DEPLOY_HOLD_SPEED);
     }
 
     public void manualDeploy() {
         leaveProfiledMode();
-        deployDemand = IntakeConstants.MANUAL_DEPLOY_SPEED;
         deployMotor.set(IntakeConstants.MANUAL_DEPLOY_SPEED);
     }
 
     public void manualReverseDeploy() {
         leaveProfiledMode();
-        deployDemand = IntakeConstants.MANUAL_RETRACT_SPEED;
         deployMotor.set(IntakeConstants.MANUAL_RETRACT_SPEED);
     }
 
@@ -218,12 +228,41 @@ public class Intake extends DashboardSubsystem {
      * @return a bounded jostle command.
      */
     public Command jiggleItALittleCommand() {
+        // Every phase moves the DEPLOY arm, so every phase has to stop the DEPLOY arm. It previously
+        // passed stopIntakeCommand(), which holds the ROLLERS and says nothing about the arm -- so
+        // when the sequence ended the arm was left at MANUAL_DEPLOY_SPEED indefinitely, pinned
+        // against its stop at 20% output, heating the winding. It reads as a mechanical bind.
+        //
+        // Requirements declared too: without them these inner commands do not interlock with
+        // anything else driving the arm, so a jostle and a deploy could fight each other.
         return Commands.sequence(
-            RobotUtils.timedCommand(0.35, Commands.run(this::manualReverseDeploy), stopIntakeCommand()),
-            RobotUtils.timedCommand(0.25, Commands.run(this::manualDeploy), stopIntakeCommand()),
-            RobotUtils.timedCommand(0.35, Commands.run(this::manualReverseDeploy), stopIntakeCommand()),
-            RobotUtils.timedCommand(0.25, Commands.run(this::manualDeploy), stopIntakeCommand()))
+            RobotUtils.timedCommand(0.35,
+                Commands.run(this::manualReverseDeploy, this), stopDeployCommand()),
+            RobotUtils.timedCommand(0.25,
+                Commands.run(this::manualDeploy, this), stopDeployCommand()),
+            RobotUtils.timedCommand(0.35,
+                Commands.run(this::manualReverseDeploy, this), stopDeployCommand()),
+            RobotUtils.timedCommand(0.25,
+                Commands.run(this::manualDeploy, this), stopDeployCommand()))
+            .andThen(Commands.runOnce(this::stopDeploy, this))
             .withName("JiggleIntake");
+    }
+
+    /** @return a command that returns the arm to its holding bias. */
+    public Command stopDeployCommand() {
+        return Commands.runOnce(this::stopDeploy, this);
+    }
+
+    /**
+     * @return the lead roller's <b>signed</b> speed, in motor RPM.
+     *
+     *     <p>{@link #getRollerVelocity} averages absolute values, which is right for load monitoring
+     *     -- it wants magnitude and does not care which way a roller is wired. It is useless for
+     *     deciding a direction, because it can never be negative. The hand-motion polarity check
+     *     needs the sign, so it needs this instead.
+     */
+    public double getRollerVelocitySigned() {
+        return intakeMotor1.getEncoder().getVelocity();
     }
 
     /** @return roller speed in motor RPM, averaged across the two rollers. */
@@ -299,7 +338,14 @@ public class Intake extends DashboardSubsystem {
         LoadConstants.DEPLOY_STOP_SUSTAIN_LOOPS);
 
     /** What the deploy motor was last told to do. The detector needs the direction. */
-    private double deployDemand;
+    /**
+     * Least applied output that counts as pushing in a direction.
+     *
+     * <p>Holding against a stop needs very little output, so this has to sit below the hold bias
+     * rather than at any comfortable-looking fraction of full scale. Its only job is to stop electrical
+     * noise on a genuinely idle motor from being read as a direction.
+     */
+    private static final double DEPLOY_DIRECTION_DEADBAND = 0.005;
 
     /** How the deploy arm is currently being driven. */
     public enum DeployMode {
@@ -470,8 +516,16 @@ public class Intake extends DashboardSubsystem {
         deployMotor.configure(config, ResetMode.kNoResetSafeParameters,
             PersistMode.kNoPersistParameters);
 
-        // Re-send the reference: a reconfigure can clear the executing profile.
-        lastCommandedGoal = Double.NaN;
+        // Re-send the reference, rather than merely forgetting it. A reconfigure can clear the
+        // executing profile, and clearing the cached goal alone was not enough: deployToGoal is only
+        // ever called from runOnce commands, so nothing would have re-issued it. The arm was simply
+        // abandoned mid-travel -- and with the profile gone and the goal cleared, deployMode stayed
+        // PROFILED, so no code anywhere noticed.
+        if (deployMode == DeployMode.PROFILED && !Double.isNaN(lastCommandedGoal)) {
+            double goal = lastCommandedGoal;
+            lastCommandedGoal = Double.NaN;
+            deployToGoal(goal);
+        }
     }
 
     /**
@@ -485,7 +539,6 @@ public class Intake extends DashboardSubsystem {
      */
     public void setDeployVoltage(double volts) {
         leaveProfiledMode();
-        deployDemand = volts / Math.max(1.0, deployMotor.getBusVoltage());
         deployMotor.setVoltage(volts);
     }
 
@@ -498,6 +551,41 @@ public class Intake extends DashboardSubsystem {
      */
     public double getDeployHoldVolts() {
         return deployMotor.getAppliedOutput() * deployMotor.getBusVoltage();
+    }
+
+    /**
+     * Puts the deploy arm in coast so it can be moved by hand, or back in brake.
+     *
+     * <p>The rollers are already configured to coast and the shooter flywheel likewise, so the arm is
+     * the only mechanism on this subsystem that needs anything done to it before it can be turned by
+     * hand.
+     *
+     * <p><b>The arm is not balanced, so in coast it falls.</b> Take its weight before calling this
+     * with true, and do not let go until brake is restored. That is why the hand-motion routine
+     * restores brake from its {@code end} handler rather than at the end of its sequence: an
+     * interrupted routine must not leave the arm free.
+     *
+     * <p>No-persist, so a power cycle restores brake even if the routine never gets the chance to.
+     *
+     * <p><b>Entering coast also abandons the profile and stops the motor.</b> Idle mode only decides
+     * what a controller does when it is applying nothing, and a SPARK executing a MAXMotion reference
+     * is not applying nothing — it would keep driving to its goal in coast exactly as it does in brake.
+     * On this mechanism that is not merely a bad measurement: the arm would be driving itself while
+     * somebody has hold of it. {@link #stopDeploy} is not sufficient either, because it applies a
+     * deliberate holding bias rather than zero.
+     *
+     * @param coast True for coast, false to restore brake.
+     */
+    public void setDeployCoastForHandCalibration(boolean coast) {
+        if (coast) {
+            leaveProfiledMode();
+            deployMotor.stopMotor();
+        }
+
+        SparkMaxConfig config = new SparkMaxConfig();
+        config.idleMode(coast ? IdleMode.kCoast : IdleMode.kBrake);
+        deployMotor.configure(config, ResetMode.kNoResetSafeParameters,
+            PersistMode.kNoPersistParameters);
     }
 
     /** @return whether the arm is following a profile or being driven directly. */
@@ -536,6 +624,46 @@ public class Intake extends DashboardSubsystem {
     }
 
     /**
+     * @return what the arm was <b>asked</b> to do this loop, signed, however it was asked.
+     *
+     *     <p>Distinct from {@link #getDeployAppliedOutput}, which is what the controller is actually
+     *     putting out, and the pair is what makes a soft limit detectable: a soft limit is intent with
+     *     no output. In profiled mode the intent is the direction of the remaining goal error, because
+     *     robot code issues no per-loop output at all once the reference is on the controller.
+     */
+    public double getDeployIntent() {
+        if (deployMode == DeployMode.PROFILED && !Double.isNaN(lastCommandedGoal)) {
+            double error = lastCommandedGoal - getDeployPosition();
+            return Math.abs(error) > IntakeConstants.DEPLOY_TOLERANCE_ROTATIONS
+                    ? Math.signum(error) : 0.0;
+        }
+        return getDeployAppliedOutput();
+    }
+
+    /**
+     * @return the signed duty cycle the controller is actually applying to the arm.
+     *
+     *     <p>Read from the controller rather than tracked in robot code, and that distinction is the
+     *     whole point. Robot code only knows what it last <em>wrote</em>, and since the profile moved
+     *     onto the SPARK it does not write anything during a profiled move at all — the controller
+     *     does. A tracked demand therefore holds whatever the last manual command was, for as long as
+     *     the arm is under profile control, which is all the time in normal operation.
+     *
+     *     <p>What that broke: hard-stop detection is told which way the arm is being pushed, so it can
+     *     attribute a stop to the right end of travel. Fed a stale demand it attributes every profiled
+     *     move to the direction of the last manual nudge — and since {@link #stopDeploy} leaves a
+     *     small bias toward stow, a profiled <em>deploy</em> would arrive at the deployed stop and be
+     *     recorded as the stowed one, while {@link #isFullyDeployed} could never return true.
+     *
+     *     <p>The applied output is correct in every mode by construction, which is why this replaced
+     *     the tracked field rather than supplementing it. Two sources of truth for the same fact is
+     *     how the stale one survived.
+     */
+    public double getDeployAppliedOutput() {
+        return deployMotor.getAppliedOutput();
+    }
+
+    /**
      * @return true when the arm is against its <b>deployed</b> hard stop.
      *
      *     <p>Distinct from {@link #isDeployed()}, which only asks whether the encoder is near the
@@ -544,12 +672,14 @@ public class Intake extends DashboardSubsystem {
      *     alone would call it arrived.
      */
     public boolean isFullyDeployed() {
-        return deployStops.isAtHardStop() && deployDemand > 0;
+        return deployStops.isAtHardStop()
+            && getDeployAppliedOutput() > DEPLOY_DIRECTION_DEADBAND;
     }
 
     /** @return true when the arm is against its <b>stowed</b> hard stop. */
     public boolean isFullyStowed() {
-        return deployStops.isAtHardStop() && deployDemand < 0;
+        return deployStops.isAtHardStop()
+            && getDeployAppliedOutput() < -DEPLOY_DIRECTION_DEADBAND;
     }
 
     /**
@@ -632,7 +762,8 @@ public class Intake extends DashboardSubsystem {
             lastCommandedGoal = Double.NaN;
         }
 
-        deployStops.update(getDeployPosition(), getDeployCurrent(), deployDemand);
+        deployStops.update(getDeployPosition(), getDeployCurrent(), getDeployIntent(),
+            getDeployAppliedOutput());
         Logger.recordOutput(getName() + "/Deploy/Mode", deployMode.name());
         Logger.recordOutput(getName() + "/Deploy/Goal", getDeployGoal());
         Logger.recordOutput(getName() + "/Deploy/GoalError", getDeployGoalError());
@@ -642,6 +773,7 @@ public class Intake extends DashboardSubsystem {
         Logger.recordOutput(getName() + "/Deploy/FullyStowed", isFullyStowed());
         Logger.recordOutput(getName() + "/Deploy/PushingBall", isDeployPushingBall());
         Logger.recordOutput(getName() + "/Deploy/EncoderDrift", getDeployEncoderDrift());
+        Logger.recordOutput(getName() + "/Deploy/AppliedOutput", getDeployAppliedOutput());
 
         Logger.recordOutput(getName() + "/Encoder/Position", getDeployPosition());
         Logger.recordOutput(getName() + "/Deploy/OutputCurrent", deployMotor.getOutputCurrent());

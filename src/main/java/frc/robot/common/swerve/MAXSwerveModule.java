@@ -13,6 +13,7 @@ import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.AbsoluteEncoder;
@@ -222,6 +223,54 @@ public class MAXSwerveModule {
     config.smartCurrentLimit(amps);
     m_drivingSpark.configure(
         config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+  }
+
+  /**
+   * Puts both of this module's motors in coast, so they can be turned by hand, or back in brake.
+   *
+   * <p>For the hand-motion polarity check, which is the one calibration step that runs with the
+   * motors unpowered. Brake mode shorts the windings, so a braked module can be forced round but
+   * fights the whole way and reports a jerky, stiction-dominated position trace — which is exactly
+   * the signal the polarity check is trying to read.
+   *
+   * <p>No-persist, deliberately. A run that is interrupted at the wrong moment therefore cannot leave
+   * the drivetrain coasting for the next match: a power cycle restores brake even if nothing else
+   * does. The routine also restores it explicitly, but that is the second line of defence rather than
+   * the only one.
+   *
+   *
+   * <p><b>Entering coast also stops the motors, and it has to.</b> Idle mode only decides what happens
+   * when a controller is applying nothing. A SPARK holding a closed-loop reference is not idle, and it
+   * carries on servoing to that reference whether it is set to coast or brake — so setting coast alone
+   * would produce a mechanism that still fights the hand moving it, and a polarity reading taken from a
+   * motor that was driving itself. Stopping the output is what actually makes it free.
+   *
+   * @param coast True for coast, false to restore brake.
+   */
+  public void setCoastForHandCalibration(boolean coast) {
+    if (coast) {
+      // Before the idle mode, not after: between the two writes the module is still executing its
+      // last steering reference, and doing it in this order keeps that window as short as possible.
+      m_drivingSpark.stopMotor();
+      m_turningSpark.stopMotor();
+    }
+
+    IdleMode mode = coast ? IdleMode.kCoast : IdleMode.kBrake;
+
+    SparkFlexConfig driveConfig = new SparkFlexConfig();
+    driveConfig.idleMode(mode);
+    m_drivingSpark.configure(
+        driveConfig, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+
+    SparkMaxConfig turnConfig = new SparkMaxConfig();
+    turnConfig.idleMode(mode);
+    m_turningSpark.configure(
+        turnConfig, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+  }
+
+  /** @return the turning encoder reading, in radians, without the chassis angular offset. */
+  public double getRawTurnPositionRadians() {
+    return m_turningEncoder.getPosition();
   }
 
   /** Zeroes all the SwerveModule encoders. */

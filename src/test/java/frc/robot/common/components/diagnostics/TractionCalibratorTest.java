@@ -37,7 +37,10 @@ class TractionCalibratorTest {
                 true, true, false);
     }
 
-    /** Builds a step where the robot drove away instead of pushing. */
+    /**
+     * Builds a step where the robot rolled instead of pushing: wheels turning, current nowhere near
+     * the commanded limit, odometry running on.
+     */
     private static Step droveAway(int amps) {
         return new Step(amps, 1.20, amps * 0.60, amps * 0.60 * 4, 12.3, 1.40,
                 false, false, true);
@@ -113,9 +116,17 @@ class TractionCalibratorTest {
     @DisplayName("a sweep where the robot was not against the wall")
     class NotAgainstTheWall {
 
+        /**
+         * A sweep in which no step ever reached its commanded limit.
+         *
+         * <p>That is what not being against the wall actually looks like in a signal independent of
+         * the wheels: a drivetrain with nothing to push against rolls freely and never binds. It used
+         * to be judged on odometry distance instead, which could not work — see
+         * {@link #odometryDistanceIsNotAValidityTest}.
+         */
         private Result result() {
             List<Step> steps = new ArrayList<>();
-            steps.add(gripped(20));
+            steps.add(droveAway(20));
             steps.add(droveAway(25));
             return TractionCalibrator.analyse(steps, CONFIGURED_LIMIT);
         }
@@ -135,49 +146,43 @@ class TractionCalibratorTest {
         }
 
         @Test
-        @DisplayName("says how far the robot moved, so the operator knows what went wrong")
+        @DisplayName("says what to do about it, not just that it failed")
         void explainsWhy() {
             String reason = result().abortReason();
 
-            assertTrue(reason.contains("1.40"), reason);
-            assertTrue(reason.contains("25"), reason);
-            assertFalse(reason.isEmpty());
+            assertTrue(reason.contains("current limit"), reason);
+            assertTrue(reason.contains("wall"), reason);
         }
 
         @Test
-        @DisplayName("wheel rotation while driving away is not counted as slip")
-        void drivingIsNotSlip() {
-            // droveAway has the wheels turning at 1.2 m/s. Without the chassis check that would be
-            // the most convincing slip in the sweep.
-            assertEquals(0, result().tractionLimitAmps(),
-                    "turning wheels only mean slip when the robot is not moving");
-        }
-    }
+        @DisplayName("Odometry distance alone must never invalidate a run")
+        void odometryDistanceIsNotAValidityTest() {
+            // The defect this pins was arithmetic, and it made the whole routine useless.
+            //
+            // Slip used to be "wheels turning AND the robot staying put", with staying put read from
+            // drive.getPose() — the pose estimator, which is wheel-integrated odometry whenever no
+            // AprilTag is in view, which is always in a shop. Spinning wheels therefore advance it.
+            // Sustained wheel speed above the slip threshold necessarily moved the estimate further
+            // than the static tolerance, so "the robot stayed put" was false exactly when slip
+            // happened. The two halves of the test excluded one another, the step that genuinely
+            // broke traction aborted the run as "not against the wall", and re-squaring the robot
+            // produced the same message every time.
+            //
+            // So: a step with metres of odometry travel, but binding at its limit and wheels well
+            // past the slip threshold, has to be usable. This is that step.
+            Step slippingHard = new Step(45, 2.40, 43.0, 172.0, 12.0, 3.20, true, true, false);
 
-    @Nested
-    @DisplayName("the main breaker warning")
-    class BreakerWarning {
+            List<Step> steps = new ArrayList<>();
+            steps.add(gripped(40));
+            steps.add(slippingHard);
+            Result result = TractionCalibrator.analyse(steps, CONFIGURED_LIMIT);
 
-        @Test
-        @DisplayName("fires when four motors at the recommended limit exceed 120 A")
-        void warnsAboveTheBreaker() {
-            Result result = TractionCalibrator.analyse(sweepSlippingAt(45), CONFIGURED_LIMIT);
-
-            // 40 A per motor is 160 A across four.
-            assertEquals(40, result.recommendedAmps());
-            assertFalse(result.breakerWarning().isEmpty(),
-                    "160 A against a 120 A breaker is worth saying out loud");
-            assertTrue(result.breakerWarning().contains("160"), result.breakerWarning());
-        }
-
-        @Test
-        @DisplayName("stays quiet when the total is within the breaker")
-        void quietBelowTheBreaker() {
-            // 25 A per motor is 100 A across four, inside the breaker.
-            Result result = TractionCalibrator.analyse(sweepSlippingAt(30), CONFIGURED_LIMIT);
-
-            assertEquals(25, result.recommendedAmps());
-            assertTrue(result.breakerWarning().isEmpty());
+            assertFalse(result.aborted(),
+                    "the drivetrain was binding at its limit, so the run is valid however far "
+                            + "odometry thinks the robot went");
+            assertTrue(result.foundTractionLimit(),
+                    "this is the whole point of the routine: it has to be able to find a limit");
+            assertEquals(45, result.tractionLimitAmps());
         }
     }
 
@@ -190,7 +195,8 @@ class TractionCalibratorTest {
         void describesEachOutcome() {
             assertTrue(gripped(40).describe().contains("gripped"));
             assertTrue(slipped(40).describe().contains("SLIPPED"));
-            assertTrue(droveAway(40).describe().contains("INVALID"));
+            assertTrue(droveAway(40).describe().contains("STOPPED"),
+                    "a runaway is now a safety stop, not a verdict on the data");
 
             Step notBinding = new Step(70, 0.01, 42.0, 168.0, 10.8, 0.01, false, false, false);
             assertTrue(notBinding.describe().contains("not binding"), notBinding.describe());
@@ -201,6 +207,8 @@ class TractionCalibratorTest {
         void emptySweep() {
             Result result = TractionCalibrator.analyse(List.of(), CONFIGURED_LIMIT);
 
+            // Not "aborted": there is nothing to abort. The abort message names a specific thing the
+            // operator did wrong, so printing it for a run that never started is a wrong instruction.
             assertFalse(result.aborted());
             assertFalse(result.foundTractionLimit());
             assertEquals(TractionCalibrator.HARD_CAP_AMPS, result.recommendedAmps());

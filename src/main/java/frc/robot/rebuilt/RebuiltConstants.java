@@ -294,7 +294,7 @@ public final class RebuiltConstants {
      * manual jogging. The equivalent checks previously existed only as commented-out code
      * in {@code periodic()}.
      */
-    public static final float DEPLOY_REVERSE_SOFT_LIMIT = 0.0f;
+    public static final float DEPLOY_REVERSE_SOFT_LIMIT = -1.0f;
     public static final float DEPLOY_FORWARD_SOFT_LIMIT = 11.0f;
 
     /** Open-loop speeds for manual deploy jogging. */

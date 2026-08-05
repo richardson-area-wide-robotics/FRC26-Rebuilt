@@ -20,16 +20,26 @@ flowchart TD
         CANDiagnostics[CANDiagnostics]
     end
     subgraph frc_robot_common_components_diagnostics[frc.robot.common.components.diagnostics]
+        ArmProfileCalibrator[ArmProfileCalibrator]
+        BumpCrossingDiagnostic[BumpCrossingDiagnostic]
         CalibrationManeuvers[CalibrationManeuvers]
         CalibrationStore[CalibrationStore]
+        DeployTravelCalibrator[DeployTravelCalibrator]
         DriftMonitor[DriftMonitor]
         DriveAutoCalibrator[DriveAutoCalibrator]
         DriveCharacterization[DriveCharacterization]
+        DriveSysId[DriveSysId]
         ExpectationMonitor[ExpectationMonitor]
         GamePieceCounter[GamePieceCounter]
+        HardStopDetector[HardStopDetector]
+        LoadCalibrationRoutine[LoadCalibrationRoutine]
+        LoadCalibrator[LoadCalibrator]
         ManeuverRunner[ManeuverRunner]
         MotorLoadMonitor[MotorLoadMonitor]
         RotationAccumulator[RotationAccumulator]
+        RotationalInertiaCalibrator[RotationalInertiaCalibrator]
+        SysIdRegression[SysIdRegression]
+        TractionCalibrator[TractionCalibrator]
         TunableNumber[TunableNumber]
         ValidationSuite[ValidationSuite]
         VisionCalibration[VisionCalibration]
@@ -73,6 +83,7 @@ flowchart TD
         TurnToRelativeHeading[TurnToRelativeHeading]
     end
     subgraph frc_robot_common_subsystems_vision[frc.robot.common.subsystems.vision]
+        FieldLayoutLoader[FieldLayoutLoader]
         VisionConstants[VisionConstants]
         VisionSubsystem[VisionSubsystem]
     end
@@ -141,12 +152,21 @@ flowchart TD
     SwerveDriveSubsystem -.implements.-> ModulePositionSupplier
     TankDriveSubsystem -.implements.-> AutoCloseable
     RebuiltContainer -.implements.-> IRobotContainer
+    ArmProfileCalibrator --> Intake
+    BumpCrossingDiagnostic --> SwerveDriveSubsystem
     CalibrationStore --> CalibrationStore
+    DeployTravelCalibrator --> Intake
     DriveAutoCalibrator --> SwerveDriveSubsystem
     DriveAutoCalibrator --> VisionSubsystem
+    DriveSysId --> SwerveDriveSubsystem
     ExpectationMonitor --> ExpectationMonitor
     GamePieceCounter --> MotorLoadMonitor
+    LoadCalibrationRoutine --> Intake
+    LoadCalibrationRoutine --> Feeder
+    LoadCalibrationRoutine --> Shooter
     ManeuverRunner --> SwerveDriveSubsystem
+    RotationalInertiaCalibrator --> SwerveDriveSubsystem
+    TractionCalibrator --> SwerveDriveSubsystem
     DriveStraightClosedLoop --> SwerveDriveSubsystem
     TankDriveSubsystem --> TankHardware
     TurnToRelativeHeading --> SwerveDriveSubsystem
@@ -158,16 +178,26 @@ flowchart TD
     style Robot fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
     style DashboardAutoUpdater fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CANDiagnostics fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style ArmProfileCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style BumpCrossingDiagnostic fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CalibrationManeuvers fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CalibrationStore fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style DeployTravelCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DriftMonitor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DriveAutoCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DriveCharacterization fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style DriveSysId fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ExpectationMonitor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style GamePieceCounter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style HardStopDetector fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style LoadCalibrationRoutine fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style LoadCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ManeuverRunner fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style MotorLoadMonitor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RotationAccumulator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style RotationalInertiaCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style SysIdRegression fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style TractionCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style TunableNumber fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ValidationSuite fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style VisionCalibration fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -195,6 +225,7 @@ flowchart TD
     style TankDriveSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style TurnToRelativeHeading fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SingleMotorSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style FieldLayoutLoader fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style VisionConstants fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style VisionSubsystem fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style Configs fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff

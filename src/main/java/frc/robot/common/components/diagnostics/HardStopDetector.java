@@ -102,6 +102,12 @@ public class HardStopDetector {
 
     private State state = State.IDLE;
     private int qualifyingLoops;
+
+    /** Sign of the last non-zero command, for spotting a reversal. */
+    private double lastDirection;
+
+    /** Consecutive loops of intent with no output, for spotting a soft limit. */
+    private int softLimitLoops;
     private double lastPosition;
     private double lastAmps;
     private double lastPositionSpread;
@@ -129,8 +135,76 @@ public class HardStopDetector {
      * @return the state this loop.
      */
     public State update(double position, double amps, double commandedOutput) {
+        return update(position, amps, commandedOutput, commandedOutput);
+    }
+
+    /**
+     * Folds in one loop, distinguishing what was asked for from what came out.
+     *
+     * <p>The two differ in exactly one interesting case, and it is the case
+     * {@link State#AT_SOFT_LIMIT} exists for: a controller enforces a soft limit by <b>zeroing its
+     * own output</b>. So intent is non-zero while applied output is zero, which is a far more direct
+     * signal than the one this used to infer from frozen position and falling current.
+     *
+     * <p>It also has to be this way round now that the arm's profile runs on the SPARK. Robot code no
+     * longer writes an output during a profiled move, so the only faithful account of what is coming
+     * out of the controller is the controller's own applied output -- while the only account of what
+     * was <em>wanted</em> is still robot-side. Passing applied output for both, as this briefly did,
+     * made AT_SOFT_LIMIT unreachable: a soft limit zeroes the output, so the near-zero check below
+     * classified it as IDLE before anything else was considered.
+     *
+     * @param position       Mechanism position.
+     * @param amps           Motor current.
+     * @param intendedOutput What the mechanism was asked to do. Sign gives the direction.
+     * @param appliedOutput  What the controller is actually applying.
+     * @return the state this loop.
+     */
+    public State update(double position, double amps, double intendedOutput,
+            double appliedOutput) {
+
+        // Intent without output, sustained, is a soft limit cutting in. Checked before the idle gate,
+        // because the idle gate is written in terms of output and would otherwise absorb this.
+        if (Math.abs(intendedOutput) >= 0.02 && Math.abs(appliedOutput) < 0.02) {
+            lastPosition = position;
+            lastAmps = amps;
+            softLimitLoops++;
+            if (softLimitLoops >= sustainLoops) {
+                state = State.AT_SOFT_LIMIT;
+                log();
+                return state;
+            }
+        } else {
+            softLimitLoops = 0;
+        }
+
+        return updateFromApplied(position, amps, appliedOutput);
+    }
+
+    private State updateFromApplied(double position, double amps, double commandedOutput) {
         lastPosition = position;
         lastAmps = amps;
+
+        // A reversal invalidates everything gathered so far, and forgetting that mislabels the stop
+        // the arm is leaving as the stop at the OTHER end.
+        //
+        // How: on the loop the command flips sign, the position window is still full of frozen
+        // samples from resting against the stop, qualifyingLoops is already past sustainLoops, and
+        // reversal current spikes instantly. So frozen && pushing is satisfied on the very first
+        // loop of the new direction, and the position gets filed under the new direction's end.
+        //
+        // What that cost: DeployTravelCalibrator seeks one stop, reverses, and immediately records
+        // the SAME position as the opposite stop. Travel comes out near zero, and
+        // Intake.clampToLearnedStops then pins every profiled goal to that one position -- so the
+        // arm silently stops responding to stow and deploy alike, having reported a successful
+        // calibration.
+        double direction = Math.signum(commandedOutput);
+        if (direction != 0 && lastDirection != 0 && direction != lastDirection) {
+            windowFill = 0;
+            qualifyingLoops = 0;
+        }
+        if (direction != 0) {
+            lastDirection = direction;
+        }
 
         // A near-zero command is not evidence of anything. Note the deploy arm's idle is a small
         // negative bias rather than zero, so the threshold has to sit under that or the arm would

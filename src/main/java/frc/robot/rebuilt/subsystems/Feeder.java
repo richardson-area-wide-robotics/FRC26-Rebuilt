@@ -98,6 +98,39 @@ public class Feeder extends DashboardSubsystem {
         setFeeder(-FeederConstants.FEEDER_SPEED);
     }
 
+    /**
+     * Puts the feeder and spindexer in coast so they can be turned by hand, or back in brake.
+     *
+     * <p>For the hand-motion polarity check. Both are braked in normal operation, so both need this
+     * before a hand can turn them far enough to read a direction.
+     *
+     * <p>No-persist, so a power cycle restores brake regardless of how the routine ended.
+     *
+     * <p><b>Entering coast also stops both motors.</b> Idle mode only governs a controller that is
+     * applying nothing, so a running motor keeps running in coast — and a polarity reading taken from a
+     * motor driving itself measures the motor, not the hand.
+     *
+     * @param coast True for coast, false to restore brake.
+     */
+    public void setCoastForHandCalibration(boolean coast) {
+        if (coast) {
+            feederMotor.stopMotor();
+            spindexerMotor.stopMotor();
+        }
+
+        IdleMode mode = coast ? IdleMode.kCoast : IdleMode.kBrake;
+
+        SparkFlexConfig feederConfig = new SparkFlexConfig();
+        feederConfig.idleMode(mode);
+        feederMotor.configure(feederConfig, ResetMode.kNoResetSafeParameters,
+            PersistMode.kNoPersistParameters);
+
+        SparkMaxConfig spindexerConfig = new SparkMaxConfig();
+        spindexerConfig.idleMode(mode);
+        spindexerMotor.configure(spindexerConfig, ResetMode.kNoResetSafeParameters,
+            PersistMode.kNoPersistParameters);
+    }
+
     /** @return the demand last sent to the feeder motor. */
     public double getFeederDemand() {
         return feederDemand;
