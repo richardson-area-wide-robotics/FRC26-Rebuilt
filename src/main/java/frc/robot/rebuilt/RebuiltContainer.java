@@ -29,6 +29,7 @@ import frc.robot.common.components.diagnostics.CalibrationStore;
 import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
 import frc.robot.common.components.diagnostics.ArmProfileCalibrator;
+import frc.robot.common.components.diagnostics.HandMotionRoutine;
 import frc.robot.common.components.diagnostics.DeployTravelCalibrator;
 import frc.robot.common.components.diagnostics.DriveSysId;
 import frc.robot.common.components.diagnostics.ExpectationMonitor;
@@ -132,6 +133,17 @@ public class RebuiltContainer implements IRobotContainer {
 
   /** Measures what the intake arm's motion profile depends on. */
   public static final ArmProfileCalibrator ARM_PROFILE = new ArmProfileCalibrator(INTAKE);
+
+  /**
+   * The hand-motion check: every mechanism moved by hand, motors unpowered.
+   *
+   * <p>Advanced by the operator controller's <b>A</b> button. Any button would do — the latch only
+   * needs a boolean — and A is chosen because it is the one an operator can find without looking while
+   * both hands are on the robot.
+   */
+  public static final HandMotionRoutine HAND_MOTION = new HandMotionRoutine(
+      DRIVE_SUBSYSTEM, INTAKE, FEEDER, SHOOTER,
+      () -> HIDConstants.OPERATOR_CONTROLLER.a().getAsBoolean());
 
   /** Measures the intake arm's real travel against its physical stops. */
   public static final DeployTravelCalibrator DEPLOY_TRAVEL = new DeployTravelCalibrator(INTAKE);
@@ -817,6 +829,31 @@ public class RebuiltContainer implements IRobotContainer {
    */
   public static Command getDeployTravelCommand() {
     return DEPLOY_TRAVEL.full();
+  }
+
+  /**
+   * Establishes which way every mechanism counts, and the arm's travel, <b>with the motors off</b>.
+   *
+   * <p><b>Run this before anything powered.</b> Every test that follows assumes it knows which way is
+   * forward. A sign error makes the drive characterisation fit a negative gain and makes the arm's
+   * profile drive away from its goal until it reaches steel — and both of those present as mechanical
+   * faults, so they cost an afternoon on the mechanism before anyone suspects a sign. Turning each
+   * thing by hand finds the same error in seconds, at no risk.
+   *
+   * <p><b>On blocks, and somebody has to hold the arm.</b> It is not balanced, and this routine
+   * releases it deliberately.
+   *
+   * <p>Nothing is ever commanded to move. The robot needs to be enabled only because commands do not
+   * run otherwise.
+   *
+   * <p>It also produces the arm's travel from its two hard stops, which makes
+   * {@link #getDeployTravelCommand()} a check rather than a discovery — far better than learning the
+   * span by driving the arm at a stop and watching the current.
+   *
+   * @return the hand-motion calibration command.
+   */
+  public static Command getHandMotionCommand() {
+    return HAND_MOTION.full();
   }
 
   /**

@@ -42,6 +42,7 @@ Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-ha
 | 0-CAD | **Pull what you can from CAD first** — worksheet included | Onshape | 20–40 min |
 | 0 | Whatever CAD cannot give — see 0-CAD | Tape, square, angle finder, PhotonVision UI | 10–45 min |
 | 1 | Deploy | Laptop | 5 min |
+| 1b | **Hand-motion check — motors OFF.** Directions and arm limits, by hand | Blocks, a helper for the arm | 15 min |
 | 2 | **On blocks** — 14-check self-test | Blocks, wheels clear | 10 min |
 | 3 | **Verify drive directions** | ~3 m clear floor | 10 min |
 | 4 | **Camera calibration (PhotonVision)** then vision commissioning | ChArUco board, practice field | 45 min |
@@ -683,6 +684,107 @@ but is less accurate than the tuned settings.
 
 Running `./gradlew simulateJava` before a deploy is still worth it as a whole-program smoke test,
 but it is no longer the *only* thing covering container wiring.
+
+---
+
+## 1b. Hand-motion check — motors off, everything moved by hand
+
+**Do this before anything is powered.** It is the cheapest step in the book and it protects every
+step after it.
+
+Every powered test below assumes it already knows which way is forward. A sign error makes the drive
+characterisation fit a negative gain, makes the arm's profile drive away from its goal until it hits
+steel, and makes a swerve module take the long way round for ever. All three present as *mechanical*
+faults, so the shop spends the afternoon on the mechanism. Turning each thing by hand finds the same
+error in about fifteen seconds at zero risk.
+
+### Before you start
+
+1. Robot **on blocks**, all four wheels free, as step 2. Bumpers on.
+2. **Someone takes the arm's weight and keeps hold of it.** The arm is not balanced, so it falls
+   when the motor is not holding it — and this routine deliberately releases it.
+3. Pick your **NEXT** button. Any button on the operator controller, or a dashboard boolean. Tell
+   whoever is on the laptop which one.
+4. Enable **Test** mode and schedule `RebuiltContainer.getHandMotionCommand()`.
+
+Nothing in this routine ever commands a motor to move. The robot has to be enabled only because
+commands do not run otherwise.
+
+### How the pacing works
+
+One press of NEXT advances exactly one step. Release the button before pressing it again — if you are
+already holding it when a step begins, the routine waits for a release rather than skipping ahead.
+
+For each step: read the instruction on the console, move that one thing **steadily in the direction
+asked for**, then press NEXT. Move it *one way* through the whole step. Rocking it back and forth is
+reported as `AMBIGUOUS` rather than resolved in whichever direction you happened to finish, because
+a wobble that ends slightly forward is indistinguishable from a deliberate push if only the net
+movement is counted.
+
+### The steps, and exactly what to move
+
+| Step | What to move | Which way |
+| --- | --- | --- |
+| 1–4 | Each drive wheel, one at a time | The way it turns when **the robot drives forward** |
+| 5–8 | Each steering module, one at a time | **Counter-clockwise seen from above** |
+| 9 | Intake rollers | The way they move a ball **into** the robot |
+| 10 | Spindexer | The way it moves balls **toward the feeder** |
+| 11 | Feeder | The way it moves a ball **up toward the shooter** |
+| 12 | Shooter flywheel | The way it throws a ball **out** |
+| 13–14 | The arm, to each hard stop | Stowed first, then deployed |
+
+For the wheel steps, rotate the wheel itself, not the module. Grip the tyre and roll it about one
+full turn — more is fine. For the steering steps, turn the whole module about a quarter turn.
+
+### Steps 13–14: the arm, and what you are measuring from and to
+
+This is a **position** measurement, not a motion one, so it matters where you stop.
+
+1. Console says to move the arm to the **fully stowed** stop. Move it until it is **against steel and
+   will not go further** — not "nearly there", not "where it usually sits". Then press NEXT.
+2. Console says to move it to the **fully deployed** stop. Again, until it stops against its own hard
+   stop. Then press NEXT.
+
+Those two encoder readings are the arm's whole travel. What comes out:
+
+- **The sign** — whether deploying counts up or down. This one fact sets the sign of every soft
+  limit, goal and profile on the arm, and there is no safe way to discover it under power.
+- **Recommended soft limits**, held back 0.25 rotations from each stop. A soft limit sitting exactly
+  on a hard stop is a soft limit you reach by hitting steel.
+- **A comparison against the constants.** A sign mismatch or a disagreement over 20% is called out.
+
+Keep this number. **Step 9b must report the same span**, which turns the powered travel test from a
+discovery into a check.
+
+### Reading the result
+
+Each step prints one of four verdicts:
+
+| Verdict | Meaning | What to do |
+| --- | --- | --- |
+| `AGREES` | Encoder went positive when moved the positive way | Nothing |
+| `INVERTED` | It went the other way | **Flip the inversion in that motor's config, then re-run this step.** Do not run powered tests on it. |
+| `NO_MOTION` | Less than 0.25 rotations of travel | Either you did not move it far enough, it is still in brake, or the encoder is not reporting. Watch the position on the dashboard as you move it. |
+| `AMBIGUOUS` | It moved, but netted almost nothing | You rocked it. Move it steadily one way and re-run. |
+
+The summary at the end lists every inversion and every step that produced no measurement. **If
+anything is inverted, fix it and re-run before step 2.** Step 2 powers the intake.
+
+### Two things this step is quietly relying on
+
+**Coast is not enough on its own, and the routine handles it.** Idle mode only decides what a
+controller does when it is applying *nothing*. A SPARK holding a closed-loop reference is not idle —
+it keeps servoing in coast exactly as it does in brake. So the routine stops every motor before it
+changes idle mode. Without that you would be reading the polarity of a motor driving itself, with
+your hands on it.
+
+**Brake is restored even if the routine is interrupted.** It is restored from the command's `finallyDo`
+handler rather than at the end of the sequence, because an interrupted sequence never reaches its last
+step — and the step that would be skipped is the one that stops the arm falling. A power cycle also
+restores brake, since none of this is persisted.
+
+The rollers and the shooter flywheel are already configured to coast in normal operation, so only the
+arm, the feeder, the spindexer and the drivetrain change mode at all.
 
 ---
 
@@ -1347,6 +1449,22 @@ It now follows a **trapezoid profile with PID**: a position *and velocity* setpo
 velocity and an acceleration limit, so the controller only ever chases a nearby target and the
 mechanism sees bounded acceleration instead of a step.
 
+**The profile runs on the SPARK, not on the roboRIO.** It is REVLib **MAXMotion**, with REVLib's own
+arm feedforward (`kS`, `kV`, `kA`, `kCos`) configured alongside it. Two reasons, both practical on a
+single CAN bus: a reference persists until it is changed, so *holding position costs no CAN traffic at
+all*, and the controller closes the loop far faster than a 50 Hz robot loop can.
+
+Two consequences worth knowing before you tune it:
+
+- **`DEPLOY_kP` is in duty cycle per rotation**, not volts. MAXMotion's output is duty cycle. A
+  volts-per-rotation value pasted in here is wrong by roughly the bus voltage.
+- **`DEPLOY_kV` is in volts per RPM** — REVLib's feedforward is a voltage, divided by the measured bus
+  internally. That is what keeps it honest across your 6–16 V range; a duty-cycle feedforward would
+  quietly weaken as the pack drained.
+
+There is no runaway-while-disabled failure mode to watch for. The profile stops with the controller
+and restarts from wherever the arm actually is.
+
 ### Calibrating it
 
 Schedule `RebuiltContainer.getArmProfileCommand()` — or `getSuperstructureCalibrationCommand()`,
@@ -1370,8 +1488,27 @@ following error grows through the whole move — **which looks exactly like a ba
 amount of PID tuning fixes a profile asking for the impossible.
 
 The report compares achievable against configured and, if configured is higher, tells you to drop to
-about 80% of achievable. Watch `Intake/Deploy/Profile/FollowingError`: it should stay small
-*throughout* the move, not only at the end.
+about 80% of achievable. Watch `Intake/Deploy/GoalError`: it should stay small *throughout* the move,
+not only at the end.
+
+### The gravity result decides a datum question — and it needs no geometry
+
+The holding-voltage phase is what says whether the arm needs a real gravity term. It is worth knowing
+why that question is open.
+
+REVLib's `kCos` takes its cosine about the **encoder zero**, and `FeedForwardConfig` offers no phase
+offset. So using it requires the encoder zero to be *where the arm is horizontal* — which conflicts
+with re-zeroing at the stowed hard stop, the only absolute physical reference the arm has. That is a
+real trade, not a detail:
+
+| Option | Cost |
+| --- | --- |
+| Zero at horizontal | Gravity works; the stow stop is no longer position zero, so the soft limits move with it |
+| Zero at the stow stop, no `kCos` | Simpler; hold with the fixed bias, which is adequate since the arm only ever rests at one end |
+
+**A small spread across the five positions means the fixed bias is fine.** Only a large spread
+justifies moving the datum. Nothing here needs the gear reduction or the arm's physical dimensions —
+the measurement is just the voltage the controller has already settled on at each position.
 
 ### Break-away is measured both ways on purpose
 
@@ -1404,7 +1541,7 @@ a mechanical one.
 
 | Symptom | Likely cause | What to do |
 | --- | --- | --- |
-| Arm moves slowly or not at all | `DEPLOY_kP` too low, `kV` under-estimated | Raise `kP` in steps while watching `FollowingError` |
+| Arm moves slowly or not at all | `DEPLOY_kP` too low, `kV` under-estimated | Raise `kP` in steps while watching `Deploy/GoalError`. Remember it is **duty cycle** per rotation |
 | Following error grows through the move, then recovers at the end | Profile asking for more than the arm can do | Lower `MaxAccelRps2` first, then `MaxVelRps` |
 | Arm overshoots and settles back | `kP` too high, or `kV` too high | Lower `kP`; add a little `kD` only if it oscillates *while following* |
 | Arm lurches on the first move after enabling | Should not happen — this was a bug, now fixed and tested | Report it, do not tune around it |
@@ -1562,6 +1699,24 @@ separate change that should be made against a measured number rather than a gues
 
 ---
 
+## Calibration routines with known defects — read before trusting a number
+
+A two-reviewer pass found defects in several routines. **None can hurt the robot** — they are all in
+calibration code — but each produces a confident number that is wrong, or a warning pointing at the
+wrong thing. Fixed items are not listed; these are the ones still open as of this revision.
+
+| Step | Do not trust | Why |
+| --- | --- | --- |
+| 9c | The **gravity / holding-voltage** result | All five samples can come from a parked arm at one position, and the report then concludes gravity does not matter. If every hold voltage is identical, the phase did not run. |
+| 9c | A break-away of **exactly 4.000 V** | That is the ramp timing out, recorded as if it were a measurement. Re-run; if it repeats, the arm did not move. |
+| 9c | **Peak acceleration** | Includes the deceleration into the limit, so it reads roughly ten times high. Treat the achievable-acceleration verdict as unproven. |
+| 9c | **`DEPLOY_kV`** if R² is suspiciously perfect | One sample per step means a velocity short of steady state scales every point equally — a perfect fit to an inflated number. |
+| 9 | **NOT VIABLE** on a mechanism that clearly works | Viability is diluted by how often a piece was actually present. Feed pieces as continuously as you can, and disbelieve a lone NOT VIABLE. |
+| 9 | A **jam fraction of exactly 0.60** | That is the clamp. It means the obstructed phase did not obstruct anything. |
+| 8 | **TRACTION_LIMITED** on a crossing where the robot skewed | Yaw is counted as slip, and traction is tested before current — so the advice can be the exact opposite of the fix. Re-run keeping it straight. |
+| 10 | The pasted **kV** if any module says untrustworthy | The mean includes failed fits, so one dead encoder puts it 25% low. Read the per-module lines before pasting. |
+| 7b | **Rotational inertia**, always | Torque per amp omits the no-load current, so the figure is about 30% high. Treat it as an upper bound. Its slip warning also fires spuriously — do **not** follow its advice to lower the spin voltage, which makes the error worse. |
+
 ## Known-unverified list
 
 Everything below is reasoned or measured in simulation, never on hardware. **Cross items off as you
@@ -1588,7 +1743,7 @@ verify them** — this list is the honest measure of how much of this code has m
   still logged so this can be confirmed rather than assumed
 - **Camera intrinsic calibration** — nothing in this repo can detect whether it has been done, since
   the intrinsics live in PhotonVision. Every distance-derived figure inherits it (step 4a)
-- **Every intake arm gain.** `DEPLOY_kP` is a conservative 1.0 V/rotation and `DEPLOY_kV` is derived
+- **Every intake arm gain.** `DEPLOY_kP` is a conservative 0.05 duty/rotation and `DEPLOY_kV` is derived
   from free speed rather than measured, so expect the arm to follow but lag (step 9c)
 - **Whether the arm's profile constraints are achievable.** 30 rot/s and 150 rot/s² are chosen, not
   measured. Unachievable constraints make the following error grow through every move, which reads as a
