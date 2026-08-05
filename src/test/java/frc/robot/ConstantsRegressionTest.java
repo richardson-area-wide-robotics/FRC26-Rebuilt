@@ -134,8 +134,12 @@ class ConstantsRegressionTest {
     double circumference = ModuleConstants.kWheelCircumferenceMeters;
     double motorRps = ModuleConstants.kDrivingMotorFreeSpeedRps;
 
-    double with12 = motorRps * circumference / ((45.0 * 22) / (12 * 15));
-    double with14 = motorRps * circumference / ((45.0 * 22) / (14 * 15));
+    // Uses the ACTUAL spur count, not a literal. The first version of this test hardcoded 22 and so
+    // compared two ratios the robot does not have — a test about confirming hardware that was itself
+    // built on the unconfirmed number.
+    int spur = ModuleConstants.kDrivingMotorSpurTeeth;
+    double with12 = motorRps * circumference / ((45.0 * spur) / (12 * 15));
+    double with14 = motorRps * circumference / ((45.0 * spur) / (14 * 15));
 
     assertTrue(with14 / with12 > 1.14,
         "12T vs 14T should differ by more than 14%, got " + (with14 / with12));
@@ -176,11 +180,26 @@ class ConstantsRegressionTest {
   }
 
   @Test
-  @DisplayName("MAXSwerve L3 reduction matches the published gear train")
+  @DisplayName("Drive reduction is the Extra High 1 gear train, exactly 4.50:1")
   void driveReductionMatchesHardware() {
-    // 45T bevel, 22T first-stage spur, 15T bevel pinion, 14T driving pinion.
-    assertEquals((45.0 * 22) / (14 * 15), ModuleConstants.kDrivingMotorReduction, 1e-9);
+    // 45T bevel, 21T first-stage spur, 15T bevel pinion, 14T driving pinion = REV Extra High 1.
     assertEquals(14, ModuleConstants.kDrivingMotorPinionTeeth);
+    assertEquals(21, ModuleConstants.kDrivingMotorSpurTeeth);
+
+    // Exactly 4.50, not approximately: (45/15) x (21/14) = 3 x 1.5.
+    assertEquals(4.50, ModuleConstants.kDrivingMotorReduction, 1e-9);
+
+    // The template's "High" ratio, which this is not. Kept as an explicit negative because it is
+    // what the code carried and it is only 4.8% away — close enough to look right.
+    assertNotEquals((45.0 * 22) / (14 * 15), ModuleConstants.kDrivingMotorReduction,
+        "4.7143 is the 22T-spur High ratio; this robot is Extra High 1 with a 21T spur");
+  }
+
+  @Test
+  @DisplayName("The pinion count agrees between its two homes")
+  void spurAndPinionAgreeWithMechanismRatios() {
+    assertEquals(ModuleConstants.kDrivingMotorPinionTeeth, MechanismRatios.DRIVE_PINION_TEETH);
+    assertEquals(ModuleConstants.kDrivingMotorSpurTeeth, MechanismRatios.DRIVE_SPUR_TEETH);
   }
 
   @Test

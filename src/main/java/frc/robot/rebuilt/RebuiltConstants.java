@@ -150,9 +150,8 @@ public final class RebuiltConstants {
     /**
      * CONFIRM FROM CAD — teeth on the MAXSwerve driving pinion.
      *
-     * <p>REV ships 12T, 13T and 14T. The code assumes <b>14T</b>, and this is the single highest-risk
-     * unconfirmed number left on the robot, because it scales the drive reduction and therefore the
-     * feedforward and the top speed:
+     * <p><b>14T, confirmed from CAD.</b> REV ships 12T, 13T and 14T, and the choice scales the drive
+     * reduction and therefore the feedforward and the top speed:
      *
      * <pre>
      *   12T -> reduction 5.500, free speed 4.92 m/s
@@ -160,12 +159,35 @@ public final class RebuiltConstants {
      *   14T -> reduction 4.714, free speed 5.74 m/s   (assumed)
      * </pre>
      *
-     * <p>That is a 17% spread, which is the same order as the wrong-motor free speed bug and would
-     * fail in exactly the same way: plausible numbers, wrong feedforward, closed loop fighting it.
-     * <b>Count the teeth.</b> It lives in {@code CommonConstants.ModuleConstants} as
-     * {@code kDrivingMotorPinionTeeth} and a test pins the two together.
+     * <p>A 17% spread, so worth confirming — and it was, at 14T. <b>The gearing was still wrong</b>,
+     * because the ratio depends on the spur gear as well and that one was the template's 22T rather
+     * than this robot's 21T. See {@link #DRIVE_SPUR_TEETH}. Checking only the pinion would have found
+     * nothing while the reduction stayed 4.8% out.
      */
     public static final int DRIVE_PINION_TEETH = 14;
+
+    /**
+     * Teeth on the first-stage spur gear. <b>21T — REV MAXSwerve "Extra High 1", confirmed.</b>
+     *
+     * <p>The gearing option is what the ratio actually turns on, and this is the tooth count that was
+     * wrong. WPILib's template hard-codes 22, giving the "High" 4.71:1 ratio; this robot is Extra High
+     * 1 (REV-21-3008) with a 21T spur for exactly 4.50:1.
+     *
+     * <p>Only 4.8% away from the template default, which is precisely why it survived: too close to
+     * look obviously wrong, far enough to matter in the feedforward.
+     */
+    public static final int DRIVE_SPUR_TEETH = 21;
+
+    /**
+     * @return total drive reduction, motor turns per wheel turn.
+     *
+     *     <p>{@code (45 / 15) x (spur / pinion)}. Duplicated deliberately from
+     *     {@code ModuleConstants.kDrivingMotorReduction} so this class can be read on its own; a test
+     *     pins the two together.
+     */
+    public static double driveReduction() {
+      return (45.0 * DRIVE_SPUR_TEETH) / (DRIVE_PINION_TEETH * 15);
+    }
 
     /**
      * FROM CAD — total reduction from the intake deploy motor to the arm, motor turns per arm turn.

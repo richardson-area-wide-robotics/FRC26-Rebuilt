@@ -78,10 +78,30 @@ public final class CommonConstants {
   public static final int SUPERSTRUCTURE_CURRENT_LIMIT = 60;
 
   public static final class ModuleConstants {
-    // The MAXSwerve module can be configured with one of three pinion gears: 12T,
-    // 13T, or 14T. This changes the drive speed of the module (a pinion gear with
-    // more teeth will result in a robot that drives faster).
+    /**
+     * Teeth on the driving pinion. <b>14T, confirmed.</b>
+     *
+     * <p>REV ships 12T, 13T and 14T. A larger pinion drives faster.
+     */
     public static final int kDrivingMotorPinionTeeth = 14;
+
+    /**
+     * Teeth on the first-stage spur gear. <b>21T, confirmed — REV MAXSwerve "Extra High 1".</b>
+     *
+     * <p>This was hard-coded as 22 inside the reduction expression, which is WPILib's MAXSwerve
+     * template default and gives the "High" 4.71:1 ratio. This robot runs the <b>Extra High 1</b>
+     * gearing (REV-21-3008): 14T pinion against a <b>21T</b> spur, for exactly <b>4.50:1</b>.
+     *
+     * <p>Named rather than buried in the expression because this is the <b>third</b> time a WPILib
+     * template default has turned out not to describe this robot. First the drive free speed was the
+     * NEO's 5676 RPM rather than the Vortex's 6784. Then the module spacing was the frame perimeter
+     * rather than the module axes. Now the spur gear. Each looked plausible precisely because it was a
+     * real number for a real MAXSwerve — just not this one.
+     *
+     * <p><b>Combined, the drivetrain model was 25.2% wrong.</b> As found, the wrong free speed and the
+     * wrong spur gear together gave 4.8037 m/s and a kV of 2.4981. Correct is 6.0149 m/s and 1.9951.
+     */
+    public static final int kDrivingMotorSpurTeeth = 21;
 
     /**
      * Free speed of the <b>drive</b> motor, in revolutions per second.
@@ -102,6 +122,16 @@ public final class CommonConstants {
      *
      * <p>The divisor must also stay a double literal: as {@code 5676 / 60} this was integer
      * division, discarding the fraction on top of naming the wrong motor.
+     *
+     * <p><b>The spur gear was wrong too</b>, see {@link #kDrivingMotorSpurTeeth}. Together the two
+     * errors put the drivetrain model out by <b>25.2%</b> on kV, not the 19.5% the motor alone
+     * accounts for.
+     *
+     * <p>And they explain {@code DriveConstants.kMaxSpeedMetersPerSecond}. The doubly-wrong model
+     * computed a free speed of <b>4.8037 m/s</b>, and that cap is set to <b>4.8</b>. It was never a
+     * chosen driveability limit — it is a fossil of the wrong model, set equal to a free speed that
+     * was not the free speed. True capability is 6.0149 m/s, so the cap now leaves <b>20%</b> of the
+     * drivetrain unused. Raising it is a driveability decision, so it is deliberately left alone.
      */
     public static final double kDrivingMotorFreeSpeedRps = 6784 / 60.0;
     /**
@@ -117,9 +147,17 @@ public final class CommonConstants {
      */
     public static final double kWheelDiameterMeters = 0.0762;
     public static final double kWheelCircumferenceMeters = kWheelDiameterMeters * Math.PI;
-    // 45 teeth on the wheel's bevel gear, 22 teeth on the first-stage spur gear, 15
-    // teeth on the bevel pinion
-    public static final double kDrivingMotorReduction = (45.0 * 22) / (kDrivingMotorPinionTeeth * 15);
+    /**
+     * Total drive reduction, motor turns per wheel turn. <b>4.50:1 as built.</b>
+     *
+     * <p>Two stages: a 45T bevel gear on a 15T bevel pinion (3.00:1), then the 21T spur on the 14T
+     * driving pinion (1.50:1). Both counts are now named constants rather than literals, so the
+     * expression states which robot it describes.
+     *
+     * <p>Read {@code (45.0 * 22) / (14 * 15)} = 4.7143 before, which is the template's "High" ratio.
+     */
+    public static final double kDrivingMotorReduction =
+        (45.0 * kDrivingMotorSpurTeeth) / (kDrivingMotorPinionTeeth * 15);
     public static final double kDriveWheelFreeSpeedRps = (kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters)
         / kDrivingMotorReduction;
   }

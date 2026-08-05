@@ -154,13 +154,16 @@ class RevSimUnitContractTest {
   @DisplayName("A wheel speed at the physical maximum corresponds to the expected motor RPM")
   void physicalMaximumIsConsistent() {
     // Sanity arithmetic for whoever builds the physics model: at the NEO Vortex free speed of
-    // 6784 RPM through the 4.714:1 reduction, the wheel turns at 1439 RPM, which on a 3 inch
-    // wheel is 5.74 m/s. That is the number a correct model should approach at full throttle,
-    // and it matches kDriveWheelFreeSpeedRps.
+    // 6784 RPM through the 4.50:1 Extra High 1 reduction, the wheel turns at 1508 RPM, which on a
+    // 3 inch wheel is 6.015 m/s. That is the number a correct model should approach at full
+    // throttle, and it matches kDriveWheelFreeSpeedRps.
+    //
+    // This read 5.74 m/s, from the 4.714:1 ratio the template assumes. Left as a derived assertion
+    // against kDriveWheelFreeSpeedRps below so that it cannot go stale again independently.
     double motorRevsPerSecond = 6784 / 60.0;
     double wheelMetersPerSecond = motorRevsPerSecond * DRIVING_FACTOR;
 
-    assertEquals(5.74, wheelMetersPerSecond, 0.01);
+    assertEquals(6.015, wheelMetersPerSecond, 0.01);
     assertEquals(ModuleConstants.kDriveWheelFreeSpeedRps, wheelMetersPerSecond, 1e-6,
         "The constant and this arithmetic must agree, or the feedforward is wrong");
   }

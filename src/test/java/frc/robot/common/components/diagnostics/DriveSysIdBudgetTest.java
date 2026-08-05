@@ -83,8 +83,13 @@ class DriveSysIdBudgetTest {
     @DisplayName("Nominal kV matches the corrected Vortex free speed")
     void nominalKvUsesTheCorrectedFreeSpeed() {
         // Ties the distance prediction to the drive constants, so changing the wheel or gearing
-        // re-prices the runway automatically. 12 V / 5.741 m/s is about 2.09.
-        assertEquals(2.09, DriveSysId.nominalKv(), 0.02,
-                "if this drifted, either the drive constants changed or the wrong-motor bug is back");
+        // re-prices the runway automatically. 12 V / 6.015 m/s is about 1.995.
+        //
+        // Was 2.09, which came from a 4.714:1 reduction — the template's 22T spur rather than this
+        // robot's 21T Extra High 1. The runway predictions all scale with kV, so a wrong reduction
+        // silently mis-prices how far each SysId run travels.
+        assertEquals(1.995, DriveSysId.nominalKv(), 0.02,
+                "if this drifted, either the drive constants changed or one of the three template "
+                        + "defaults is back: motor free speed, spur gear, or module spacing");
     }
 }
