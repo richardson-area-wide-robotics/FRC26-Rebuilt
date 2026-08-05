@@ -24,6 +24,12 @@ explains why that changes nothing about the numbers and everything about where y
 readable over NT4 as it happens, so the capture list can be gathered live rather than reconstructed
 from a WPILOG afterwards.
 
+**Four review passes so far, 38 defects closed.** The most recent found three defects in the arm
+profiling within an hour of it being written, all of them boundary errors rather than mistakes inside a
+component: wrong units across an interface, a controller running in a mode it should not, and a
+calibration step longer than the travel it was measuring. Two of them would have presented as
+mechanical faults. Section 12 of the review artifact has the detail.
+
 Background, decisions and history: `passdowns/2026-08-04_claude_frc26-rebuilt-hardening.md`.
 
 ---
@@ -1390,6 +1396,27 @@ profiled controller has settled on to hold station *is* the answer. Read the spr
 `DEPLOY_kG` is currently **0**, so the gravity term is inert. Deliberately: a gravity feedforward built
 on a guessed angle pushes hardest in the wrong place.
 
+### If the arm barely moves, check this before the gearbox
+
+The gains shipped are **conservative on purpose**, so the first symptom you may see is the arm
+**lagging behind its setpoint** rather than tracking it. That is expected and it is a gain problem, not
+a mechanical one.
+
+| Symptom | Likely cause | What to do |
+| --- | --- | --- |
+| Arm moves slowly or not at all | `DEPLOY_kP` too low, `kV` under-estimated | Raise `kP` in steps while watching `FollowingError` |
+| Following error grows through the move, then recovers at the end | Profile asking for more than the arm can do | Lower `MaxAccelRps2` first, then `MaxVelRps` |
+| Arm overshoots and settles back | `kP` too high, or `kV` too high | Lower `kP`; add a little `kD` only if it oscillates *while following* |
+| Arm lurches on the first move after enabling | Should not happen — this was a bug, now fixed and tested | Report it, do not tune around it |
+
+> **A note on why `kP` starts where it does.** The gain used to live on the SPARK in `kPosition` mode,
+> where output is a **duty cycle** — 0.05 there means 0.6 V. The profiled controller commands **volts**,
+> so the same 0.05 would have meant 0.05 V per rotation: it would have needed **76 rotations of error on
+> a mechanism with about 10 rotations of travel.** The arm would have barely moved and it would have
+> looked like a mechanical fault. `kV` is now derived from free speed so the feedforward carries the
+> velocity, and `kP` at 1.0 only corrects error. Say so to whoever tunes it, because the units of that
+> number changed and its old value is meaningless now.
+
 ### Tuning it live
 
 `IntakeDeploy/kP`, `kD`, `MaxVelRps` and `MaxAccelRps2` are `TunableNumber`s, so with
@@ -1506,6 +1533,10 @@ separate change that should be made against a measured number rather than a gues
 - [ ] `LoadConstants` updated, or the NOT VIABLE mechanisms noted as such
 - [ ] `SwerveConstants.DRIVE_MOTOR_CURRENT_LIMIT` updated from the traction sweep
 - [ ] `DriveFeedforwardConstants` kS/kV/kA pasted from the SysId report
+- [ ] Intake arm gains from step 9c: `DEPLOY_kS`, `DEPLOY_kV`, and the profile constraints if they
+      turned out to be unachievable
+- [ ] Noted whether the arm's gravity spread was small (constant bias is fine) or large (the arm
+      geometry is worth getting from CAD after all)
 - [ ] `settings.json` `robotMOI` updated from step 7b, and a note of **which intake state** it
       describes — a single value cannot serve both
 - [ ] SysId kS/kV cross-checked against the auto-calibrator's figures
@@ -1557,6 +1588,16 @@ verify them** — this list is the honest measure of how much of this code has m
   still logged so this can be confirmed rather than assumed
 - **Camera intrinsic calibration** — nothing in this repo can detect whether it has been done, since
   the intrinsics live in PhotonVision. Every distance-derived figure inherits it (step 4a)
+- **Every intake arm gain.** `DEPLOY_kP` is a conservative 1.0 V/rotation and `DEPLOY_kV` is derived
+  from free speed rather than measured, so expect the arm to follow but lag (step 9c)
+- **Whether the arm's profile constraints are achievable.** 30 rot/s and 150 rot/s² are chosen, not
+  measured. Unachievable constraints make the following error grow through every move, which reads as a
+  tuning problem and is not one
+- **The frozen-band and pushing-current thresholds** that separate a hard stop from a ball — reasoned
+  from encoder noise against ball compliance, never watched on a real arm with a real ball under it
+- **That the arm has two hard stops inside its soft limits at all.** If a soft limit sits inside a
+  stop, step 9b reports the stop as never found — and travel, goal clamping and the encoder re-zero all
+  depend on finding it
 - **The drive pinion tooth count.** 14T is assumed. 12T would change free speed by 17%, which is the
   same magnitude and the same failure mode as the wrong-motor bug. Count it (0-CAD)
 - **Every reduction in `MechanismRatios`** — placeholders of 1.0, which makes the conversions the
