@@ -29,6 +29,7 @@ import frc.robot.common.components.diagnostics.CalibrationStore;
 import frc.robot.common.components.diagnostics.DriftMonitor;
 import frc.robot.common.components.diagnostics.DriveAutoCalibrator;
 import frc.robot.common.components.diagnostics.ArmProfileCalibrator;
+import frc.robot.common.components.diagnostics.CalibrationButtons;
 import frc.robot.common.components.diagnostics.CalibrationSteps;
 import frc.robot.common.components.diagnostics.GuidedCalibration;
 import frc.robot.common.components.diagnostics.HandMotionRoutine;
@@ -834,7 +835,15 @@ public class RebuiltContainer implements IRobotContainer {
   }
 
   /**
-   * The guided calibration: two buttons, and the robot judges its own data.
+   * The four calibration buttons, readable from a controller, a dashboard or the laptop keyboard.
+   *
+   * <p>Static so the NetworkTables entries exist from robot start, and a dashboard widget can be bound
+   * to them before the routine has ever been run. A topic that does not exist yet cannot be bound.
+   */
+  public static final CalibrationButtons CALIBRATION_BUTTONS = new CalibrationButtons();
+
+  /**
+   * The guided calibration: four buttons, and the robot judges its own data.
    *
    * <p><b>READY</b> (operator A) starts a measurement once the setup prompt has been satisfied.
    * <b>NEXT</b> (operator B) moves on. After each measurement the step assesses what it gathered and
@@ -852,12 +861,21 @@ public class RebuiltContainer implements IRobotContainer {
    * @return the guided calibration command.
    */
   public static Command getGuidedCalibrationCommand() {
+    // Controller OR dashboard OR keyboard, for every one of the four. A gamepad is the wrong input
+    // for some of these steps: the person holding the arm has no free hand, whoever is squaring the
+    // robot against a wall is nowhere near the driver station, and the person reading the assessments
+    // is at the laptop where the console is.
     return new GuidedCalibration(
-            () -> HIDConstants.OPERATOR_CONTROLLER.a().getAsBoolean(),
-            () -> HIDConstants.OPERATOR_CONTROLLER.b().getAsBoolean(),
-            () -> HIDConstants.OPERATOR_CONTROLLER.x().getAsBoolean(),
-            () -> HIDConstants.OPERATOR_CONTROLLER.y().getAsBoolean(),
+            CALIBRATION_BUTTONS.runButton(
+                () -> HIDConstants.OPERATOR_CONTROLLER.a().getAsBoolean()),
+            CALIBRATION_BUTTONS.nextButton(
+                () -> HIDConstants.OPERATOR_CONTROLLER.b().getAsBoolean()),
+            CALIBRATION_BUTTONS.previousButton(
+                () -> HIDConstants.OPERATOR_CONTROLLER.x().getAsBoolean()),
+            CALIBRATION_BUTTONS.skipButton(
+                () -> HIDConstants.OPERATOR_CONTROLLER.y().getAsBoolean()),
             DRIVE_SUBSYSTEM, INTAKE, FEEDER, SHOOTER)
+        .beforeEachRun(CALIBRATION_BUTTONS::clearAll)
         // Teleop drive runs while waiting for a button, so the robot can still be repositioned
         // between steps. Without it the drivetrain sits inert, because the routine holds it -- and
         // the setup prompts ask the operator to square it against a wall.

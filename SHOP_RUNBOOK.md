@@ -529,6 +529,44 @@ tells you to press RUN or SKIP.
 **One press is one action.** Release the button between presses; if you are already holding one when a
 step begins, it waits for a release rather than skipping ahead.
 
+### Three ways to press them — use whichever suits the step
+
+A gamepad is the wrong input for some of these. The person holding the arm has no free hand, whoever is
+squaring the robot against a wall is nowhere near the driver station, and the person reading the
+assessments is at the laptop where the console is. So all three work at once, at any time:
+
+**1. Operator controller** — A / B / X / Y as above.
+
+**2. Dashboard** — four booleans in the `Calibration` table:
+
+| Entry | Button |
+| --- | --- |
+| `Calibration/Run` | RUN |
+| `Calibration/Next` | NEXT |
+| `Calibration/Previous` | PREVIOUS |
+| `Calibration/Skip` | SKIP |
+
+They exist from robot start, so you can bind widgets before ever running the routine. Set one true and
+the robot **writes false straight back** — that is what turns a sticky dashboard toggle into a momentary
+press, so any widget type works and you never have to un-click anything. They sit at false and blink
+true, which is also how you can see the robot receiving each press.
+
+**3. Laptop keyboard** — `python tools/calib_keys.py`
+
+| Key | Button |
+| --- | --- |
+| `r` or `SPACE` | RUN |
+| `n` or `→` | NEXT |
+| `p` or `←` | PREVIOUS |
+| `s` | SKIP |
+| `q` or `ESC` | quit the script (the routine keeps running) |
+
+That window needs focus, and it reads single keypresses — no Enter. Needs `pip install pyntcore`.
+
+**There is no keyboard input on a real Driver Station.** The WPILib *simulator* maps keys to joysticks,
+but the Driver Station does not — so this script closes the gap from the laptop side, setting the same
+dashboard booleans. The robot knows nothing about keyboards.
+
 **You can still drive between steps.** The routine holds the drivetrain while it runs, so the teleop
 drive command is fed through while it waits for a button — the driver controller works normally right
 up to the moment RUN is pressed. Which matters, because the setup prompts ask you to square the robot

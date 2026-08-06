@@ -88,6 +88,10 @@ public class GuidedCalibration {
     /** What runs while waiting for a button, so the robot can still be positioned. */
     private Supplier<Command> setupCommand = Commands::idle;
 
+    /** Runs once as the routine starts. */
+    private Runnable onStart = () -> {
+    };
+
     private int index;
     private int announcedIndex = -1;
     private boolean finished;
@@ -124,6 +128,22 @@ public class GuidedCalibration {
      */
     public GuidedCalibration whileWaiting(Supplier<Command> setupCommand) {
         this.setupCommand = setupCommand;
+        return this;
+    }
+
+    /**
+     * Sets something to run as the routine starts.
+     *
+     * <p>Used to clear the dashboard button entries. Without it, a press made while nothing was
+     * listening stays latched and fires the instant the routine begins &mdash; consuming the first
+     * step's prompt before anybody has read it, which looks like the routine skipping a step on its
+     * own.
+     *
+     * @param onStart Runs once at the start.
+     * @return this, for chaining.
+     */
+    public GuidedCalibration beforeEachRun(Runnable onStart) {
+        this.onStart = onStart;
         return this;
     }
 
@@ -357,6 +377,7 @@ public class GuidedCalibration {
 
         return Commands.sequence(
                 Commands.runOnce(() -> {
+                    onStart.run();
                     index = 0;
                     announcedIndex = -1;
                     finished = false;
@@ -365,6 +386,9 @@ public class GuidedCalibration {
 
                     say("================================================================");
                     say("GUIDED CALIBRATION -- " + steps.size() + " steps, four buttons.");
+                    say("RUN=A  NEXT=B  PREVIOUS=X  SKIP=Y on the operator controller,");
+                    say("or the Calibration/{Run,Next,Previous,Skip} booleans on a dashboard,");
+                    say("or run  python tools/calib_keys.py  for keyboard control.");
                     say("Each step judges its own data and says what to change.");
                     say("================================================================");
                 }),
