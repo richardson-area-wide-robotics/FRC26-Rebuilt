@@ -8,11 +8,28 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    # Must track the season. This was left on the 2024 image while building a 2026 project.
-    container: wpilib/roborio-cross-ubuntu:2026-22.04
+
+    # Must track the season, AND the tag has to be one that exists.
+    #
+    # This was left on 2024-22.04 while building a 2026 project, and the fix for that guessed
+    # `2026-22.04` by analogy with earlier seasons. That tag does not exist, so every build since died
+    # pulling the image -- before checkout, with "manifest unknown". The log looks nothing like a code
+    # failure: about twenty seconds of docker retries and then a red cross.
+    #
+    # WPILib changed the tagging for 2026. Up to 2025 there was a plain `<season>-22.04`; for 2026
+    # there is ONLY a Python-suffixed form, py313 or py314. The suffix is not optional and it is not
+    # noise, so please do not tidy it away. This project is Java, so the Python version makes no
+    # difference to the build; py313 is chosen as the continuation of the 2025 line.
+    #
+    # Before changing this line, check the tag is real:
+    #   curl -s "https://hub.docker.com/v2/repositories/wpilib/roborio-cross-ubuntu/tags?page_size=40"
+    container: wpilib/roborio-cross-ubuntu:2026-22.04-py313
+
     steps:
+      # v4, not v2. v2 runs on a Node release GitHub has retired, so it warns now and will fail
+      # outright later. check-deploy.yml in this same directory was already on v4.
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Grant execute permission
         run: chmod +x gradlew
       - name: Build robot code

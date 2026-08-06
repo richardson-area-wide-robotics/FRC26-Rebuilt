@@ -22,7 +22,9 @@ flowchart TD
     subgraph frc_robot_common_components_diagnostics[frc.robot.common.components.diagnostics]
         ArmProfileCalibrator[ArmProfileCalibrator]
         BumpCrossingDiagnostic[BumpCrossingDiagnostic]
+        CalibrationButtons[CalibrationButtons]
         CalibrationManeuvers[CalibrationManeuvers]
+        CalibrationSteps[CalibrationSteps]
         CalibrationStore[CalibrationStore]
         DeployTravelCalibrator[DeployTravelCalibrator]
         DriftMonitor[DriftMonitor]
@@ -31,11 +33,16 @@ flowchart TD
         DriveSysId[DriveSysId]
         ExpectationMonitor[ExpectationMonitor]
         GamePieceCounter[GamePieceCounter]
+        GatedStep[GatedStep]
+        GuidedCalibration[GuidedCalibration]
+        HandMotionCalibrator[HandMotionCalibrator]
+        HandMotionRoutine[HandMotionRoutine]
         HardStopDetector[HardStopDetector]
         LoadCalibrationRoutine[LoadCalibrationRoutine]
         LoadCalibrator[LoadCalibrator]
         ManeuverRunner[ManeuverRunner]
         MotorLoadMonitor[MotorLoadMonitor]
+        PressLatch[PressLatch]
         RotationAccumulator[RotationAccumulator]
         RotationalInertiaCalibrator[RotationalInertiaCalibrator]
         SysIdRegression[SysIdRegression]
@@ -161,6 +168,10 @@ flowchart TD
     DriveSysId --> SwerveDriveSubsystem
     ExpectationMonitor --> ExpectationMonitor
     GamePieceCounter --> MotorLoadMonitor
+    HandMotionRoutine --> SwerveDriveSubsystem
+    HandMotionRoutine --> Intake
+    HandMotionRoutine --> Feeder
+    HandMotionRoutine --> Shooter
     LoadCalibrationRoutine --> Intake
     LoadCalibrationRoutine --> Feeder
     LoadCalibrationRoutine --> Shooter
@@ -180,7 +191,9 @@ flowchart TD
     style CANDiagnostics fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ArmProfileCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style BumpCrossingDiagnostic fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style CalibrationButtons fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CalibrationManeuvers fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style CalibrationSteps fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style CalibrationStore fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DeployTravelCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style DriftMonitor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
@@ -189,11 +202,16 @@ flowchart TD
     style DriveSysId fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ExpectationMonitor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style GamePieceCounter fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style GatedStep fill:#66bb6a,stroke:#333,stroke-width:2px,color:#fff
+    style GuidedCalibration fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style HandMotionCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style HandMotionRoutine fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style HardStopDetector fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style LoadCalibrationRoutine fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style LoadCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style ManeuverRunner fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style MotorLoadMonitor fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
+    style PressLatch fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RotationAccumulator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style RotationalInertiaCalibrator fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
     style SysIdRegression fill:#42a5f5,stroke:#333,stroke-width:2px,color:#fff
