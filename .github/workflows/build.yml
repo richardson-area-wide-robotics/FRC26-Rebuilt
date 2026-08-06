@@ -9,28 +9,39 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
 
-    # Must track the season, AND the tag has to be one that exists.
+    # No container, deliberately.
     #
-    # This was left on 2024-22.04 while building a 2026 project, and the fix for that guessed
-    # `2026-22.04` by analogy with earlier seasons. That tag does not exist, so every build since died
-    # pulling the image -- before checkout, with "manifest unknown". The log looks nothing like a code
-    # failure: about twenty seconds of docker retries and then a red cross.
+    # This used to run in wpilib/roborio-cross-ubuntu, and that image is the source of a long-running
+    # CI outage worth recording so nobody restores it without knowing:
     #
-    # WPILib changed the tagging for 2026. Up to 2025 there was a plain `<season>-22.04`; for 2026
-    # there is ONLY a Python-suffixed form, py313 or py314. The suffix is not optional and it is not
-    # noise, so please do not tidy it away. This project is Java, so the Python version makes no
-    # difference to the build; py313 is chosen as the continuation of the 2025 line.
+    #   1. The tag has to track the season, so it silently rots every January. It sat on 2024-22.04
+    #      while the project moved to 2026.
+    #   2. Fixing that by analogy gives `2026-22.04`, which does not exist -- WPILib changed the 2026
+    #      tagging to require a Python suffix (py313/py314). Every build then died pulling the image,
+    #      before checkout, with "manifest unknown": no compiler output, no test results, nothing
+    #      pointing at any file.
+    #   3. With the real tag, the pull succeeds and the build fails anyway, because that image does not
+    #      put a JDK on PATH or set JAVA_HOME.
     #
-    # Before changing this line, check the tag is real:
-    #   curl -s "https://hub.docker.com/v2/repositories/wpilib/roborio-cross-ubuntu/tags?page_size=40"
-    container: wpilib/roborio-cross-ubuntu:2026-22.04-py313
-
+    # The container exists for cross-compiling and deploying to a roboRIO. This job only builds and
+    # tests a pure-Java project, which needs a JDK and the Gradle wrapper and nothing else -- verified
+    # by running the same `./gradlew build` outside any container. So the container buys nothing here
+    # and costs a yearly breakage.
     steps:
-      # v4, not v2. v2 runs on a Node release GitHub has retired, so it warns now and will fail
-      # outright later. check-deploy.yml in this same directory was already on v4.
+      # v4, not v2. v2 runs on a Node release GitHub has retired, so it warns now and will fail later.
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # JDK 17 to match build.gradle's source/targetCompatibility. Explicit rather than inherited, so
+      # a change to the runner image cannot quietly move the compiler out from under the project.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Grant execute permission
         run: chmod +x gradlew
+
       - name: Build robot code
         run: ./gradlew build
